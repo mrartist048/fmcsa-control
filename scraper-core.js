@@ -1,6 +1,6 @@
 // Premium Theme-Based Drawer, Button aur Developer Tag Injector
 function injectHistoryUIFramework() {
-    // === DEVELOPER TAG INJECTOR (Created by Nauman) ===
+    // === DEVELOPER TAG INJECTOR (Created by Nauman:Ph 03037654849) ===
     // Yeh code heading aur line ke beech me top-right par chota sa text add karega
     let mainHeading = document.querySelector('h1, h2, .heading'); // Agar aapke HTML me h1 hai
     if (!mainHeading) {
