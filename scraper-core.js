@@ -51,7 +51,7 @@ function injectHistoryUIFramework() {
         mainHeading.style.position = 'relative';
         let creditTag = document.createElement('span');
         creditTag.id = 'devCreditTag';
-        creditTag.innerHTML = "Created by <b>Nauman</b>";
+        creditTag.innerHTML = "Created by <b>Nauman (Ph:03037654849)</b>";
         creditTag.style.cssText = `
             position: absolute;
             right: 0;
