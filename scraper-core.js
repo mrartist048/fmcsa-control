@@ -1,7 +1,7 @@
 // ====== ACCESS CONTROL CONFIGURATION ======
 // Yahan aap apne clients ke username aur unka status manage karenge
 const allowedUsers = {
-    "dispatcher_lahore": true,  // Is client ka access chal raha hai
+    "dispatcher_lahore": false,  // Is client ka access chal raha hai
     "dispatcher_karachi": true // Is client ka access aap ne band kar diya
 };
 
