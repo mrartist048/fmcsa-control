@@ -11,7 +11,7 @@ const currentClient = window.scrClientID || "unknown";
 
 if (!allowedUsers[currentClient]) {
     // Agar client list mein nahi hai ya 'false' hai to tool block ho jayega
-    document.getElementById('status').innerText = "ERROR: Subscription Expired or Invalid License. Please contact the administrator.";
+    document.getElementById('status').innerText = "ERROR: Subscription Expired or Invalid License. Please contact the administrator.(Whatsapp 03037654849)";
     document.getElementById('status').style.background = "#f8d7da";
     document.getElementById('status').style.color = "#721c24";
     document.getElementById('status').style.borderLeft = "4px solid #d9534f";
