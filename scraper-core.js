@@ -243,7 +243,8 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     req.onsuccess = function() {
         const data = req.result;
         if (data) {
-            data.totalRecords = recordsArray.length;
+            // Sirf AUTHORIZED records ka count history db me save hoga
+            data.totalRecords = recordsArray.filter(r => r.status === "AUTHORIZED").length;
             data.records = recordsArray;
             data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
             store.put(data);
@@ -459,11 +460,14 @@ window.startScraping = async function() {
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
     
+    // Filter out only AUTHORIZED records for final view count
+    let authorizedOnlyCount = scrapedData.filter(r => r.status === "AUTHORIZED").length;
+    
     if (statusBox) {
         statusBox.style.padding = "15px";
         statusBox.style.display = "block";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
+        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${authorizedOnlyCount} active records.</strong>`;
     }
     
     if(scrapedData.length > 0) {
