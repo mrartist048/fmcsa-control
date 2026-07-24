@@ -23,7 +23,7 @@ if (!allowedUsers[currentClient]) {
     throw new Error("Access Denied"); // Code ko yahin rok dega
 }
 
-// ====== ASLI SCRAPING LOGIC (WITH RUN-TIME DYNAMIC CIRCULAR PROGRESS UI) ======
+// ====== ASLI SCRAPING LOGIC (WITH INLINE MINI-CIRCLE & ETA LOGIC) ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { 
     scraping = false; 
@@ -31,7 +31,7 @@ window.stopScraping = function() {
     if (statusBox) {
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
-        statusBox.style.padding = "15px";
+        statusBox.style.padding = "10px 15px";
         statusBox.innerText = "Stopping..."; 
     }
 }
@@ -58,20 +58,19 @@ window.startScraping = async function() {
     let totalToScan = end - start + 1;
     let totalProcessed = 0; 
 
-    // UI Reset aur Structure Setup (Purani HTML file ke andar naya design inject kar rahe hain)
+    // UI Structure Reset (Purani thin patti layout ke mutabiq compact size adjustment)
     let statusBox = document.getElementById('status');
     if (statusBox) {
         statusBox.style.display = "flex";
-        statusBox.style.flexDirection = "column";
+        statusBox.style.flexDirection = "row"; // Row layout taake height na barhe
         statusBox.style.alignItems = "center";
-        statusBox.style.justifyContent = "center";
-        statusBox.style.gap = "15px";
-        statusBox.style.padding = "25px";
+        statusBox.style.justifyContent = "space-between"; // Left pe text, right pe circle
+        statusBox.style.padding = "10px 15px"; // Compact padding for thin row look
         statusBox.style.background = "#f8f9fa"; 
         statusBox.style.color = "#333";
         statusBox.style.border = "1px solid #e9ecef";
         statusBox.style.borderLeft = "5px solid #002d62";
-        statusBox.style.borderRadius = "8px";
+        statusBox.style.borderRadius = "4px";
     }
 
     for (let mc = start; mc <= end; mc++) {
@@ -99,22 +98,22 @@ window.startScraping = async function() {
             timeString = `Estimated Time Remaining: ${mins}m ${secs}s`;
         }
 
-        // Circular Loader ke liye Conic Gradient ka Angle (360 degrees total)
+        // Mini Circle loader ke degrees
         let degrees = percentage * 3.6;
 
-        // Har loop par pura dynamic block layout inject aur update hoga
+        // Har loop par compact row layout update hoga
         if (statusBox) {
             statusBox.innerHTML = `
-                <!-- Gol Circle Loader (Center percentage ke sath) -->
-                <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <div style="position: absolute; width: 84px; height: 84px; background: #fff; border-radius: 50%;"></div>
-                    <span style="position: relative; font-family: sans-serif; font-size: 20px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                <!-- Left Side: Status Text aur ETA -->
+                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333;">Scanning MC <b>${mc}</b>...</div>
+                    <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
                 </div>
 
-                <!-- Niche Chalne wala text metadata -->
-                <div style="text-align: center; font-family: sans-serif;">
-                    <div style="font-size: 16px; font-weight: bold; color: #333;">Scanning MC <b>${mc}</b>...</div>
-                    <div style="font-size: 13px; color: #6c757d; font-weight: bold; margin-top: 5px;">${timeString}</div>
+                <!-- Right Side: Sleek Mini Circle Loader -->
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
                 </div>
             `;
         }
@@ -165,16 +164,16 @@ window.startScraping = async function() {
             }
 
             if (record.usdot !== 'N/A' && scraping) {
-                // Email extraction process ke time bhi loader aur UI settings active rahengi
+                // Email extraction ke dauran bhi inline row design intact rahega
                 if (statusBox) {
                     statusBox.innerHTML = `
-                        <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                            <div style="position: absolute; width: 84px; height: 84px; background: #fff; border-radius: 50%;"></div>
-                            <span style="position: relative; font-family: sans-serif; font-size: 20px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                        <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                            <div style="font-size: 14px; font-weight: bold; color: #002d62;">Extracting Email for USDOT <b>${record.usdot}</b>...</div>
+                            <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
                         </div>
-                        <div style="text-align: center; font-family: sans-serif;">
-                            <div style="font-size: 16px; font-weight: bold; color: #002d62;">Extracting Email for USDOT <b>${record.usdot}</b>...</div>
-                            <div style="font-size: 13px; color: #6c757d; font-weight: bold; margin-top: 5px;">${timeString}</div>
+                        <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
+                            <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
                         </div>
                     `;
                 }
@@ -218,10 +217,10 @@ window.startScraping = async function() {
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
     
-    // Scan khatam hone par pure structure ko clean kar ke wapas single line green alert box me convert karna
+    // Process end hone par single layout status restore
     if (statusBox) {
         statusBox.style.padding = "15px";
-        statusBox.style.gap = "0px";
+        statusBox.style.display = "block";
         statusBox.style.borderLeft = "5px solid #28a745";
         statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
