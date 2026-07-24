@@ -11,12 +11,15 @@
     link.href = faviconUrl;
 })();
 
-// ====== ACCESS CONTROL WITH CHROMES/TABS LIMIT CONFIGURATION ======
+// ====== GLOBAL ACCESS CONTROL (FIREBASE REALTIME DATABASE) ======
 const allowedUsers = {
-    "dispatcher_lahore": 2,    // Max 2 Chrome windows/tabs allowed anywhere
-    "dispatcher_karachi": 0,   
+    "dispatcher_lahore": 2,    // Global Max Laptops/Tabs Limit
+    "dispatcher_karachi": 0,   // Blocked
     "dispatchloadify": 2,      
 };
+
+// Auto-configured URL from your Firebase console link
+const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
 
 const currentClient = window.scrClientID || "unknown";
 const userLimit = allowedUsers[currentClient] || 0;
@@ -33,59 +36,85 @@ if (userLimit === 0) {
     throw new Error("Access Denied");
 }
 
-// Unique tab identity setup
+// Global Unique Tab/Laptop Identity
 if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
     window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
 }
 
-function checkActiveSessions() {
-    let activeTabs = [];
-    try {
-        activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
-    } catch(e) { activeTabs = []; }
-    
+async function checkGlobalSessions() {
+    const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
-    // STRICT CLEANUP: Jo tab 15 seconds se responsive nahi hai use dead samjho taake seats foran khali hon
-    activeTabs = activeTabs.filter(tab => (now - tab.timestamp) < 15000 || tab.id === window.name);
-    
-    const isAlreadyRegistered = activeTabs.some(tab => tab.id === window.name);
-    
-    // Agar limit exceed ho chuki hai toh system tools hide karke page content freeze kar dega
-    if (!isAlreadyRegistered && activeTabs.length >= userLimit) {
-        document.body.innerHTML = `
-            <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
-                <h1 style="color:#dc3545; font-size:30px;">⚠️ License Limit Exceeded</h1>
-                <p style="font-size:16px; color:#333;">Aapke account par maximum <b>${userLimit}</b> Chrome instances chalane ki ijazat hai.</p>
-                <p style="color:#6c757d;">Meharbani karke pehle se open windows ya tabs ko band karein.</p>
-                <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
-            </div>
-        `;
-        throw new Error("Session Limit Exceeded");
+    try {
+        // 1. Firebase se saari active global sessions fetch karein
+        const res = await fetch(url);
+        const data = await res.json() || {};
+        
+        let activeTabs = Object.keys(data).map(key => ({ dbKey: key, id: data[key].id, timestamp: data[key].timestamp }));
+        
+        // 2. Dead tabs cleanup (Jo kisi bhi laptop par 20 seconds se update nahi huin aur current tab nahi hain)
+        for (let tab of activeTabs) {
+            if ((now - tab.timestamp) >= 20000 && tab.id !== window.name) {
+                await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${tab.dbKey}.json`, { method: 'DELETE' });
+            }
+        }
+        
+        // Naye sirey se active list filter karein cleanup ke baad
+        const cleanRes = await fetch(url);
+        const cleanData = await cleanRes.json() || {};
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp }));
+        
+        const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
+        
+        // 3. Agar limit cross ho gayi hai aur yeh new instance hai toh block kar do globally!
+        if (!currentTabRecord && activeTabs.length >= userLimit) {
+            document.body.innerHTML = `
+                <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
+                    <h1 style="color:#dc3545; font-size:30px;">⚠️ Global License Limit Exceeded</h1>
+                    <p style="font-size:16px; color:#333;">Aapke account par maximum <b>${userLimit}</b> Chrome instances/Laptops chalane ki ijazat hai.</p>
+                    <p style="color:#6c757d;">Meharbani karke pehle se open windows ya dusre laptop par chalti tabs ko band karein.</p>
+                    <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
+                </div>
+            `;
+            throw new Error("Global Session Limit Exceeded");
+        }
+        
+        // 4. Update or Create current tab timestamp in Firebase
+        if (currentTabRecord) {
+            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${currentTabRecord.dbKey}/timestamp.json`, {
+                method: 'PUT',
+                body: JSON.stringify(now)
+            });
+        } else {
+            await fetch(url, {
+                method: 'POST',
+                body: JSON.stringify({ id: window.name, timestamp: now })
+            });
+        }
+        
+    } catch (e) {
+        console.error("Session sync failed:", e);
     }
-    
-    // Active state timestamp save/update karna
-    const currentTabIdx = activeTabs.findIndex(tab => tab.id === window.name);
-    if (currentTabIdx > -1) {
-        activeTabs[currentTabIdx].timestamp = now;
-    } else {
-        activeTabs.push({ id: window.name, timestamp: now });
-    }
-    
-    localStorage.setItem(`active_sessions_${currentClient}`, JSON.stringify(activeTabs));
 }
 
-// Pehla instantly run hoga aur phir har 3 seconds baad rapid tracking chalegi
-checkActiveSessions();
-setInterval(checkActiveSessions, 3000);
+// Instantly check karein aur har 5 seconds baad internet par automatic sync chalega
+checkGlobalSessions();
+setInterval(checkGlobalSessions, 5000);
 
+// Laptop ya tab close hote hi seat globally instantly khali ho jaye
 window.addEventListener('beforeunload', function () {
-    let activeTabs = [];
-    try {
-        activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
-    } catch(e) {}
-    activeTabs = activeTabs.filter(tab => tab.id !== window.name);
-    localStorage.setItem(`active_sessions_${currentClient}`, JSON.stringify(activeTabs));
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}.json?_method=DELETE`);
+    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`)
+        .then(res => res.json())
+        .then(data => {
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    if (data[key].id === window.name) {
+                        fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
+                    }
+                });
+            }
+        });
 });
 
 // ====== INDEXEDDB HISTORY SETUP ======
