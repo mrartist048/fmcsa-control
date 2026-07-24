@@ -29,76 +29,126 @@ request.onupgradeneeded = function(e) {
 };
 request.onsuccess = function(e) {
     db = e.target.result;
-    renderHistoryTable(); // Database khulte hi purani history screen par show ho jayegi
+    injectHistoryUIFramework(); // Page load hote hi premium UI elements background me setup ho jayenge
 };
 
-// History Table ko HTML mein inject karne ka function
-function renderHistoryTable() {
-    if (!db) return;
-    
-    // Check karein agar pehle se history container bana hua hai, nahi to create karein
-    let historyContainer = document.getElementById('scraperHistoryContainer');
-    if (!historyContainer) {
-        historyContainer = document.createElement('div');
-        historyContainer.id = 'scraperHistoryContainer';
-        historyContainer.style.marginTop = "30px";
-        historyContainer.style.fontFamily = "sans-serif";
+// Premium Theme-Based Drawer aur Button Injector
+function injectHistoryUIFramework() {
+    // 1. History Open Button Injector (Top Controls Box ke andar top-right standard look)
+    let startBtn = document.getElementById('startBtn');
+    if (startBtn && !document.getElementById('openHistoryBtn')) {
+        let historyBtn = document.createElement('button');
+        historyBtn.id = 'openHistoryBtn';
+        historyBtn.innerHTML = "📜 View History";
+        historyBtn.style.cssText = `
+            background: #002d62;
+            color: white;
+            border: 1px solid #001a3a;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            font-family: sans-serif;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            display: inline-block;
+            vertical-align: middle;
+            transition: background 0.2s;
+        `;
+        historyBtn.onmouseover = () => historyBtn.style.background = "#001a3a";
+        historyBtn.onmouseout = () => historyBtn.style.background = "#002d62";
+        historyBtn.onclick = toggleHistoryDrawer;
         
-        // Pura table framework main container ke bahar inject kar rahe hain
-        const mainBox = document.getElementById('status').parentElement;
-        mainBox.appendChild(historyContainer);
+        // Button ko Start Button ke bilkul sath inline attach kar rahe hain
+        startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
     }
+
+    // 2. Right-Side Slide-out Panel Setup
+    if (!document.getElementById('scraperHistoryDrawer')) {
+        let drawer = document.createElement('div');
+        drawer.id = 'scraperHistoryDrawer';
+        drawer.style.cssText = `
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            height: 100%;
+            background: #ffffff;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.15);
+            z-index: 999999;
+            transition: right 0.3s ease-in-out;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+        `;
+        
+        drawer.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="color: #002d62; margin: 0; font-size: 18px;">Saved Sheets History</h3>
+                <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+            </div>
+            <div id="drawerHistoryList" style="flex: 1; overflow-y: auto; padding-right: 5px;">
+                <!-- Records auto load honge yahan -->
+            </div>
+        `;
+        document.body.appendChild(drawer);
+    }
+}
+
+// Drawer ko kholne aur band karne ka dynamic function
+window.toggleHistoryDrawer = function() {
+    let drawer = document.getElementById('scraperHistoryDrawer');
+    if (!drawer) return;
+    
+    if (drawer.style.right === "0px") {
+        drawer.style.right = "-420px";
+    } else {
+        drawer.style.right = "0px";
+        renderHistoryItems(); // Drawer khulte hi live items refresh honge
+    }
+};
+
+// Drawer ke andar items render karne ka custom loop
+function renderHistoryItems() {
+    if (!db) return;
+    const listContainer = document.getElementById('drawerHistoryList');
+    if (!listContainer) return;
 
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
     const getAll = store.getAll();
 
     getAll.onsuccess = function() {
-        const data = getAll.result.reverse(); // Nayi files sab se upar aayengi
+        const data = getAll.result.reverse(); 
         
         if (data.length === 0) {
-            historyContainer.innerHTML = `
-                <h3 style="color: #002d62; border-bottom: 2px solid #002d62; padding-bottom: 5px; font-size: 16px;">Saved Sheets History</h3>
-                <p style="color: #6c757d; font-size: 13px; font-style: italic;">No history available yet. Complete a scan to save sheets automatically.</p>
-            `;
+            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
             return;
         }
 
-        let tableRows = "";
+        let itemsHTML = "";
         data.forEach(item => {
-            tableRows += `
-                <tr style="border-bottom: 1px solid #e9ecef;">
-                    <td style="padding: 10px; font-size: 13px;"><b>${item.date}</b></td>
-                    <td style="padding: 10px; font-size: 13px; color: #555;">${item.range}</td>
-                    <td style="padding: 10px; font-size: 13px; text-align: center;"><span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Records</span></td>
-                    <td style="padding: 10px; text-align: right;">
-                        <button onclick="downloadHistoryCSV(${item.id})" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px;">📥 Download</button>
-                        <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️ Delete</button>
-                    </td>
-                </tr>
+            itemsHTML += `
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
+                        <div>
+                            <button onclick="downloadHistoryCSV(${item.id})" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;">📥 Get CSV</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
+                        </div>
+                    </div>
+                </div>
             `;
         });
-
-        historyContainer.innerHTML = `
-            <h3 style="color: #002d62; border-bottom: 2px solid #002d62; padding-bottom: 5px; font-size: 16px; margin-bottom: 15px;">Saved Sheets History</h3>
-            <table style="width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden;">
-                <thead>
-                    <tr style="background: #002d62; color: white; text-align: left;">
-                        <th style="padding: 10px; font-size: 13px;">Date & Time</th>
-                        <th style="padding: 10px; font-size: 13px;">MC Range</th>
-                        <th style="padding: 10px; font-size: 13px; text-align: center;">Total Active</th>
-                        <th style="padding: 10px; font-size: 13px; text-align: right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableRows}
-                </tbody>
-            </table>
-        `;
+        listContainer.innerHTML = itemsHTML;
     };
 }
 
-// Purani sheet database se download karne ka function
+// History Functions
 window.downloadHistoryCSV = function(id) {
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
@@ -111,19 +161,17 @@ window.downloadHistoryCSV = function(id) {
     };
 };
 
-// History se item delete karne ka function
 window.deleteHistoryItem = function(id) {
-    if (confirm("Are you sure you want to delete this sheet from history?")) {
+    if (confirm("Delete this sheet from history?")) {
         const tx = db.transaction("history", "readwrite");
         const store = tx.objectStore("history");
         store.delete(id);
         tx.oncomplete = function() {
-            renderHistoryTable();
+            renderHistoryItems();
         };
     }
 };
 
-// Main CSV generate karne ka helper
 function triggerCSVDownload(recordsData, filename) {
     let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers\n"; 
     recordsData.forEach(r => { 
@@ -160,6 +208,7 @@ window.startScraping = async function() {
 
     scraping = true; scrapedData = [];
     document.getElementById('startBtn').style.display = 'none';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
     const tableBody = document.getElementById('resultsTable');
@@ -318,6 +367,7 @@ window.startScraping = async function() {
     
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
     
     if (statusBox) {
@@ -327,7 +377,7 @@ window.startScraping = async function() {
         statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
     
-    // SCAN KHATAM HOTE HI DATA AUTO-SAVE TO INDEXEDDB
+    // Auto-Save Data to Database when finished
     if(scrapedData.length > 0 && db) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
         
@@ -344,9 +394,6 @@ window.startScraping = async function() {
         const tx = db.transaction("history", "readwrite");
         const store = tx.objectStore("history");
         store.add(newHistoryItem);
-        tx.oncomplete = function() {
-            renderHistoryTable(); // Nayi sheet ka table refresh ho kar screen par aa jayega
-        };
     }
 }
 
