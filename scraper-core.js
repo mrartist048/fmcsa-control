@@ -23,9 +23,18 @@ if (!allowedUsers[currentClient]) {
     throw new Error("Access Denied"); // Code ko yahin rok dega
 }
 
-// ====== ASLI SCRAPING LOGIC (WITH NEW PROGRESS & ETA LOGIC) ======
+// ====== ASLI SCRAPING LOGIC (WITH RUN-TIME DYNAMIC CIRCULAR PROGRESS UI) ======
 let scraping = false; let scrapedData = [];
-window.stopScraping = function() { scraping = false; document.getElementById('status').innerText = "Stopping..."; }
+window.stopScraping = function() { 
+    scraping = false; 
+    let statusBox = document.getElementById('status');
+    if (statusBox) {
+        statusBox.style.background = "#fff3cd";
+        statusBox.style.color = "#856404";
+        statusBox.style.padding = "15px";
+        statusBox.innerText = "Stopping..."; 
+    }
+}
 
 window.startScraping = async function() {
     const start = parseInt(document.getElementById('startMc').value);
@@ -44,20 +53,36 @@ window.startScraping = async function() {
     const tableBody = document.getElementById('resultsTable');
     tableBody.innerHTML = '';
     
-    // ETA Aur Percentage Ke Naye Variables
+    // ETA Aur Percentage Ke Variables
     let startTime = null;
     let totalToScan = end - start + 1;
-    let totalProcessed = 0; // Kitne MCs ka process cycle guzra (chahay record mile ya na mile)
+    let totalProcessed = 0; 
+
+    // UI Reset aur Structure Setup (Purani HTML file ke andar naya design inject kar rahe hain)
+    let statusBox = document.getElementById('status');
+    if (statusBox) {
+        statusBox.style.display = "flex";
+        statusBox.style.flexDirection = "column";
+        statusBox.style.alignItems = "center";
+        statusBox.style.justifyContent = "center";
+        statusBox.style.gap = "15px";
+        statusBox.style.padding = "25px";
+        statusBox.style.background = "#f8f9fa"; 
+        statusBox.style.color = "#333";
+        statusBox.style.border = "1px solid #e9ecef";
+        statusBox.style.borderLeft = "5px solid #002d62";
+        statusBox.style.borderRadius = "8px";
+    }
 
     for (let mc = start; mc <= end; mc++) {
         if (!scraping) break;
         
         totalProcessed++;
         if (startTime === null) {
-            startTime = Date.now(); // Pehli request start hote hi time note kiya
+            startTime = Date.now(); 
         }
 
-        // Percentage aur Live Remaining Time (ETA) Calculation Logic
+        // Percentage aur Live Remaining Time (ETA) Calculation
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
         let elapsedSeconds = (Date.now() - startTime) / 1000;
         let avgTimePerMC = elapsedSeconds / totalProcessed;
@@ -69,18 +94,30 @@ window.startScraping = async function() {
 
         let timeString = "";
         if (totalProcessed < 3) {
-            timeString = "Calculating ETA..."; // Shuruati 2 requests tak display normal rahega
+            timeString = "Calculating ETA..."; 
         } else {
             timeString = `Estimated Time Remaining: ${mins}m ${secs}s`;
         }
 
-        // Status bar ko do hisson mein clean show karwayenge (Left pe MC, Right pe ETA)
-        document.getElementById('status').innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <span><strong>Scanning MC ${mc}...</strong> (${percentage}%)</span>
-                <span style="color: #555; font-size: 13px; font-weight: bold; font-family: sans-serif;">${timeString}</span>
-            </div>
-        `;
+        // Circular Loader ke liye Conic Gradient ka Angle (360 degrees total)
+        let degrees = percentage * 3.6;
+
+        // Har loop par pura dynamic block layout inject aur update hoga
+        if (statusBox) {
+            statusBox.innerHTML = `
+                <!-- Gol Circle Loader (Center percentage ke sath) -->
+                <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <div style="position: absolute; width: 84px; height: 84px; background: #fff; border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 20px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                </div>
+
+                <!-- Niche Chalne wala text metadata -->
+                <div style="text-align: center; font-family: sans-serif;">
+                    <div style="font-size: 16px; font-weight: bold; color: #333;">Scanning MC <b>${mc}</b>...</div>
+                    <div style="font-size: 13px; color: #6c757d; font-weight: bold; margin-top: 5px;">${timeString}</div>
+                </div>
+            `;
+        }
 
         try {
             const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
@@ -128,13 +165,20 @@ window.startScraping = async function() {
             }
 
             if (record.usdot !== 'N/A' && scraping) {
-                // Email nikalte waqt bhi ETA aur scanning wala status bar intact rahega
-                document.getElementById('status').innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <span><strong>Extracting Email for USDOT ${record.usdot}...</strong> (${percentage}%)</span>
-                        <span style="color: #555; font-size: 13px; font-weight: bold; font-family: sans-serif;">${timeString}</span>
-                    </div>
-                `;
+                // Email extraction process ke time bhi loader aur UI settings active rahengi
+                if (statusBox) {
+                    statusBox.innerHTML = `
+                        <div style="position: relative; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                            <div style="position: absolute; width: 84px; height: 84px; background: #fff; border-radius: 50%;"></div>
+                            <span style="position: relative; font-family: sans-serif; font-size: 20px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                        </div>
+                        <div style="text-align: center; font-family: sans-serif;">
+                            <div style="font-size: 16px; font-weight: bold; color: #002d62;">Extracting Email for USDOT <b>${record.usdot}</b>...</div>
+                            <div style="font-size: 13px; color: #6c757d; font-weight: bold; margin-top: 5px;">${timeString}</div>
+                        </div>
+                    `;
+                }
+
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsResponse = await fetch(smsUrl);
@@ -173,7 +217,15 @@ window.startScraping = async function() {
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
-    document.getElementById('status').innerText = `Done! Found ${scrapedData.length} active records.`;
+    
+    // Scan khatam hone par pure structure ko clean kar ke wapas single line green alert box me convert karna
+    if (statusBox) {
+        statusBox.style.padding = "15px";
+        statusBox.style.gap = "0px";
+        statusBox.style.borderLeft = "5px solid #28a745";
+        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
+    }
+    
     if(scrapedData.length > 0) document.getElementById('downloadBtn').style.display = 'inline-block';
 }
 
