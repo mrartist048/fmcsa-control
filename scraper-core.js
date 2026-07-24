@@ -20,6 +20,7 @@ if (!allowedUsers[currentClient]) {
 
 // ====== INDEXEDDB HISTORY SETUP ======
 let db;
+let currentHistoryId = null; // Har active scan ki tracking ID
 const request = indexedDB.open("ScraperHistoryDB", 1);
 request.onupgradeneeded = function(e) {
     db = e.target.result;
@@ -29,12 +30,11 @@ request.onupgradeneeded = function(e) {
 };
 request.onsuccess = function(e) {
     db = e.target.result;
-    injectHistoryUIFramework(); // Page load hote hi premium UI elements background me setup ho jayenge
+    injectHistoryUIFramework(); 
 };
 
 // Premium Theme-Based Drawer aur Button Injector
 function injectHistoryUIFramework() {
-    // 1. History Open Button Injector (Top Controls Box ke andar top-right standard look)
     let startBtn = document.getElementById('startBtn');
     if (startBtn && !document.getElementById('openHistoryBtn')) {
         let historyBtn = document.createElement('button');
@@ -59,11 +59,9 @@ function injectHistoryUIFramework() {
         historyBtn.onmouseout = () => historyBtn.style.background = "#002d62";
         historyBtn.onclick = toggleHistoryDrawer;
         
-        // Button ko Start Button ke bilkul sath inline attach kar rahe hain
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
     }
 
-    // 2. Right-Side Slide-out Panel Setup
     if (!document.getElementById('scraperHistoryDrawer')) {
         let drawer = document.createElement('div');
         drawer.id = 'scraperHistoryDrawer';
@@ -90,14 +88,12 @@ function injectHistoryUIFramework() {
                 <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             <div id="drawerHistoryList" style="flex: 1; overflow-y: auto; padding-right: 5px;">
-                <!-- Records auto load honge yahan -->
             </div>
         `;
         document.body.appendChild(drawer);
     }
 }
 
-// Drawer ko kholne aur band karne ka dynamic function
 window.toggleHistoryDrawer = function() {
     let drawer = document.getElementById('scraperHistoryDrawer');
     if (!drawer) return;
@@ -106,11 +102,10 @@ window.toggleHistoryDrawer = function() {
         drawer.style.right = "-420px";
     } else {
         drawer.style.right = "0px";
-        renderHistoryItems(); // Drawer khulte hi live items refresh honge
+        renderHistoryItems(); 
     }
 };
 
-// Drawer ke andar items render karne ka custom loop
 function renderHistoryItems() {
     if (!db) return;
     const listContainer = document.getElementById('drawerHistoryList');
@@ -130,14 +125,20 @@ function renderHistoryItems() {
 
         let itemsHTML = "";
         data.forEach(item => {
+            // Agar unexpected crash hua ho toh status alert ke sath show hoga
+            let displayStatus = item.status === "Interrupted (Auto-Saved)" 
+                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
+                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
+
             itemsHTML += `
                 <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                     <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
                     <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="font-size: 12px; margin-bottom: 6px;">Status: ${displayStatus}</div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                         <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
                         <div>
-                            <button onclick="downloadHistoryCSV(${item.id})" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;">📥 Get CSV</button>
+                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;"'}>📥 Get CSV</button>
                             <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
                         </div>
                     </div>
@@ -148,14 +149,13 @@ function renderHistoryItems() {
     };
 }
 
-// History Functions
 window.downloadHistoryCSV = function(id) {
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
     const req = store.get(id);
     req.onsuccess = function() {
         const item = req.result;
-        if (item) {
+        if (item && item.records.length > 0) {
             triggerCSVDownload(item.records, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
         }
     };
@@ -184,7 +184,26 @@ function triggerCSVDownload(recordsData, filename) {
     link.click();
 }
 
-// ====== ASLI SCRAPING LOGIC (WITH INLINE MINI-CIRCLE & AUTO-SAVE TO HISTORY) ======
+// Helper function to update record entry in Real-Time inside IndexedDB
+function updateRealTimeHistory(recordsArray, isCompleted = false) {
+    if (!db || currentHistoryId === null) return;
+    
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    
+    const req = store.get(currentHistoryId);
+    req.onsuccess = function() {
+        const data = req.result;
+        if (data) {
+            data.totalRecords = recordsArray.length;
+            data.records = recordsArray;
+            data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
+            store.put(data);
+        }
+    };
+}
+
+// ====== ASLI SCRAPING LOGIC (WITH REAL-TIME CRASH-PROOF SAVE & INLINE MINI-CIRCLE) ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { 
     scraping = false; 
@@ -230,6 +249,27 @@ window.startScraping = async function() {
         statusBox.style.border = "1px solid #e9ecef";
         statusBox.style.borderLeft = "5px solid #002d62";
         statusBox.style.borderRadius = "4px";
+    }
+
+    // CRASH SAFE STEP 1: Scan shuru hote hi unique empty session generate kar ke pehle hi db me daal rahe hain
+    if (db) {
+        const now = new Date();
+        const formattedDate = now.toLocaleString('en-US', { hour12: true });
+        
+        const initialHistoryItem = {
+            date: formattedDate,
+            range: `${start} - ${end}`,
+            totalRecords: 0,
+            status: "Interrupted (Auto-Saved)", // By default tab tak crash status rahega jab tak scan khud 'Done' na ho
+            records: []
+        };
+        
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        const addReq = store.add(initialHistoryItem);
+        addReq.onsuccess = function(e) {
+            currentHistoryId = e.target.result; // Dynamic generated primary key ID save ho gayi
+        };
     }
 
     for (let mc = start; mc <= end; mc++) {
@@ -347,6 +387,10 @@ window.startScraping = async function() {
                 } catch (smsErr) { console.log(smsErr); }
 
                 scrapedData.push(record);
+                
+                // CRASH SAFE STEP 2: Har live single record fetch hote hi database entry update ho jayegi
+                updateRealTimeHistory(scrapedData, false);
+
                 let isAuth = record.status.toLowerCase().includes('authorized');
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -377,23 +421,16 @@ window.startScraping = async function() {
         statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
     
-    // Auto-Save Data to Database when finished
-    if(scrapedData.length > 0 && db) {
+    // CRASH SAFE STEP 3: Agar tool smoothly band ho gaya toh background history ka status "Completed" ho jayega
+    if(scrapedData.length > 0) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
-        
-        const now = new Date();
-        const formattedDate = now.toLocaleString('en-US', { hour12: true });
-        
-        const newHistoryItem = {
-            date: formattedDate,
-            range: `${start} - ${end}`,
-            totalRecords: scrapedData.length,
-            records: scrapedData
-        };
-        
-        const tx = db.transaction("history", "readwrite");
-        const store = tx.objectStore("history");
-        store.add(newHistoryItem);
+        updateRealTimeHistory(scrapedData, true);
+    } else {
+        // Agar pure batch scan me ek bhi record nahi mila toh database se is empty record entry ko remove kar dete hain
+        if(currentHistoryId !== null) {
+            const tx = db.transaction("history", "readwrite");
+            tx.objectStore("history").delete(currentHistoryId);
+        }
     }
 }
 
