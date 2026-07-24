@@ -1,7 +1,7 @@
 // ====== ACCESS CONTROL CONFIGURATION ======
 // Yahan aap apne clients ke username aur unka status manage karenge
 const allowedUsers = {
-    "dispatcher_lahore": true,  // Is client ka access chal raha hai
+    "dispatcher_lahore": true,   // Is client ka access chal raha hai
     "dispatcher_karachi": false, // Is client ka access aap ne band kar diya
     "dispatchloadify": true,
 };
@@ -23,13 +23,20 @@ if (!allowedUsers[currentClient]) {
     throw new Error("Access Denied"); // Code ko yahin rok dega
 }
 
-// ====== ASLI SCRAPING LOGIC (JO AAP NE BANAYA) ======
+// ====== ASLI SCRAPING LOGIC (WITH NEW PROGRESS & ETA LOGIC) ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { scraping = false; document.getElementById('status').innerText = "Stopping..."; }
 
 window.startScraping = async function() {
     const start = parseInt(document.getElementById('startMc').value);
     const end = parseInt(document.getElementById('endMc').value);
+    
+    // Range validate karne ke baad calculations shuru karenge
+    if (isNaN(start) || isNaN(end) || start > end) {
+        document.getElementById('status').innerText = "Please enter a valid MC range.";
+        return;
+    }
+
     scraping = true; scrapedData = [];
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
@@ -37,9 +44,44 @@ window.startScraping = async function() {
     const tableBody = document.getElementById('resultsTable');
     tableBody.innerHTML = '';
     
+    // ETA Aur Percentage Ke Naye Variables
+    let startTime = null;
+    let totalToScan = end - start + 1;
+    let totalProcessed = 0; // Kitne MCs ka process cycle guzra (chahay record mile ya na mile)
+
     for (let mc = start; mc <= end; mc++) {
         if (!scraping) break;
-        document.getElementById('status').innerText = `Scanning MC ${mc}...`;
+        
+        totalProcessed++;
+        if (startTime === null) {
+            startTime = Date.now(); // Pehli request start hote hi time note kiya
+        }
+
+        // Percentage aur Live Remaining Time (ETA) Calculation Logic
+        let percentage = Math.floor((totalProcessed / totalToScan) * 100);
+        let elapsedSeconds = (Date.now() - startTime) / 1000;
+        let avgTimePerMC = elapsedSeconds / totalProcessed;
+        let remainingMCs = totalToScan - totalProcessed;
+        let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
+
+        let mins = Math.floor(estimatedRemainingSeconds / 60);
+        let secs = Math.floor(estimatedRemainingSeconds % 60);
+
+        let timeString = "";
+        if (totalProcessed < 3) {
+            timeString = "Calculating ETA..."; // Shuruati 2 requests tak display normal rahega
+        } else {
+            timeString = `Estimated Time Remaining: ${mins}m ${secs}s`;
+        }
+
+        // Status bar ko do hisson mein clean show karwayenge (Left pe MC, Right pe ETA)
+        document.getElementById('status').innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span><strong>Scanning MC ${mc}...</strong> (${percentage}%)</span>
+                <span style="color: #555; font-size: 13px; font-weight: bold; font-family: sans-serif;">${timeString}</span>
+            </div>
+        `;
+
         try {
             const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
             const response = await fetch(snapshotUrl);
@@ -86,7 +128,13 @@ window.startScraping = async function() {
             }
 
             if (record.usdot !== 'N/A' && scraping) {
-                document.getElementById('status').innerText = `Extracting Email for USDOT ${record.usdot}...`;
+                // Email nikalte waqt bhi ETA aur scanning wala status bar intact rahega
+                document.getElementById('status').innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span><strong>Extracting Email for USDOT ${record.usdot}...</strong> (${percentage}%)</span>
+                        <span style="color: #555; font-size: 13px; font-weight: bold; font-family: sans-serif;">${timeString}</span>
+                    </div>
+                `;
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsResponse = await fetch(smsUrl);
@@ -121,6 +169,7 @@ window.startScraping = async function() {
         } catch (e) { console.log(e); }
         await new Promise(r => setTimeout(r, 2000));
     }
+    
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
