@@ -1,29 +1,142 @@
 // ====== ACCESS CONTROL CONFIGURATION ======
-// Yahan aap apne clients ke username aur unka status manage karenge
 const allowedUsers = {
-    "dispatcher_lahore": true,   // Is client ka access chal raha hai
-    "dispatcher_karachi": false, // Is client ka access aap ne band kar diya
+    "dispatcher_lahore": true,   
+    "dispatcher_karachi": false, 
     "dispatchloadify": true,
 };
 
-// Jis client ko aap file de rahe hain, uska username yahan check hoga
 const currentClient = window.scrClientID || "unknown";
 
 if (!allowedUsers[currentClient]) {
-    // Agar client list mein nahi hai ya 'false' hai to tool block ho jayega
     document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
     document.getElementById('status').style.background = "#f8d7da";
     document.getElementById('status').style.color = "#721c24";
     document.getElementById('status').style.borderLeft = "4px solid #d9534f";
-    
-    // Buttons ko disable kar dete hain taake woh click na kar sakein
     document.getElementById('startBtn').disabled = true;
     document.getElementById('startBtn').style.opacity = "0.5";
     alert("Your access has been revoked or expired. Contact admin for renewal.");
-    throw new Error("Access Denied"); // Code ko yahin rok dega
+    throw new Error("Access Denied");
 }
 
-// ====== ASLI SCRAPING LOGIC (WITH INLINE MINI-CIRCLE & ETA LOGIC) ======
+// ====== INDEXEDDB HISTORY SETUP ======
+let db;
+const request = indexedDB.open("ScraperHistoryDB", 1);
+request.onupgradeneeded = function(e) {
+    db = e.target.result;
+    if (!db.objectStoreNames.contains("history")) {
+        db.createObjectStore("history", { keyPath: "id", autoIncrement: true });
+    }
+};
+request.onsuccess = function(e) {
+    db = e.target.result;
+    renderHistoryTable(); // Database khulte hi purani history screen par show ho jayegi
+};
+
+// History Table ko HTML mein inject karne ka function
+function renderHistoryTable() {
+    if (!db) return;
+    
+    // Check karein agar pehle se history container bana hua hai, nahi to create karein
+    let historyContainer = document.getElementById('scraperHistoryContainer');
+    if (!historyContainer) {
+        historyContainer = document.createElement('div');
+        historyContainer.id = 'scraperHistoryContainer';
+        historyContainer.style.marginTop = "30px";
+        historyContainer.style.fontFamily = "sans-serif";
+        
+        // Pura table framework main container ke bahar inject kar rahe hain
+        const mainBox = document.getElementById('status').parentElement;
+        mainBox.appendChild(historyContainer);
+    }
+
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const getAll = store.getAll();
+
+    getAll.onsuccess = function() {
+        const data = getAll.result.reverse(); // Nayi files sab se upar aayengi
+        
+        if (data.length === 0) {
+            historyContainer.innerHTML = `
+                <h3 style="color: #002d62; border-bottom: 2px solid #002d62; padding-bottom: 5px; font-size: 16px;">Saved Sheets History</h3>
+                <p style="color: #6c757d; font-size: 13px; font-style: italic;">No history available yet. Complete a scan to save sheets automatically.</p>
+            `;
+            return;
+        }
+
+        let tableRows = "";
+        data.forEach(item => {
+            tableRows += `
+                <tr style="border-bottom: 1px solid #e9ecef;">
+                    <td style="padding: 10px; font-size: 13px;"><b>${item.date}</b></td>
+                    <td style="padding: 10px; font-size: 13px; color: #555;">${item.range}</td>
+                    <td style="padding: 10px; font-size: 13px; text-align: center;"><span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Records</span></td>
+                    <td style="padding: 10px; text-align: right;">
+                        <button onclick="downloadHistoryCSV(${item.id})" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 5px;">📥 Download</button>
+                        <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️ Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        historyContainer.innerHTML = `
+            <h3 style="color: #002d62; border-bottom: 2px solid #002d62; padding-bottom: 5px; font-size: 16px; margin-bottom: 15px;">Saved Sheets History</h3>
+            <table style="width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden;">
+                <thead>
+                    <tr style="background: #002d62; color: white; text-align: left;">
+                        <th style="padding: 10px; font-size: 13px;">Date & Time</th>
+                        <th style="padding: 10px; font-size: 13px;">MC Range</th>
+                        <th style="padding: 10px; font-size: 13px; text-align: center;">Total Active</th>
+                        <th style="padding: 10px; font-size: 13px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
+        `;
+    };
+}
+
+// Purani sheet database se download karne ka function
+window.downloadHistoryCSV = function(id) {
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const req = store.get(id);
+    req.onsuccess = function() {
+        const item = req.result;
+        if (item) {
+            triggerCSVDownload(item.records, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
+        }
+    };
+};
+
+// History se item delete karne ka function
+window.deleteHistoryItem = function(id) {
+    if (confirm("Are you sure you want to delete this sheet from history?")) {
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.delete(id);
+        tx.oncomplete = function() {
+            renderHistoryTable();
+        };
+    }
+};
+
+// Main CSV generate karne ka helper
+function triggerCSVDownload(recordsData, filename) {
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers\n"; 
+    recordsData.forEach(r => { 
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.drivers}"\n`; 
+    }); 
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
+// ====== ASLI SCRAPING LOGIC (WITH INLINE MINI-CIRCLE & AUTO-SAVE TO HISTORY) ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { 
     scraping = false; 
@@ -40,7 +153,6 @@ window.startScraping = async function() {
     const start = parseInt(document.getElementById('startMc').value);
     const end = parseInt(document.getElementById('endMc').value);
     
-    // Range validate karne ke baad calculations shuru karenge
     if (isNaN(start) || isNaN(end) || start > end) {
         document.getElementById('status').innerText = "Please enter a valid MC range.";
         return;
@@ -53,19 +165,17 @@ window.startScraping = async function() {
     const tableBody = document.getElementById('resultsTable');
     tableBody.innerHTML = '';
     
-    // ETA Aur Percentage Ke Variables
     let startTime = null;
     let totalToScan = end - start + 1;
     let totalProcessed = 0; 
 
-    // UI Structure Reset (Purani thin patti layout ke mutabiq compact size adjustment)
     let statusBox = document.getElementById('status');
     if (statusBox) {
         statusBox.style.display = "flex";
-        statusBox.style.flexDirection = "row"; // Row layout taake height na barhe
+        statusBox.style.flexDirection = "row"; 
         statusBox.style.alignItems = "center";
-        statusBox.style.justifyContent = "space-between"; // Left pe text, right pe circle
-        statusBox.style.padding = "10px 15px"; // Compact padding for thin row look
+        statusBox.style.justifyContent = "space-between"; 
+        statusBox.style.padding = "10px 15px"; 
         statusBox.style.background = "#f8f9fa"; 
         statusBox.style.color = "#333";
         statusBox.style.border = "1px solid #e9ecef";
@@ -81,7 +191,6 @@ window.startScraping = async function() {
             startTime = Date.now(); 
         }
 
-        // Percentage aur Live Remaining Time (ETA) Calculation
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
         let elapsedSeconds = (Date.now() - startTime) / 1000;
         let avgTimePerMC = elapsedSeconds / totalProcessed;
@@ -98,19 +207,14 @@ window.startScraping = async function() {
             timeString = `Estimated Time Remaining: ${mins}m ${secs}s`;
         }
 
-        // Mini Circle loader ke degrees
         let degrees = percentage * 3.6;
 
-        // Har loop par compact row layout update hoga
         if (statusBox) {
             statusBox.innerHTML = `
-                <!-- Left Side: Status Text aur ETA -->
                 <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
                     <div style="font-size: 14px; font-weight: bold; color: #333;">Scanning MC <b>${mc}</b>...</div>
                     <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
                 </div>
-
-                <!-- Right Side: Sleek Mini Circle Loader -->
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
                     <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
@@ -164,7 +268,6 @@ window.startScraping = async function() {
             }
 
             if (record.usdot !== 'N/A' && scraping) {
-                // Email extraction ke dauran bhi inline row design intact rahega
                 if (statusBox) {
                     statusBox.innerHTML = `
                         <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
@@ -217,7 +320,6 @@ window.startScraping = async function() {
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
     
-    // Process end hone par single layout status restore
     if (statusBox) {
         statusBox.style.padding = "15px";
         statusBox.style.display = "block";
@@ -225,17 +327,33 @@ window.startScraping = async function() {
         statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
     
-    if(scrapedData.length > 0) document.getElementById('downloadBtn').style.display = 'inline-block';
+    // SCAN KHATAM HOTE HI DATA AUTO-SAVE TO INDEXEDDB
+    if(scrapedData.length > 0 && db) {
+        document.getElementById('downloadBtn').style.display = 'inline-block';
+        
+        const now = new Date();
+        const formattedDate = now.toLocaleString('en-US', { hour12: true });
+        
+        const newHistoryItem = {
+            date: formattedDate,
+            range: `${start} - ${end}`,
+            totalRecords: scrapedData.length,
+            records: scrapedData
+        };
+        
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.add(newHistoryItem);
+        tx.oncomplete = function() {
+            renderHistoryTable(); // Nayi sheet ka table refresh ho kar screen par aa jayega
+        };
+    }
 }
 
 window.downloadCSV = function() {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers\n"; 
-    scrapedData.forEach(r => { 
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.drivers}"\n`; 
-    }); 
-    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'SAFER_Clean_Data.csv';
-    link.click();
+    if(scrapedData.length > 0) {
+        const start = document.getElementById('startMc').value;
+        const end = document.getElementById('endMc').value;
+        triggerCSVDownload(scrapedData, `SAFER_Clean_Data_${start}_to_${end}.csv`);
+    }
 }
