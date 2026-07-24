@@ -1,7 +1,7 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
 // Yahan aap ne apni GitHub repository me uploaded favicon image ka direct cdn link daalna hai
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fv.png";// <-- YAHAN APNA LINK LAGAEIN
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";// <-- YAHAN APNA LINK LAGAEIN
     
     // Pehle se agar koi favicon HTML me laga ho toh use dhoondte hain
     let link = document.querySelector("link[rel*='icon']");
