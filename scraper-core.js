@@ -1,34 +1,27 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
-// Yahan aap ne apni GitHub repository me uploaded favicon image ka direct cdn link daalna hai
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";// <-- YAHAN APNA LINK LAGAEIN
-    
-    // Pehle se agar koi favicon HTML me laga ho toh use dhoondte hain
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";
     let link = document.querySelector("link[rel*='icon']");
-    
-    // Agar nahi laga hua (jo ke purani file me nahi hai), toh naya create karenge
     if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
         document.head.appendChild(link);
     }
-    
     link.type = 'image/png';
     link.href = faviconUrl;
 })();
 
 // ====== ACCESS CONTROL WITH CHROMES/TABS LIMIT CONFIGURATION ======
-// Yahan aap har user ke agay uski ALLOWED TABS/CHROME windows ki limit set kar sakte hain
 const allowedUsers = {
-    "dispatcher_lahore": 2,    // Yeh user maximum 2 browsers/tabs par chal sakta hai
-    "dispatcher_karachi": 0,   // Yeh 1 browser/tab par chal sakta hai
-    "dispatchloadify": 2,      // Yeh sirf 1 browser/tab par chal sakta hai
+    "dispatcher_lahore": 2,    // Max 2 Chrome windows/tabs allowed anywhere
+    "dispatcher_karachi": 0,   
+    "dispatchloadify": 2,      
 };
 
 const currentClient = window.scrClientID || "unknown";
 const userLimit = allowedUsers[currentClient] || 0;
 
-// 1. Check if user is allowed at all (ya subscription expired hai)
+// 1. Check if user is allowed at all
 if (userLimit === 0) {
     document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
     document.getElementById('status').style.background = "#f8d7da";
@@ -40,34 +33,38 @@ if (userLimit === 0) {
     throw new Error("Access Denied");
 }
 
-// 2. Track Session Count in current browser session using localStorage
-if (!window.name) {
+// Unique tab identity setup
+if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
     window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
 }
 
 function checkActiveSessions() {
-    let activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
+    let activeTabs = [];
+    try {
+        activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
+    } catch(e) { activeTabs = []; }
+    
     const now = Date.now();
     
-    // Dead tabs clean up karne ke liye (jo 40 seconds se update nahi huin aur current tab nahi hain)
-    activeTabs = activeTabs.filter(tab => (now - tab.timestamp) < 40000 || tab.id === window.name);
+    // STRICT CLEANUP: Jo tab 15 seconds se responsive nahi hai use dead samjho taake seats foran khali hon
+    activeTabs = activeTabs.filter(tab => (now - tab.timestamp) < 15000 || tab.id === window.name);
     
     const isAlreadyRegistered = activeTabs.some(tab => tab.id === window.name);
     
-    // Agar limit cross ho rahi hai toh block kar do
+    // Agar limit exceed ho chuki hai toh system tools hide karke page content freeze kar dega
     if (!isAlreadyRegistered && activeTabs.length >= userLimit) {
-        document.getElementById('status').innerText = `ERROR: License Limit Exceeded. Max allowed: ${userLimit} Chrome Window(s).`;
-        document.getElementById('status').style.background = "#fff3cd";
-        document.getElementById('status').style.color = "#856404";
-        document.getElementById('status').style.borderLeft = "4px solid #ffc107";
-        document.getElementById('status').style.padding = "10px 15px";
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('startBtn').style.opacity = "0.5";
-        alert(`Access Denied: Is account par maximum ${userLimit} Chrome instances allowed hain. Baki extra tabs band karein.`);
+        document.body.innerHTML = `
+            <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
+                <h1 style="color:#dc3545; font-size:30px;">⚠️ License Limit Exceeded</h1>
+                <p style="font-size:16px; color:#333;">Aapke account par maximum <b>${userLimit}</b> Chrome instances chalane ki ijazat hai.</p>
+                <p style="color:#6c757d;">Meharbani karke pehle se open windows ya tabs ko band karein.</p>
+                <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
+            </div>
+        `;
         throw new Error("Session Limit Exceeded");
     }
     
-    // Current tab ko list me add/update karna aur timestamp barhana
+    // Active state timestamp save/update karna
     const currentTabIdx = activeTabs.findIndex(tab => tab.id === window.name);
     if (currentTabIdx > -1) {
         activeTabs[currentTabIdx].timestamp = now;
@@ -78,13 +75,15 @@ function checkActiveSessions() {
     localStorage.setItem(`active_sessions_${currentClient}`, JSON.stringify(activeTabs));
 }
 
-// Initial session verification aur background heartbeat mechanism
+// Pehla instantly run hoga aur phir har 3 seconds baad rapid tracking chalegi
 checkActiveSessions();
-setInterval(checkActiveSessions, 10000);
+setInterval(checkActiveSessions, 3000);
 
-// Tab/Window close hote hi seat foran khali ho jaye
 window.addEventListener('beforeunload', function () {
-    let activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
+    let activeTabs = [];
+    try {
+        activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
+    } catch(e) {}
     activeTabs = activeTabs.filter(tab => tab.id !== window.name);
     localStorage.setItem(`active_sessions_${currentClient}`, JSON.stringify(activeTabs));
 });
@@ -104,9 +103,8 @@ request.onsuccess = function(e) {
     injectHistoryUIFramework(); 
 };
 
-// Premium Theme-Based Drawer, Button aur Developer Tag Injector
 function injectHistoryUIFramework() {
-    // === DEVELOPER TAG INJECTOR (Created by Nauman) ===
+    // === DEVELOPER TAG INJECTOR ===
     let mainHeading = document.querySelector('h1, h2, .heading'); 
     if (!mainHeading) {
         const headings = document.querySelectorAll('div, h1, h2, h3');
@@ -455,7 +453,6 @@ window.startScraping = async function() {
                 }
             }
 
-            // FILTER CRITERIA: Agar status AUTHORIZED nahi hai toh list me add mat karo aur aglay loop pe chale jao
             if (record.status !== "AUTHORIZED") {
                 continue;
             }
