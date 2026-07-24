@@ -17,16 +17,19 @@
     link.href = faviconUrl;
 })();
 
-// ====== ACCESS CONTROL CONFIGURATION ======
+// ====== ACCESS CONTROL WITH CHROMES/TABS LIMIT CONFIGURATION ======
+// Yahan aap har user ke agay uski ALLOWED TABS/CHROME windows ki limit set kar sakte hain
 const allowedUsers = {
-    "dispatcher_lahore": true,   
-    "dispatcher_karachi": true, 
-    "dispatchloadify": true,
+    "dispatcher_lahore": 2,    // Yeh user maximum 2 browsers/tabs par chal sakta hai
+    "dispatcher_karachi": 1,   // Yeh 1 browser/tab par chal sakta hai
+    "dispatchloadify": 1,      // Yeh sirf 1 browser/tab par chal sakta hai
 };
 
 const currentClient = window.scrClientID || "unknown";
+const userLimit = allowedUsers[currentClient] || 0;
 
-if (!allowedUsers[currentClient]) {
+// 1. Check if user is allowed at all (ya subscription expired hai)
+if (userLimit === 0) {
     document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
     document.getElementById('status').style.background = "#f8d7da";
     document.getElementById('status').style.color = "#721c24";
@@ -36,6 +39,55 @@ if (!allowedUsers[currentClient]) {
     alert("Your access has been revoked or expired. Contact admin for renewal.");
     throw new Error("Access Denied");
 }
+
+// 2. Track Session Count in current browser session using localStorage
+if (!window.name) {
+    window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+}
+
+function checkActiveSessions() {
+    let activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
+    const now = Date.now();
+    
+    // Dead tabs clean up karne ke liye (jo 40 seconds se update nahi huin aur current tab nahi hain)
+    activeTabs = activeTabs.filter(tab => (now - tab.timestamp) < 40000 || tab.id === window.name);
+    
+    const isAlreadyRegistered = activeTabs.some(tab => tab.id === window.name);
+    
+    // Agar limit cross ho rahi hai toh block kar do
+    if (!isAlreadyRegistered && activeTabs.length >= userLimit) {
+        document.getElementById('status').innerText = `ERROR: License Limit Exceeded. Max allowed: ${userLimit} Chrome Window(s).`;
+        document.getElementById('status').style.background = "#fff3cd";
+        document.getElementById('status').style.color = "#856404";
+        document.getElementById('status').style.borderLeft = "4px solid #ffc107";
+        document.getElementById('status').style.padding = "10px 15px";
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('startBtn').style.opacity = "0.5";
+        alert(`Access Denied: Is account par maximum ${userLimit} Chrome instances allowed hain. Baki extra tabs band karein.`);
+        throw new Error("Session Limit Exceeded");
+    }
+    
+    // Current tab ko list me add/update karna aur timestamp barhana
+    const currentTabIdx = activeTabs.findIndex(tab => tab.id === window.name);
+    if (currentTabIdx > -1) {
+        activeTabs[currentTabIdx].timestamp = now;
+    } else {
+        activeTabs.push({ id: window.name, timestamp: now });
+    }
+    
+    localStorage.setItem(`active_sessions_${currentClient}`, JSON.stringify(activeTabs));
+}
+
+// Initial session verification aur background heartbeat mechanism
+checkActiveSessions();
+setInterval(checkActiveSessions, 10000);
+
+// Tab/Window close hote hi seat foran khali ho jaye
+window.addEventListener('beforeunload', function () {
+    let activeTabs = JSON.parse(localStorage.getItem(`active_sessions_${currentClient}`) || "[]");
+    activeTabs = activeTabs.filter(tab => tab.id !== window.name);
+    localStorage.setItem(`active_sessions_${currentClient}`, JSON.stringify(activeTabs));
+});
 
 // ====== INDEXEDDB HISTORY SETUP ======
 let db;
@@ -243,7 +295,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     req.onsuccess = function() {
         const data = req.result;
         if (data) {
-            // Ab saare records hi AUTHORIZED hain toh direct length save hogi
             data.totalRecords = recordsArray.length;
             data.records = recordsArray;
             data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
