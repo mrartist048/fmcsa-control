@@ -1,3 +1,22 @@
+// ====== DYNAMIC FAVICON INJECTOR ======
+// Yahan aap ne apni GitHub repository me uploaded favicon image ka direct cdn link daalna hai
+(function injectFavicon() {
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control/fv.png";// <-- YAHAN APNA LINK LAGAEIN
+    
+    // Pehle se agar koi favicon HTML me laga ho toh use dhoondte hain
+    let link = document.querySelector("link[rel*='icon']");
+    
+    // Agar nahi laga hua (jo ke purani file me nahi hai), toh naya create karenge
+    if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+    }
+    
+    link.type = 'image/png';
+    link.href = faviconUrl;
+})();
+
 // ====== ACCESS CONTROL CONFIGURATION ======
 const allowedUsers = {
     "dispatcher_lahore": true,   
@@ -20,7 +39,7 @@ if (!allowedUsers[currentClient]) {
 
 // ====== INDEXEDDB HISTORY SETUP ======
 let db;
-let currentHistoryId = null; // Har active scan ki tracking ID
+let currentHistoryId = null; 
 const request = indexedDB.open("ScraperHistoryDB", 1);
 request.onupgradeneeded = function(e) {
     db = e.target.result;
@@ -51,7 +70,7 @@ function injectHistoryUIFramework() {
         mainHeading.style.position = 'relative';
         let creditTag = document.createElement('span');
         creditTag.id = 'devCreditTag';
-        creditTag.innerHTML = "Created by <b>Nauman (Ph:03037654849)</b>";
+        creditTag.innerHTML = "Created by <b>Nauman</b>";
         creditTag.style.cssText = `
             position: absolute;
             right: 0;
@@ -64,7 +83,7 @@ function injectHistoryUIFramework() {
         mainHeading.appendChild(creditTag);
     }
 
-    // === EXISTING HISTORY BUTTON INJECTOR ===
+    // === HISTORY BUTTON INJECTOR ===
     let startBtn = document.getElementById('startBtn');
     if (startBtn && !document.getElementById('openHistoryBtn')) {
         let historyBtn = document.createElement('button');
@@ -92,7 +111,7 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
     }
 
-    // === EXISTING RIGHT-SIDE DRAWER SETUP ===
+    // === RIGHT-SIDE DRAWER SETUP ===
     if (!document.getElementById('scraperHistoryDrawer')) {
         let drawer = document.createElement('div');
         drawer.id = 'scraperHistoryDrawer';
@@ -232,7 +251,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== ASLI SCRAPING LOGIC (WITH REAL-TIME CRASH-PROOF SAVE & INLINE MINI-CIRCLE) ======
+// ====== ASLI SCRAPING LOGIC ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { 
     scraping = false; 
