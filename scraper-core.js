@@ -243,8 +243,8 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     req.onsuccess = function() {
         const data = req.result;
         if (data) {
-            // Sirf AUTHORIZED records ka count history db me save hoga
-            data.totalRecords = recordsArray.filter(r => r.status === "AUTHORIZED").length;
+            // Ab saare records hi AUTHORIZED hain toh direct length save hogi
+            data.totalRecords = recordsArray.length;
             data.records = recordsArray;
             data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
             store.put(data);
@@ -252,7 +252,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== ASLI SCRAPING LOGIC ======
+// ====== ONLY AUTHORIZED SCRAPING LOGIC ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { 
     scraping = false; 
@@ -404,6 +404,11 @@ window.startScraping = async function() {
                 }
             }
 
+            // FILTER CRITERIA: Agar status AUTHORIZED nahi hai toh list me add mat karo aur aglay loop pe chale jao
+            if (record.status !== "AUTHORIZED") {
+                continue;
+            }
+
             if (record.usdot !== 'N/A' && scraping) {
                 if (statusBox) {
                     statusBox.innerHTML = `
@@ -437,13 +442,12 @@ window.startScraping = async function() {
                 scrapedData.push(record);
                 updateRealTimeHistory(scrapedData, false);
 
-                let isAuth = record.status.toLowerCase().includes('authorized');
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
                     <td>${record.usdot}</td>
                     <td>${record.name}</td>
                     <td>${record.entityType}</td>
-                    <td><span class="badge ${isAuth?'badge-active':'badge-inactive'}">${record.status}</span></td>
+                    <td><span class="badge badge-active">${record.status}</span></td>
                     <td>${record.phone}</td>
                     <td>${record.address}</td> 
                     <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
@@ -460,14 +464,11 @@ window.startScraping = async function() {
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
     
-    // Filter out only AUTHORIZED records for final view count
-    let authorizedOnlyCount = scrapedData.filter(r => r.status === "AUTHORIZED").length;
-    
     if (statusBox) {
         statusBox.style.padding = "15px";
         statusBox.style.display = "block";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${authorizedOnlyCount} active records.</strong>`;
+        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
     
     if(scrapedData.length > 0) {
