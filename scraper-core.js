@@ -21,7 +21,7 @@
 // Yahan aap har user ke agay uski ALLOWED TABS/CHROME windows ki limit set kar sakte hain
 const allowedUsers = {
     "dispatcher_lahore": 2,    // Yeh user maximum 2 browsers/tabs par chal sakta hai
-    "dispatcher_karachi": 1,   // Yeh 1 browser/tab par chal sakta hai
+    "dispatcher_karachi": 0,   // Yeh 1 browser/tab par chal sakta hai
     "dispatchloadify": 2,      // Yeh sirf 1 browser/tab par chal sakta hai
 };
 
