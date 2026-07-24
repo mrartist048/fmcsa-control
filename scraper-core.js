@@ -2,7 +2,7 @@
 // Yahan aap apne clients ke username aur unka status manage karenge
 const allowedUsers = {
     "dispatcher_lahore": true,  // Is client ka access chal raha hai
-    "dispatcher_karachi": false // Is client ka access aap ne band kar diya
+    "dispatcher_karachi": true // Is client ka access aap ne band kar diya
 };
 
 // Jis client ko aap file de rahe hain, uska username yahan check hoga
