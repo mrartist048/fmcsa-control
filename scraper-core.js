@@ -221,7 +221,73 @@ function injectHistoryUIFramework() {
         `;
         document.body.appendChild(drawer);
     }
+
+    // === DYNAMIC DUAL SHARE POPUP INJECTOR ===
+    if (startBtn && !document.getElementById('shareContainerPanel')) {
+        let downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) {
+            let shareWrap = document.createElement('div');
+            shareWrap.id = 'shareContainerPanel';
+            shareWrap.style.cssText = "display: none; position: relative; display: inline-block; vertical-align: middle; margin-left: 8px;";
+            
+            shareWrap.innerHTML = `
+                <button id="mainShareTriggerBtn" style="background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; transition: background 0.2s;">📤 Share Sheet</button>
+                <div id="shareMenuDropdown" style="display: none; position: absolute; top: 40px; left: 0; background: white; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border-radius: 4px; width: 160px; z-index: 99999; font-family: sans-serif;">
+                    <a href="#" onclick="executeGlobalSharing('whatsapp'); return false;" style="display: block; padding: 10px; color: #25D366; text-decoration: none; font-weight: bold; border-bottom: 1px solid #eee; font-size: 13px;">💬 WhatsApp Share</a>
+                    <a href="#" onclick="executeGlobalSharing('email'); return false;" style="display: block; padding: 10px; color: #ea4335; text-decoration: none; font-weight: bold; font-size: 13px;">📧 Email Share</a>
+                </div>
+            `;
+            downloadBtn.parentNode.insertBefore(shareWrap, downloadBtn.nextSibling);
+
+            document.addEventListener('click', function(event) {
+                let trigger = document.getElementById('mainShareTriggerBtn');
+                let dropdown = document.getElementById('shareMenuDropdown');
+                if (trigger && dropdown) {
+                    if (trigger.contains(event.target)) {
+                        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                    } else {
+                        dropdown.style.display = 'none';
+                    }
+                }
+            });
+        }
+    }
 }
+
+function buildSharingTextContent() {
+    const start = document.getElementById('startMc').value;
+    const end = document.getElementById('endMc').value;
+    let text = `*FMCSA SAFER Clean Data Report*\n`;
+    text += `*Scraped Range:* ${start} to ${end}\n`;
+    text += `*Total Active Records Found:* ${scrapedData.length}\n\n`;
+    
+    let limit = Math.min(scrapedData.length, 5);
+    text += `*Top ${limit} Records Preview:*\n`;
+    for(let i=0; i<limit; i++) {
+        let r = scrapedData[i];
+        text += `${i+1}. MC: ${r.mc} | ${r.name} | Ph: ${r.phone} | Email: ${r.email}\n`;
+    }
+    if(scrapedData.length > 5) text += `\n...aur baqi records dekhne k liye downloaded CSV check karein.`;
+    return text;
+}
+
+window.executeGlobalSharing = function(platform) {
+    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
+    
+    const rawMessage = buildSharingTextContent();
+    const encodedMessage = encodeURIComponent(rawMessage);
+    const start = document.getElementById('startMc').value;
+    const end = document.getElementById('endMc').value;
+
+    if (platform === 'whatsapp') {
+        const waUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+        window.open(waUrl, '_blank');
+    } else if (platform === 'email') {
+        const subject = encodeURIComponent(`SAFER Scraper Report (MC Range: ${start} - ${end})`);
+        const mailtoUrl = `mailto:?subject=${subject}&body=${encodedMessage}`;
+        window.open(mailtoUrl, '_blank');
+    }
+};
 
 window.toggleHistoryDrawer = function() {
     let drawer = document.getElementById('scraperHistoryDrawer');
@@ -357,6 +423,8 @@ window.startScraping = async function() {
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
+    if(document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'none';
+    
     const tableBody = document.getElementById('resultsTable');
     tableBody.innerHTML = '';
     
@@ -550,6 +618,7 @@ window.startScraping = async function() {
     
     if(scrapedData.length > 0) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
+        if(document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'inline-block';
         updateRealTimeHistory(scrapedData, true);
     } else {
         if(currentHistoryId !== null) {
