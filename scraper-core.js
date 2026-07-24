@@ -20,7 +20,7 @@
 // ====== ACCESS CONTROL CONFIGURATION ======
 const allowedUsers = {
     "dispatcher_lahore": true,   
-    "dispatcher_karachi": false, 
+    "dispatcher_karachi": true, 
     "dispatchloadify": true,
 };
 
