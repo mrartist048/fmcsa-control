@@ -300,7 +300,7 @@ function injectHistoryUIFramework() {
 
         creditTag.id = 'devCreditTag';
 
-        creditTag.innerHTML = "Created by <b>Nauman (Ph: 03037654849)</b>";
+        creditTag.innerHTML = "Created by <b>Mr. Nauman (Ph: 03037654849)</b>";
 
         creditTag.style.cssText = `
 
