@@ -366,7 +366,6 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* DYNAMIC PRESTIGE HOVER ARCHITECTURE FOR STABLE DIALER LINK */
             .premium-dialer-link {
                 display: flex !important;
                 flex-direction: row !important;
@@ -484,6 +483,7 @@ function injectHistoryUIFramework() {
     }
 }
 
+// ====== UPGRADED MASTER UI PIPELINE WITH 50 ALL USA STATES ======
 function injectPremiumFiltersUI() {
     let statusBox = document.getElementById('status');
     if (!statusBox || document.getElementById('premiumFilterWrapper')) return;
@@ -496,11 +496,60 @@ function injectPremiumFiltersUI() {
             <label style="font-size: 11px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">🔍 Live Text Filter</label>
             <input type="text" id="premiumLiveSearch" placeholder="Type to filter rows instantly..." style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
         </div>
-        <div style="width: 180px;">
+        <div style="width: 220px;">
             <label style="font-size: 11px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">📍 Filter by US State</label>
             <select id="premiumStateFilter" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; background: white;">
                 <option value="ALL">All States (No Filter)</option>
-                <option value="AL">AL - Alabama</option><option value="CA">CA - California</option><option value="FL">FL - Florida</option><option value="GA">GA - Georgia</option><option value="IL">IL - Illinois</option><option value="NY">NY - New York</option><option value="TX">TX - Texas</option>
+                <option value="AL">AL - Alabama</option>
+                <option value="AK">AK - Alaska</option>
+                <option value="AZ">AZ - Arizona</option>
+                <option value="AR">AR - Arkansas</option>
+                <option value="CA">CA - California</option>
+                <option value="CO">CO - Colorado</option>
+                <option value="CT">CT - Connecticut</option>
+                <option value="DE">DE - Delaware</option>
+                <option value="FL">FL - Florida</option>
+                <option value="GA">GA - Georgia</option>
+                <option value="HI">HI - Hawaii</option>
+                <option value="ID">ID - Idaho</option>
+                <option value="IL">IL - Illinois</option>
+                <option value="IN">IN - Indiana</option>
+                <option value="IA">IA - Iowa</option>
+                <option value="KS">KS - Kansas</option>
+                <option value="KY">KY - Kentucky</option>
+                <option value="LA">LA - Louisiana</option>
+                <option value="ME">ME - Maine</option>
+                <option value="MD">MD - Maryland</option>
+                <option value="MA">MA - Massachusetts</option>
+                <option value="MI">MI - Michigan</option>
+                <option value="MN">MN - Minnesota</option>
+                <option value="MS">MS - Mississippi</option>
+                <option value="MO">MO - Missouri</option>
+                <option value="MT">MT - Montana</option>
+                <option value="NE">NE - Nebraska</option>
+                <option value="NV">NV - Nevada</option>
+                <option value="NH">NH - New Hampshire</option>
+                <option value="NJ">NJ - New Jersey</option>
+                <option value="NM">NM - New Mexico</option>
+                <option value="NY">NY - New York</option>
+                <option value="NC">NC - North Carolina</option>
+                <option value="ND">ND - North Dakota</option>
+                <option value="OH">OH - Ohio</option>
+                <option value="OK">OK - Oklahoma</option>
+                <option value="OR">OR - Oregon</option>
+                <option value="PA">PA - Pennsylvania</option>
+                <option value="RI">RI - Rhode Island</option>
+                <option value="SC">SC - South Carolina</option>
+                <option value="SD">SD - South Dakota</option>
+                <option value="TN">TN - Tennessee</option>
+                <option value="TX">TX - Texas</option>
+                <option value="UT">UT - Utah</option>
+                <option value="VT">VT - Vermont</option>
+                <option value="VA">VA - Virginia</option>
+                <option value="WA">WA - Washington</option>
+                <option value="WV">WV - West Virginia</option>
+                <option value="WI">WI - Wisconsin</option>
+                <option value="WY">WY - Wyoming</option>
             </select>
         </div>
         <div style="background: #e2eafc; padding: 8px 15px; border-radius: 4px; display: flex; gap: 15px; font-size: 12px; font-weight: bold; color: #001a3a; height: 35px; align-items: center; margin-top: 15px;">
@@ -636,7 +685,6 @@ window.toggleHistoryDrawer = function() {
     if (drawer.style.right === "0px") { drawer.style.right = "-420px"; } else { drawer.style.right = "0px"; renderHistoryItems(); }
 };
 
-// ====== HOVER-ACTIVE DIALER CELL ENGINE ======
 function buildDialerCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td>N/A</td>`;
     let rawDigits = phoneNum.replace(/[^0-9+]/g, '');
