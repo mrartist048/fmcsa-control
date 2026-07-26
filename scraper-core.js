@@ -85,8 +85,8 @@ async function checkGlobalSessions() {
             document.body.innerHTML = `
                 <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
                     <h1 style="color:#dc3545; font-size:30px;">⚠️ Global License Limit Exceeded</h1>
-                    <p style="font-size:16px; color:#333;">Aapke account par maximum <b>${userLimit}</b> Chrome instances/Laptops chalane ki ijazat hai.</p>
-                    <p style="color:#6c757d;">Meharbani karke pehle se open windows ya dusre laptop par chalti tabs ko band karein.</p>
+                    <p style="font-size:16px; color:#333;">Your account is limited to a maximum of <b>${userLimit}</b> active Chrome instances or laptops.</p>
+                    <p style="color:#6c757d;">Please close any open Chrome windows or tabs running on another laptop before continuing.</p>
                     <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
                 </div>
             `;
