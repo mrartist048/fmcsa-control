@@ -1,6 +1,6 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.gh/mrartist048/fmcsa-control@main/fav.png";
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
         link = document.createElement('link');
@@ -70,7 +70,7 @@ function showPremiumNotification(message, isAlert = false, duration = 4500) {
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`scr_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
-        let inputName = prompt("Welcome! Please enter your name for team synchronization (e.g., Nauman, Ali, Bilal):");
+        let inputName = prompt("Welcome! Please enter your name (e.g., Nauman, Ali, Bilal):");
         if (inputName && inputName.trim() !== "") {
             dispatcherNickname = inputName.trim();
         } else {
@@ -87,7 +87,7 @@ function injectNicknameProfileUI() {
     let panel = document.createElement('div');
     panel.id = 'scrNickProfilePanel';
     panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
-    panel.innerHTML = `👤 Active Dispatcher: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change Name]</a>`;
+    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a>`;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
@@ -137,10 +137,7 @@ function initializeAccessControl() {
 
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
-    checkGlobalSessions().then(() => {
-        listenForIncomingLeads();
-    });
-    
+    checkGlobalSessions();
     setInterval(checkGlobalSessions, 5000);
     
     injectHistoryUIFramework();
@@ -169,13 +166,12 @@ async function checkGlobalSessions() {
         for (let tab of activeTabs) {
             if ((now - tab.timestamp) >= 20000 && tab.id !== window.name) {
                 await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${tab.dbKey}.json`, { method: 'DELETE' });
-                await fetch(`${FIREBASE_DB_URL}transfers/${currentClient}/${tab.dbKey}.json`, { method: 'DELETE' });
             }
         }
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp, nickname: cleanData[key].nickname }));
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: data[key].timestamp, nickname: cleanData[key].nickname }));
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
@@ -213,157 +209,89 @@ async function checkGlobalSessions() {
 window.addEventListener('beforeunload', function () {
     if (currentClient === "unknown" || !mySessionKey) return;
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
-    navigator.sendBeacon(`${FIREBASE_DB_URL}transfers/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
 
-// ====== ATOMIC LEAD TRANSFERS ENGINE ======
-async function fetchActivePeerLaptops() {
-    try {
-        const res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
-        const data = await res.json() || {};
-        return Object.keys(data).map(key => ({
-            sessionKey: key,
-            id: data[key].id,
-            nickname: data[key].nickname || "Dispatcher"
-        })).filter(peer => peer.id !== window.name);
-    } catch (e) {
-        return [];
-    }
-}
-
-window.shareLeadWithPeerLaptop = async function(index, selectElement) {
-    let targetSessionKey = selectElement.value;
-    if (!targetSessionKey || targetSessionKey === "") return;
-    
+// ====== CORE FOLLOW-UP ENGINE ======
+window.addLeadToFollowUpList = function(index) {
     let record = scrapedData[index];
     if (!record) return;
 
-    selectElement.disabled = true;
+    let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
     
-    try {
-        let payload = {
-            sender: dispatcherNickname,
-            timestamp: Date.now(),
-            record: record
-        };
+    if (followUpStore.some(r => r.mc === record.mc)) {
+        return alert("Yeh carrier pehle se hi Follow-Up list mein add hai.");
+    }
+    
+    record.addedAt = new Date().toLocaleString();
+    followUpStore.push(record);
+    localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
+    
+    showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, false, 3000);
+    if (document.getElementById('scraperFollowUpDrawer').style.right === "0px") renderFollowUpItems();
+};
 
-        // Push data to unique sub-node path under target queue bucket
-        await fetch(`${FIREBASE_DB_URL}transfers/${currentClient}/${targetSessionKey}/${record.mc}.json`, {
-            method: 'PUT',
-            body: JSON.stringify(payload)
-        });
-        
-        alert(`Lead transferred successfully to ${selectElement.options[selectElement.selectedIndex].text}!`);
-    } catch (err) {
-        alert("Transfer failed. Please check network connectivity.");
-    } finally {
-        selectElement.value = "";
-        selectElement.disabled = false;
+window.toggleFollowUpDrawer = function() {
+    let drawer = document.getElementById('scraperFollowUpDrawer');
+    let historyDrawer = document.getElementById('scraperHistoryDrawer');
+    if (!drawer) return;
+    
+    if(historyDrawer) historyDrawer.style.right = "-420px"; // Close history if open
+    
+    if (drawer.style.right === "0px") {
+        drawer.style.right = "-420px";
+    } else {
+        drawer.style.right = "0px";
+        renderFollowUpItems(); 
     }
 };
 
-function listenForIncomingLeads() {
-    if (!mySessionKey || currentClient === "unknown") return;
-    
-    setInterval(async () => {
-        try {
-            const url = `${FIREBASE_DB_URL}transfers/${currentClient}/${mySessionKey}.json`;
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            if (data) {
-                // Read nested active transmission sequences safely
-                let keys = Object.keys(data);
-                for (let k of keys) {
-                    let packet = data[k];
-                    if (packet && packet.record) {
-                        // Delete processed sub-node block instantly
-                        await fetch(`${FIREBASE_DB_URL}transfers/${currentClient}/${mySessionKey}/${k}.json`, { method: 'DELETE' });
-                        
-                        let incomingRecord = packet.record;
-                        incomingRecord.remarks = `[From ${packet.sender}] ` + (incomingRecord.remarks || "");
-                        
-                        if (!scrapedData.some(r => r.mc === incomingRecord.mc)) {
-                            scrapedData.unshift(incomingRecord); 
-                            
-                            showPremiumNotification(`📥 Incoming Lead! ${packet.sender} sent you MC ${incomingRecord.mc}`, true, 6000);
-                            
-                            const tableBody = document.getElementById('resultsTable');
-                            if (tableBody) {
-                                let dialerCellHTML = buildDialerCellMarkup(incomingRecord.phone);
-                                let emailCellHTML = buildEmailCellMarkup(incomingRecord.email, incomingRecord.name);
-                                
-                                let tr = document.createElement('tr');
-                                tr.style.background = "#fff3cd";
-                                tr.style.transition = "background 2s";
-                                tr.className = "scraped-row-item";
-                                
-                                tr.innerHTML = `
-                                    <td><b>${incomingRecord.mc}</b></td>
-                                    <td>${incomingRecord.usdot}</td>
-                                    <td>${incomingRecord.name}</td>
-                                    <td>${incomingRecord.entityType}</td>
-                                    <td><span class="badge badge-active">${incomingRecord.status}</span></td>
-                                    ${dialerCellHTML}
-                                    <td>${incomingRecord.address}</td> 
-                                    ${emailCellHTML}
-                                    <td>${incomingRecord.powerUnits}</td>
-                                    <td class="remarks-cell-container"><input type="text" value="${incomingRecord.remarks}" class="remarks-input-field" oninput="syncDynamicRowRemarks(this)" /></td>
-                                    <td class="peer-dropdown-cell">Syncing...</td>
-                                `;
-                                
-                                tableBody.insertBefore(tr, tableBody.firstChild);
-                                updateAllPeerDropdowns(); 
+window.deleteFollowUpItem = function(mcNumber) {
+    if (confirm("Remove this carrier from Follow-Ups?")) {
+        let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+        followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
+        localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
+        renderFollowUpItems();
+    }
+};
 
-                                setTimeout(() => { tr.style.background = ""; }, 3000);
-                            }
-                            updateRealTimeHistory(scrapedData, false);
-                            executePremiumUIPipeline();
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Polling error:", e);
-        }
-    }, 3000);
-}
+window.downloadFollowUpsCSV = function() {
+    let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    if (followUpStore.length === 0) return alert("Follow-up list khali hai.");
+    triggerCSVDownload(followUpStore, `FMCSA_FollowUps_${dispatcherNickname}.csv`);
+};
 
-async function updateAllPeerDropdowns() {
-    let peers = await fetchActivePeerLaptops();
-    let rows = document.querySelectorAll('#resultsTable tr');
-    
-    rows.forEach((row, reversedIndex) => {
-        let cell = row.querySelector('.peer-dropdown-cell') || row.cells[row.cells.length - 1];
-        if (!cell) return;
-        
-        if (peers.length === 0) {
-            cell.innerHTML = `<span style="color: #6c757d; font-size: 11px; font-style: italic;">No peers online</span>`;
-            return;
-        }
-        
-        let options = `<option value="" selected disabled>Send to...</option>`;
-        peers.forEach(p => {
-            options += `<option value="${p.sessionKey}">👤 ${p.nickname}</option>`;
-        });
+function renderFollowUpItems() {
+    const listContainer = document.getElementById('drawerFollowUpList');
+    if (!listContainer) return;
 
-        cell.innerHTML = `
-            <select onchange="shareLeadWithPeerLaptop(${reversedIndex}, this)" style="padding: 4px; font-size: 11px; font-weight: bold; border: 1px solid #b6ccfe; border-radius: 4px; background: #fff; max-width: 120px;">
-                ${options}
-            </select>
+    let data = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    data = data.reverse(); 
+
+    if (data.length === 0) {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
+        return;
+    }
+
+    let itemsHTML = "";
+    data.forEach(item => {
+        itemsHTML += `
+            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+                <div style="font-size: 11px; color: #6c757d; font-weight: bold;">Saved: ${item.addedAt}</div>
+                <div style="font-size: 14px; font-weight: bold; color: #002d62; margin: 4px 0;">${item.name}</div>
+                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
+                    <b>Remarks:</b> ${item.remarks || 'No remarks added'}
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📩 Pitch</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
+                </div>
+            </div>
         `;
     });
+    listContainer.innerHTML = itemsHTML;
 }
-
-window.syncDynamicRowRemarks = function(inputField) {
-    let row = inputField.closest('tr');
-    let mcNumber = parseInt(row.cells[0].textContent);
-    let index = scrapedData.findIndex(r => r.mc === mcNumber);
-    if (index !== -1) {
-        scrapedData[index].remarks = inputField.value;
-        updateRealTimeHistory(scrapedData, false);
-    }
-};
 
 // ====== INDEXEDDB HISTORY SETUP ======
 let db;
@@ -387,7 +315,7 @@ function injectHistoryUIFramework() {
         styleTag.innerHTML = `
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 15px !important; box-sizing: border-box !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 4px !important; }
-            table.table { width: 100% !important; min-width: 1300px !important; table-layout: auto !important; border-collapse: collapse !important; }
+            table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
             .remarks-cell-container { min-width: 200px !important; width: 220px !important; }
             .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
@@ -395,6 +323,8 @@ function injectHistoryUIFramework() {
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
+            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
+            .premium-followup-btn:hover { background: #e0a800; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -422,9 +352,16 @@ function injectHistoryUIFramework() {
         let historyBtn = document.createElement('button');
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
-        historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle; transition: background 0.2s;";
+        historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
         historyBtn.onclick = toggleHistoryDrawer;
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
+        
+        let followUpBtn = document.createElement('button');
+        followUpBtn.id = 'openFollowUpDrawerBtn';
+        followUpBtn.innerHTML = "📅 View Follow-Ups";
+        followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
+        followUpBtn.onclick = toggleFollowUpDrawer;
+        startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
     if (!document.getElementById('scraperHistoryDrawer')) {
@@ -441,6 +378,24 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
+    // Dynamic Follow-Up Drawer Structural Injection
+    if (!document.getElementById('scraperFollowUpDrawer')) {
+        let fDrawer = document.createElement('div');
+        fDrawer.id = 'scraperFollowUpDrawer';
+        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
+        fDrawer.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
+                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
+            </div>
+            <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
+        `;
+        document.body.appendChild(fDrawer);
+    }
+
     let tableHeader = document.querySelector('table.table thead tr, table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
@@ -450,11 +405,11 @@ function injectHistoryUIFramework() {
         remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
         tableHeader.appendChild(remTh);
         
-        let shareTh = document.createElement('th');
-        shareTh.id = 'peerShareHeaderCol';
-        shareTh.innerText = "Send Lead To";
-        shareTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
-        tableHeader.appendChild(shareTh);
+        let followTh = document.createElement('th');
+        followTh.id = 'followUpHeaderCol';
+        followTh.innerText = "Action";
+        followTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
+        tableHeader.appendChild(followTh);
     }
 }
 
@@ -467,7 +422,7 @@ function injectPremiumFiltersUI() {
     filterPanel.style.cssText = "display: flex; flex-wrap: wrap; gap: 15px; align-items: center; background: #fdfdfd; padding: 15px; margin: 15px 0; border: 1px solid #e2eafc; border-radius: 6px; font-family: sans-serif;";
     filterPanel.innerHTML = `
         <div style="flex: 1; min-width: 240px;">
-            <label style="font-size: 11px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">🔍 Live Text Filter (Search Name, MC, Phone)</label>
+            <label style="font-size: 11px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">🔍 Live Text Filter</label>
             <input type="text" id="premiumLiveSearch" placeholder="Type to filter rows instantly..." style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
         </div>
         <div style="width: 180px;">
@@ -602,7 +557,11 @@ function generateCSVString(recordsData) {
 
 window.toggleHistoryDrawer = function() {
     let drawer = document.getElementById('scraperHistoryDrawer');
+    let followUpDrawer = document.getElementById('scraperFollowUpDrawer');
     if (!drawer) return;
+    
+    if(followUpDrawer) followUpDrawer.style.right = "-420px"; // Close follow-ups if open
+    
     if (drawer.style.right === "0px") { drawer.style.right = "-420px"; } else { drawer.style.right = "0px"; renderHistoryItems(); }
 };
 
@@ -648,13 +607,35 @@ window.loadHistorySheetToTable = async function(id) {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${record.remarks || ''}" class="remarks-input-field" oninput="syncRemarksData(${index}, this.value)" /></td>
-                <td class="peer-dropdown-cell">Syncing...</td>
+                <td><button onclick="addLeadToFollowUpList(${index})" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
-        updateAllPeerDropdowns();
         executePremiumUIPipeline(); 
         toggleHistoryDrawer(); 
     };
+};
+
+window.downloadHistoryCSV = function(id) {
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const req = store.get(id);
+    req.onsuccess = function() {
+        const item = req.result;
+        if (item && item.records.length > 0) {
+            triggerCSVDownload(item.records, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
+        }
+    };
+};
+
+window.deleteHistoryItem = function(id) {
+    if (confirm("Delete this sheet from history?")) {
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.delete(id);
+        tx.oncomplete = function() {
+            renderHistoryItems();
+        };
+    }
 };
 
 function renderHistoryItems() {
@@ -667,13 +648,17 @@ function renderHistoryItems() {
         let itemsHTML = "";
         data.forEach(item => {
             itemsHTML += `
-                <div style="background: #f8f9fa; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px;">
-                    <div style="font-size: 14px; font-weight: bold;">Range: ${item.range}</div>
-                    <div style="font-size: 11px;">${item.totalRecords} Active Records</div>
-                    <button onclick="loadHistorySheetToTable(${item.id})" style="background:#002d62; color:white; border:none; margin-top:5px; padding:4px 8px; cursor:pointer;">📂 Open</button>
+                <div style="background: #f8f9fa; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="font-size: 12px; margin-bottom: 6px;">Total Records: ${item.totalRecords}</div>
+                    <div style="display: flex; gap: 5px; margin-top: 8px;">
+                        <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">📂 Open</button>
+                        <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;"'}>📥 CSV</button>
+                        <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️ Delete</button>
+                    </div>
                 </div>`;
         });
-        document.getElementById('drawerHistoryList').innerHTML = itemsHTML || '<p>No history</p>';
+        document.getElementById('drawerHistoryList').innerHTML = itemsHTML || '<p style="color:#6c757d; font-size:13px; text-align:center;">No history records found.</p>';
     };
 }
 
@@ -754,7 +739,6 @@ window.startScraping = async function() {
 
             if (record.status !== "AUTHORIZED") continue;
 
-            // Fetch registration email
             let smsHtml = await fetchViaProxy(`https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`);
             if (smsHtml) {
                 let m = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
@@ -762,6 +746,7 @@ window.startScraping = async function() {
             }
 
             scrapedData.push(record);
+            let recordIndex = scrapedData.length - 1;
             updateRealTimeHistory(scrapedData, false);
 
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
@@ -778,11 +763,10 @@ window.startScraping = async function() {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
-                <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks..." oninput="syncDynamicRowRemarks(this)" /></td>
-                <td class="peer-dropdown-cell">Syncing...</td>
+                <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
+                <td><button onclick="addLeadToFollowUpList(${recordIndex})" class="premium-followup-btn">⭐ Follow</button></td>
             `;
             tableBody.appendChild(tr);
-            updateAllPeerDropdowns();
             executePremiumUIPipeline();
 
         } catch (err) {}
@@ -790,4 +774,21 @@ window.startScraping = async function() {
     }
     scraping = false;
     if(scrapedData.length > 0) updateRealTimeHistory(scrapedData, true);
+}
+
+function triggerCSVDownload(recordsData, filename) {
+    const csv = generateCSVString(recordsData);
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
+window.downloadCSV = function() {
+    if(scrapedData.length > 0) {
+        const start = document.getElementById('startMc').value;
+        const end = document.getElementById('endMc').value;
+        triggerCSVDownload(scrapedData, `SAFER_Data_${start}_to_${end}.csv`);
+    }
 }
