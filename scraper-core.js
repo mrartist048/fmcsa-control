@@ -115,12 +115,18 @@ function initializeAccessControl() {
     }
 
     if (!isAccessValid) {
-        document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
-        document.getElementById('status').style.background = "#f8d7da";
-        document.getElementById('status').style.color = "#721c24";
-        document.getElementById('status').style.borderLeft = "4px solid #d9534f";
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('startBtn').style.opacity = "0.5";
+        let statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
+            statusEl.style.background = "#f8d7da";
+            statusEl.style.color = "#721c24";
+            statusEl.style.borderLeft = "4px solid #d9534f";
+        }
+        let startBtn = document.getElementById('startBtn');
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.style.opacity = "0.5";
+        }
         alert("Your access has been revoked or expired. Contact admin for renewal.");
         throw new Error("Access Denied");
     }
@@ -261,6 +267,8 @@ function injectHistoryUIFramework() {
             .premium-pitch-btn:hover { background: #138496; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
+            .clickable-phone { color: #002d62; font-weight: bold; cursor: pointer; text-decoration: underline; }
+            .clickable-phone:hover { color: #17a2b8; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -345,6 +353,8 @@ function injectHistoryUIFramework() {
         document.body.appendChild(fDrawer);
     }
 
+    injectStateFilterBar();
+
     let tableHeader = document.querySelector('table.table thead tr, table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
@@ -363,6 +373,42 @@ function injectHistoryUIFramework() {
 
     injectEmailProposalPanel();
 }
+
+// ====== STATE FILTER BAR ======
+function injectStateFilterBar() {
+    let table = document.querySelector('table');
+    if (!table || document.getElementById('stateFilterWrapper')) return;
+
+    let filterDiv = document.createElement('div');
+    filterDiv.id = 'stateFilterWrapper';
+    filterDiv.style.cssText = "background: #e2eafc; padding: 10px 15px; margin: 10px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; align-items: center; gap: 10px;";
+    filterDiv.innerHTML = `
+        <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 Filter by State:</span>
+        <input type="text" id="stateFilterInput" placeholder="e.g. TX, CA, FL..." style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; width: 160px;" oninput="applyStateFilter()">
+        <button onclick="clearStateFilter()" style="background: #002d62; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Show All</button>
+    `;
+    table.parentNode.insertBefore(filterDiv, table);
+}
+
+window.applyStateFilter = function() {
+    let query = (document.getElementById('stateFilterInput')?.value || "").toUpperCase().trim();
+    let rows = document.querySelectorAll('#resultsTable tr');
+    rows.forEach(row => {
+        let addressCell = row.cells[6]?.textContent || "";
+        if (query === "") {
+            row.style.display = "";
+        } else {
+            let hasState = addressCell.toUpperCase().includes(query);
+            row.style.display = hasState ? "" : "none";
+        }
+    });
+};
+
+window.clearStateFilter = function() {
+    let input = document.getElementById('stateFilterInput');
+    if (input) input.value = "";
+    applyStateFilter();
+};
 
 // ====== EMAIL PROPOSAL TEMPLATE PANEL ======
 function injectEmailProposalPanel() {
@@ -426,6 +472,17 @@ window.copyEmailToClipboard = function(element, emailAddress) {
     });
 };
 
+window.copyPhoneToClipboard = function(element, phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return;
+    navigator.clipboard.writeText(phoneNum).then(() => {
+        let badge = document.createElement('span');
+        badge.className = 'premium-copy-badge';
+        badge.innerText = "Copied Phone!";
+        element.appendChild(badge);
+        setTimeout(() => badge.remove(), 1200);
+    });
+};
+
 function buildEmailCellMarkup(emailAddress, companyName) {
     if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
     let escapedName = companyName.replace(/'/g, "\\'");
@@ -435,6 +492,15 @@ function buildEmailCellMarkup(emailAddress, companyName) {
                 <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${emailAddress}</span>
                 <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📩 Pitch</a>
             </div>
+        </td>
+    `;
+}
+
+function buildPhoneCellMarkup(phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
+    return `
+        <td style="position: relative; vertical-align: middle;">
+            <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone" title="Click to Copy Phone">${phoneNum}</span>
         </td>
     `;
 }
@@ -677,6 +743,7 @@ window.loadHistorySheetToTable = async function(id) {
         for (let index = 0; index < scrapedData.length; index++) {
             let record = scrapedData[index];
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            let phoneCellHTML = buildPhoneCellMarkup(record.phone);
             
             let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
@@ -688,7 +755,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td>${record.name}</td>
                 <td>${record.entityType}</td>
                 <td><span class="badge badge-active">${record.status}</span></td>
-                <td>${record.phone}</td>
+                ${phoneCellHTML}
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
@@ -930,6 +997,7 @@ window.startScraping = async function() {
                 updateRealTimeHistory(scrapedData, false);
 
                 let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+                let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
 
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -937,15 +1005,17 @@ window.startScraping = async function() {
                     <td>${record.name}</td>
                     <td>${record.entityType}</td>
                     <td><span class="badge badge-active">${record.status}</span></td>
-                    <td>${record.phone}</td>
+                    ${phoneCellMarkup}
                     <td>${record.address}</td>
                     ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)"></textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${index || recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 </tr>`;
+
+                applyStateFilter();
             }
         } catch (e) { console.log(e); }
         await new Promise(r => setTimeout(r, 2000));
@@ -959,7 +1029,7 @@ window.startScraping = async function() {
 
     if (statusBox) {
         statusBox.style.padding = "15px";
-        statusBox.style.display = "block";
+        statusBox.style.display = "flex";
         statusBox.style.borderLeft = "5px solid #28a745";
         statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
