@@ -87,7 +87,7 @@ function injectNicknameProfileUI() {
     let panel = document.createElement('div');
     panel.id = 'scrNickProfilePanel';
     panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
-    panel.innerHTML = `👤 Active Dispatcher: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change Name]</a>`;
+    panel.innerHTML = `👤 Active Agent: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change Name]</a>`;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
