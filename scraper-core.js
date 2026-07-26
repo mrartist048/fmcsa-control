@@ -1,6 +1,6 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.gh/mrartist048/fmcsa-control@main/fav.png";
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
         link = document.createElement('link');
@@ -191,7 +191,6 @@ request.onsuccess = function(e) {
 };
 
 function injectHistoryUIFramework() {
-    // Inject global responsive layout stylesheet configuration overrides
     if (!document.getElementById('scrResponsiveLayoutTheme')) {
         let styleTag = document.createElement('style');
         styleTag.id = 'scrResponsiveLayoutTheme';
@@ -207,7 +206,6 @@ function injectHistoryUIFramework() {
         document.head.appendChild(styleTag);
     }
 
-    // Force wrap main table element structure if missing inside parent hierarchy
     let coreTable = document.querySelector('table');
     if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
         let wrapperDiv = document.createElement('div');
@@ -374,7 +372,7 @@ function buildSharingTextContent() {
 }
 
 window.executeGlobalSharing = async function(platform) {
-    if (scrapedData.length === 0) return alert("Kindly scan the data before proceeding.");
+    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
     
     const start = document.getElementById('startMc').value;
     const end = document.getElementById('endMc').value;
@@ -696,19 +694,40 @@ window.sendSupportAlert = function(channel) {
     toggleSupportChatbox();
 };
 
-// ====== HELPER MULTI-PROXY AUTO FETCH ENGINE ======
+// ====== DYNAMIC BACKUP AUTO-PROXIES BYPASS SYSTEM ======
 async function fetchViaProxy(targetUrl) {
-    let primaryProxy = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
-    let backupProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-    
+    const fetchOptions = {
+        method: 'GET',
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+        }
+    };
+
+    // 1st Attempt: Direct fetch (Works perfectly if Allow CORS extension is active)
     try {
-        let res = await fetch(primaryProxy);
-        if(!res.ok) throw new Error("Primary failed");
-        return await res.text();
-    } catch(err) {
-        console.log("Switching to backup CORS proxy...");
-        let resBackup = await fetch(backupProxy);
-        return await resBackup.text();
+        let directRes = await fetch(targetUrl, fetchOptions);
+        if (directRes.ok) return await directRes.text();
+    } catch (directErr) {
+        console.log("Direct fetch blocked by CORS, trying Proxy Cluster...");
+    }
+
+    // 2nd Attempt: Premium Proxy Cluster 1 (corsproxy.io)
+    let proxy1 = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+    try {
+        let res1 = await fetch(proxy1);
+        if (res1.ok) return await res1.text();
+    } catch (err1) {
+        console.log("Proxy Cluster 1 failed, trying Backup Cluster 2...");
+    }
+
+    // 3rd Attempt: Backup Proxy Cluster 2 (allorigins) with cache-buster
+    let proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}&_cb=${Date.now()}`;
+    try {
+        let res2 = await fetch(proxy2);
+        if (res2.ok) return await res2.text();
+    } catch (err2) {
+        throw new Error("All data streams are currently blocked by FMCSA server throttling.");
     }
 }
 
@@ -825,7 +844,7 @@ window.startScraping = async function() {
             const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
             const htmlText = await fetchViaProxy(snapshotUrl);
             
-            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
+            if (!htmlText || htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
                 continue;
             }
 
@@ -885,14 +904,16 @@ window.startScraping = async function() {
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsHtml = await fetchViaProxy(smsUrl);
-                    let smsEl = document.createElement('html');
-                    smsEl.innerHTML = smsHtml;
-                    let smsCells = smsEl.querySelectorAll('td, th, span, label');
-                    for (let j = 0; j < smsCells.length; j++) {
-                        let smsText = smsCells[j].textContent.trim();
-                        if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
-                            let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                            if (emailMatch) { record.email = emailMatch[0]; break; }
+                    if (smsHtml) {
+                        let smsEl = document.createElement('html');
+                        smsEl.innerHTML = smsHtml;
+                        let smsCells = smsEl.querySelectorAll('td, th, span, label');
+                        for (let j = 0; j < smsCells.length; j++) {
+                            let smsText = smsCells[j].textContent.trim();
+                            if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
+                                let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                                if (emailMatch) { record.email = emailMatch[0]; break; }
+                            }
                         }
                     }
                 } catch (smsErr) { console.log(smsErr); }
