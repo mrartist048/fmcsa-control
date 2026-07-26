@@ -327,14 +327,14 @@ function injectHistoryUIFramework() {
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
         historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
-        historyBtn.onclick = toggleHistoryDrawer;
+        historyBtn.onclick = (e) => { e.stopPropagation(); toggleHistoryDrawer(); };
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
 
         let followUpBtn = document.createElement('button');
         followUpBtn.id = 'openFollowUpDrawerBtn';
         followUpBtn.innerHTML = "📅 View Follow-Ups";
         followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
-        followUpBtn.onclick = toggleFollowUpDrawer;
+        followUpBtn.onclick = (e) => { e.stopPropagation(); toggleFollowUpDrawer(); };
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
@@ -372,6 +372,26 @@ function injectHistoryUIFramework() {
         `;
         document.body.appendChild(fDrawer);
     }
+
+    // Global Click Listener to close drawers when clicking outside
+    document.addEventListener('click', function(event) {
+        let hDrawer = document.getElementById('scraperHistoryDrawer');
+        let fDrawer = document.getElementById('scraperFollowUpDrawer');
+        let hBtn = document.getElementById('openHistoryBtn');
+        let fBtn = document.getElementById('openFollowUpDrawerBtn');
+
+        if (hDrawer && hDrawer.style.right === "0px") {
+            if (!hDrawer.contains(event.target) && (!hBtn || !hBtn.contains(event.target))) {
+                hDrawer.style.right = "-420px";
+            }
+        }
+
+        if (fDrawer && fDrawer.style.right === "0px") {
+            if (!fDrawer.contains(event.target) && (!fBtn || !fBtn.contains(event.target))) {
+                fDrawer.style.right = "-420px";
+            }
+        }
+    });
 
     injectAdvancedFilterBar();
 
