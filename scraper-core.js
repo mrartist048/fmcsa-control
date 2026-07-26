@@ -11,11 +11,12 @@
     link.href = faviconUrl;
 })();
 
-// ====== GLOBAL ACCESS CONTROL (FIREBASE REALTIME DATABASE) ======
+// ====== GLOBAL ACCESS CONTROL & SUBSCRIPTION MANAGEMENT ======
+// Aap yahan har user ki Max Laptops limit aur Expiry Date (YYYY-MM-DD) set kar sakte hain
 const allowedUsers = {
-    "dispatcher_lahore": 2,    // Global Max Laptops/Tabs Limit
-    "dispatcher_karachi": 0,   // Blocked
-    "dispatchloadify": 2,      
+    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   // Active till 26 August 2026
+    "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  // Already Blocked/Expired
+    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     // Active till 1st Sept 2026
 };
 
 // Auto-configured URL from your Firebase console link
@@ -69,10 +70,24 @@ function showPremiumNotification(message, duration = 4500) {
 // Function to safely execute security check after DOM and variables load completely
 function initializeAccessControl() {
     currentClient = window.scrClientID || "unknown";
-    userLimit = allowedUsers[currentClient] || 0;
+    
+    let isAccessValid = false;
+    let clientConfig = allowedUsers[currentClient];
 
-    // Check if user is allowed at all
-    if (userLimit === 0) {
+    if (clientConfig) {
+        userLimit = clientConfig.maxLaptops || 0;
+        
+        // System date format (YYYY-MM-DD) me nikalte hain comparison k liye
+        const todayStr = new Date().toISOString().split('T')[0]; 
+        
+        // Agar laptop limit 0 se bari hai aur aaj ki date expiry date se pehle ya barabar hai
+        if (userLimit > 0 && todayStr <= clientConfig.expires) {
+            isAccessValid = true;
+        }
+    }
+
+    // Check if user is allowed at all or expired
+    if (!isAccessValid) {
         document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
         document.getElementById('status').style.background = "#f8d7da";
         document.getElementById('status').style.color = "#721c24";
@@ -88,8 +103,8 @@ function initializeAccessControl() {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
 
-    // Success subscription message pop-up on start
-    showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Max Laptops: ${userLimit})`);
+    // Success subscription message pop-up on start (With Expiry Alert)
+    showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     // Start network sync loop immediately after validation
     checkGlobalSessions();
@@ -273,7 +288,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
-    // === UPGRADED DUAL SHARE POPUP INJECTOR ===
     if (startBtn && !document.getElementById('shareContainerPanel')) {
         let downloadBtn = document.getElementById('downloadBtn');
         if (downloadBtn) {
@@ -623,7 +637,6 @@ window.startScraping = async function() {
             }
 
             if (record.status !== "AUTHORIZED") {
-                
                 continue;
             }
 
