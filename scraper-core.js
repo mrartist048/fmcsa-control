@@ -282,12 +282,13 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Uniform Fully Clickable Phone Cell Styling */
-            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; }
-            .phone-clickable-cell:hover { background-color: #e2eafc !important; }
+            /* Uniform Dark-Themed Clickable Phone Cell Styling */
+            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; }
+            .phone-clickable-cell:hover { background-color: #001a3a !important; }
+            .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
             .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
             .phone-icon-span { font-size: 14px; line-height: 1; }
-            .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; }
+            .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -393,7 +394,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR WITH LIVE VISIBLE COUNT ======
+// ====== ADVANCED FILTER BAR WITH FIXED 0 COUNT ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -495,9 +496,11 @@ window.resetAdvancedFilters = function() {
 function updateVisibleRecordCount() {
     let rows = document.querySelectorAll('#resultsTable tr');
     let visibleCount = 0;
-    rows.forEach(r => {
-        if (r.style.display !== 'none') visibleCount++;
-    });
+    if (rows.length > 0) {
+        rows.forEach(r => {
+            if (r.style.display !== 'none') visibleCount++;
+        });
+    }
     let badge = document.getElementById('visibleRecordCountBadge');
     if (badge) badge.innerText = visibleCount;
 }
@@ -580,8 +583,8 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td>
-            <a href="tel:${phoneNum}" class="phone-clickable-cell" style="display: block; text-decoration: none;" title="Click to Call / Copy">
+        <td style="padding: 0 !important;">
+            <a href="tel:${phoneNum}" class="phone-clickable-cell" title="Click to Call / Copy">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
