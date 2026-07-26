@@ -32,7 +32,7 @@ function showPremiumNotification(message, isAlert = false, duration = 4500) {
     
     toast.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="background: ${isAlert ? '#dc3545' : '#28a745'}; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px ${isAlert ? '#dc3545' : '#28a745'}; animate: pulse 1s infinite;"></div>
+            <div style="background: ${isAlert ? '#dc3545' : '#28a745'}; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px ${isAlert ? '#dc3545' : '#28a745'};"></div>
             <span>${message}</span>
         </div>
     `;
@@ -371,7 +371,7 @@ request.onsuccess = function(e) {
     injectHistoryUIFramework(); 
 };
 
-// CONSTANT HEADINGS CONFIGURATION
+// DEFAULT TEMPLATE HEADINGS
 const DEFAULT_REMARKS_TEMPLATE = 
     "Truck Type:\n" +
     "Length:\n" +
@@ -390,7 +390,7 @@ function injectHistoryUIFramework() {
             table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
             
-            /* SMART EXPANDING LOCKED COLUMN TEXTAREA STYLING */
+            /* STABLE EXPANDING REMARKS TEXTAREA */
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; }
             .remarks-input-field { 
                 width: 100% !important; 
@@ -409,7 +409,7 @@ function injectHistoryUIFramework() {
                 transition: height 0.25s ease-in-out, border-color 0.2s, background 0.2s, box-shadow 0.2s; 
             }
             .remarks-input-field:focus { 
-                height: 115px !important; 
+                height: 120px !important; 
                 border-color: #002d62 !important; 
                 background: #ffffff !important; 
                 outline: none !important; 
@@ -674,7 +674,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== SMART FOCUS & AUTO-CLEAN UP ENGINE ======
+// ====== STABLE REMARKS HANDLER ======
 window.remarksFocus = function(index, textarea) {
     if (!textarea.value || textarea.value.trim() === "") {
         textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -708,30 +708,9 @@ window.remarksBlur = function(index, textarea) {
     }
 };
 
-window.handleLockedRemarksInput = function(index, textarea) {
-    let currentVal = textarea.value;
-    const linesCheck = ["Truck Type:", "Length:", "Accessories:", "Load:", "Zip Code:", "Summary:"];
-    let lines = currentVal.split('\n');
-    
-    while(lines.length < 6) { lines.push(""); }
-
-    for(let i = 0; i < 6; i++) {
-        if (!lines[i].startsWith(linesCheck[i])) {
-            let actualData = lines[i].replace(/^(Truck Type|Length|Accessories|Load|Zip Code|Summary):\s*/i, "");
-            lines[i] = linesCheck[i] + " " + actualData;
-        }
-    }
-
-    let formattedText = lines.slice(0,6).join('\n');
-    
-    if (textarea.value !== formattedText) {
-        let cursorStart = textarea.selectionStart;
-        textarea.value = formattedText;
-        textarea.setSelectionRange(cursorStart, cursorStart);
-    }
-
+window.syncRemarksData = function(index, textarea) {
     if (scrapedData[index]) {
-        scrapedData[index].remarks = formattedText;
+        scrapedData[index].remarks = textarea.value;
         updateRealTimeHistory(scrapedData, false);
     }
 };
@@ -809,7 +788,7 @@ window.loadHistorySheetToTable = async function(id) {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="handleLockedRemarksInput(${index}, this)">${activeRemarksValue}</textarea>
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
@@ -882,24 +861,23 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ROBUST DUAL-PROXY FETCH ENGINE TO PREVENT FETCH LOCKUPS
+// BULLETPROOF MULTI-PROXY FETCH ENGINE
 async function fetchViaProxy(targetUrl) {
-    try {
-        let res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`);
-        if (res.ok) {
-            let text = await res.text();
-            if (text && text.includes("USDOT Number:")) return text;
-        }
-    } catch (e) {}
+    const proxies = [
+        `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+        `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+    ];
 
-    try {
-        let res2 = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
-        if (res2.ok) {
-            let text2 = await res2.text();
-            if (text2) return text2;
-        }
-    } catch (e) {}
-
+    for (let proxyUrl of proxies) {
+        try {
+            let res = await fetch(proxyUrl);
+            if (res.ok) {
+                let text = await res.text();
+                if (text && text.length > 200) return text;
+            }
+        } catch (e) {}
+    }
     return "";
 }
 
@@ -972,7 +950,7 @@ window.startScraping = async function() {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="handleLockedRemarksInput(${recordIndex}, this)"></textarea>
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)"></textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             `;
@@ -980,7 +958,7 @@ window.startScraping = async function() {
             executePremiumUIPipeline();
 
         } catch (err) {}
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 1000));
     }
     scraping = false;
     if(scrapedData.length > 0) updateRealTimeHistory(scrapedData, true);
