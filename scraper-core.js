@@ -171,7 +171,7 @@ async function checkGlobalSessions() {
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: data[key].timestamp, nickname: cleanData[key].nickname }));
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp, nickname: cleanData[key].nickname }));
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
@@ -394,7 +394,7 @@ function injectHistoryUIFramework() {
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; }
             .remarks-input-field { 
                 width: 100% !important; 
-                height: 38px !important; /* COMPACT DEFAULT LOOK */
+                height: 38px !important; 
                 border: 1px solid #b6ccfe !important; 
                 border-radius: 6px !important; 
                 padding: 6px 10px !important; 
@@ -409,7 +409,7 @@ function injectHistoryUIFramework() {
                 transition: height 0.25s ease-in-out, border-color 0.2s, background 0.2s, box-shadow 0.2s; 
             }
             .remarks-input-field:focus { 
-                height: 115px !important; /* EXPANDS ON CLICK */
+                height: 115px !important; 
                 border-color: #002d62 !important; 
                 background: #ffffff !important; 
                 outline: none !important; 
@@ -685,10 +685,9 @@ window.remarksFocus = function(index, textarea) {
 };
 
 window.remarksBlur = function(index, textarea) {
-    let currentVal = textarea.value.trim();
-    let hasData = false;
     let lines = textarea.value.split('\n');
     const linesCheck = ["Truck Type:", "Length:", "Accessories:", "Load:", "Zip Code:", "Summary:"];
+    let hasData = false;
     
     for(let i = 0; i < 6; i++) {
         if (lines[i]) {
@@ -883,13 +882,25 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
+// ROBUST DUAL-PROXY FETCH ENGINE TO PREVENT FETCH LOCKUPS
 async function fetchViaProxy(targetUrl) {
     try {
         let res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`);
-        if (res.ok) return await res.text();
+        if (res.ok) {
+            let text = await res.text();
+            if (text && text.includes("USDOT Number:")) return text;
+        }
     } catch (e) {}
-    let res2 = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
-    return await res2.text();
+
+    try {
+        let res2 = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
+        if (res2.ok) {
+            let text2 = await res2.text();
+            if (text2) return text2;
+        }
+    } catch (e) {}
+
+    return "";
 }
 
 let scraping = false; let scrapedData = [];
@@ -969,7 +980,7 @@ window.startScraping = async function() {
             executePremiumUIPipeline();
 
         } catch (err) {}
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 1500));
     }
     scraping = false;
     if(scrapedData.length > 0) updateRealTimeHistory(scrapedData, true);
