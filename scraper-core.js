@@ -22,7 +22,8 @@ const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com
 
 let currentClient = "unknown";
 let userLimit = 0;
-let mySessionKey = ""; // Tracks current laptop's private sync key
+let mySessionKey = ""; 
+let dispatcherNickname = ""; // Stores user's real custom name
 
 function showPremiumNotification(message, isAlert = false, duration = 4500) {
     let toast = document.createElement('div');
@@ -66,6 +67,42 @@ function showPremiumNotification(message, isAlert = false, duration = 4500) {
     }, duration);
 }
 
+function setupDispatcherIdentity() {
+    dispatcherNickname = localStorage.getItem(`scr_nick_${currentClient}`) || "";
+    if (!dispatcherNickname) {
+        let inputName = prompt("Welcome! Please enter your name for team synchronization (e.g., Nauman, Ali, Bilal):");
+        if (inputName && inputName.trim() !== "") {
+            dispatcherNickname = inputName.trim();
+        } else {
+            dispatcherNickname = "User_" + Math.floor(100 + Math.random() * 900);
+        }
+        localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
+    }
+    injectNicknameProfileUI();
+}
+
+function injectNicknameProfileUI() {
+    if (document.getElementById('scrNickProfilePanel')) return;
+    let heading = document.querySelector('h1, h2, .heading') || document.body;
+    let panel = document.createElement('div');
+    panel.id = 'scrNickProfilePanel';
+    panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
+    panel.innerHTML = `👤 Active Dispatcher: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change Name]</a>`;
+    heading.parentNode.insertBefore(panel, heading.nextSibling);
+}
+
+window.changeDispatcherName = function() {
+    let oldName = localStorage.getItem(`scr_nick_${currentClient}`) || "";
+    let newName = prompt("Enter your new display name:", oldName);
+    if (newName && newName.trim() !== "") {
+        dispatcherNickname = newName.trim();
+        localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
+        let label = document.getElementById('scrDispCurrentName');
+        if (label) label.innerText = dispatcherNickname;
+        checkGlobalSessions(); // Force metadata update on server
+    }
+};
+
 function initializeAccessControl() {
     currentClient = window.scrClientID || "unknown";
     
@@ -92,6 +129,8 @@ function initializeAccessControl() {
         throw new Error("Access Denied");
     }
 
+    setupDispatcherIdentity();
+
     if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
@@ -99,7 +138,6 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions().then(() => {
-        // Start listening for incoming leads pushed by team members
         listenForIncomingLeads();
     });
     
@@ -136,7 +174,7 @@ async function checkGlobalSessions() {
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp }));
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: data[key].timestamp, nickname: data[key].nickname }));
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
@@ -144,8 +182,7 @@ async function checkGlobalSessions() {
             document.body.innerHTML = `
                 <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
                     <h1 style="color:#dc3545; font-size:30px;">⚠️ Global License Limit Exceeded</h1>
-                    <p style="font-size:16px; color:#333;">Your account is limited to a maximum of <b>${userLimit}</b> active Chrome instances or laptops.</p>
-                    <p style="color:#6c757d;">Please close any open Chrome windows or tabs running on another laptop before continuing.</p>
+                    <p style="font-size:16px; color:#333;">Your account is limited to a maximum of <b>${userLimit}</b> active instances.</p>
                     <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
                 </div>
             `;
@@ -154,14 +191,14 @@ async function checkGlobalSessions() {
         
         if (currentTabRecord) {
             mySessionKey = currentTabRecord.dbKey;
-            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}/timestamp.json`, {
-                method: 'PUT',
-                body: JSON.stringify(now)
+            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ timestamp: now, nickname: dispatcherNickname })
             });
         } else {
             let postRes = await fetch(url, {
                 method: 'POST',
-                body: JSON.stringify({ id: window.name, timestamp: now })
+                body: JSON.stringify({ id: window.name, timestamp: now, nickname: dispatcherNickname })
             });
             let postData = await postRes.json();
             mySessionKey = postData.name;
@@ -184,7 +221,8 @@ async function fetchActivePeerLaptops() {
         const data = await res.json() || {};
         return Object.keys(data).map(key => ({
             sessionKey: key,
-            id: data[key].id
+            id: data[key].id,
+            nickname: data[key].nickname || "Dispatcher"
         })).filter(peer => peer.id !== window.name);
     } catch (e) {
         return [];
@@ -201,20 +239,18 @@ window.shareLeadWithPeerLaptop = async function(index, selectElement) {
     selectElement.disabled = true;
     
     try {
-        let senderNickname = window.name.split('_').pop();
         let payload = {
-            sender: senderNickname,
+            sender: dispatcherNickname,
             timestamp: Date.now(),
             record: record
         };
 
-        // Push lead into target laptop's message queue node inside Firebase Realtime DB
         await fetch(`${FIREBASE_DB_URL}transfers/${currentClient}/${targetSessionKey}.json`, {
             method: 'PUT',
             body: JSON.stringify(payload)
         });
         
-        alert("Lead transferred successfully to your team member's dashboard!");
+        alert(`Lead transferred successfully to ${selectElement.options[selectElement.selectedIndex].text}!`);
     } catch (err) {
         alert("Transfer failed. Please check network connectivity.");
     } finally {
@@ -233,19 +269,16 @@ function listenForIncomingLeads() {
             const data = await res.json();
             
             if (data && data.record) {
-                // Delete message node instantly right after acknowledgment to clear queue
                 await fetch(url, { method: 'DELETE' });
                 
                 let incomingRecord = data.record;
-                incomingRecord.remarks = `[From Laptop ${data.sender}] ` + (incomingRecord.remarks || "");
+                incomingRecord.remarks = `[From ${data.sender}] ` + (incomingRecord.remarks || "");
                 
-                // Avoid injecting exact duplicates
                 if (!scrapedData.some(r => r.mc === incomingRecord.mc)) {
-                    scrapedData.unshift(incomingRecord); // Prepend to current volatile data array
+                    scrapedData.unshift(incomingRecord); 
                     
-                    showPremiumNotification(`📥 Incoming Lead! Laptop-${data.sender} sent you MC ${incomingRecord.mc}`, true, 6000);
+                    showPremiumNotification(`📥 Incoming Lead! ${data.sender} sent you MC ${incomingRecord.mc}`, true, 6000);
                     
-                    // Live interface raw updates insertion
                     const tableBody = document.getElementById('resultsTable');
                     if (tableBody) {
                         let recordIndex = scrapedData.length - 1; 
@@ -287,17 +320,16 @@ function listenForIncomingLeads() {
 async function buildPeerSelectionOptionsMarkup(index) {
     let peers = await fetchActivePeerLaptops();
     if (peers.length === 0) {
-        return `<span style="color: #6c757d; font-size: 11px; font-style: italic;">No peers online</span>`;
+        return `<span style="color: #6c757d; font-size: 11px; font-style: italic;">No dispatchers online</span>`;
     }
     
-    let options = `<option value="" selected disabled>Select Laptop</option>`;
+    let options = `<option value="" selected disabled>Send to...</option>`;
     peers.forEach(p => {
-        let nick = p.id.split('_').pop();
-        options += `<option value="${p.sessionKey}">💻 Laptop ${nick}</option>`;
+        options += `<option value="${p.sessionKey}">👤 ${p.nickname}</option>`;
     });
 
     return `
-        <select onchange="shareLeadWithPeerLaptop(${index}, this)" style="padding: 4px; font-size: 11px; font-weight: bold; border: 1px solid #b6ccfe; border-radius: 4px; background: #fff; max-width: 110px;">
+        <select onchange="shareLeadWithPeerLaptop(${index}, this)" style="padding: 4px; font-size: 11px; font-weight: bold; border: 1px solid #b6ccfe; border-radius: 4px; background: #fff; max-width: 120px;">
             ${options}
         </select>
     `;
@@ -552,7 +584,7 @@ function injectEmailProposalPanel() {
     if (!filterWrapper || document.getElementById('premiumProposalWrapper')) return;
 
     let savedSubject = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal - Special Offer";
-    let savedBody = localStorage.getItem(`scr_body_${currentClient}`) || "Hello,\n\nWe found your company profile via FMCSA. We are offering professional truck dispatching services with premium load boards access at a 5% flat rate.\n\nLet us know if you have empty trucks.\n\nBest Regards,\nDispatch Team";
+    let savedBody = localStorage.getItem(`scr_body_${currentClient}`) || "Hello,\n\nWe found your company profile via FMCSA. We are offering professional truck dispatching services at a 5% flat rate.\n\nBest Regards,\nDispatch Team";
 
     let proposalPanel = document.createElement('div');
     proposalPanel.id = 'premiumProposalWrapper';
@@ -669,7 +701,7 @@ window.copyEmailToClipboard = function(element, emailAddress) {
 
         setTimeout(() => { badge.remove(); }, 1200);
     }).catch(err => {
-        console.error("Failed to copy token details", err);
+        console.error("Failed to copy details", err);
     });
 };
 
@@ -733,7 +765,6 @@ window.executeGlobalSharing = async function(platform) {
                 text: textHeadline
             });
         } catch (err) {
-            console.log("Native sharing failed, switching to text method.", err);
             fallbackTextShare(platform, textHeadline);
         }
     } else {
@@ -748,7 +779,6 @@ function fallbackTextShare(platform, basicText) {
         let curRemStr = scrapedData[i].remarks ? ` | Remarks: ${scrapedData[i].remarks}` : '';
         fullText += `- MC: ${scrapedData[i].mc} | Phone: ${scrapedData[i].phone}${curRemStr}\n`;
     }
-    fullText += `\nFile share format issue, please download report directly.`;
     
     const encoded = encodeURIComponent(fullText);
     if (platform === 'whatsapp') {
@@ -997,10 +1027,10 @@ function injectLiveSupportSystem() {
             <span onclick="toggleSupportChatbox()" style="cursor: pointer; font-size: 18px;">&times;</span>
         </div>
         <div style="padding: 12px; background: #fdfdfd; font-size: 12px; color: #555; border-bottom: 1px solid #eee;">
-            Assalam-o-Alaikum! Aapko tool me koi b help chahiye ya licence renewal krwana ho, niche message likh kr send krein.
+            Assalam-o-Alaikum! Message likh kr send krein.
         </div>
         <div style="padding: 15px;">
-            <textarea id="scrSupportMsgInput" placeholder="Apna masla ya message yahan type krein..." style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: sans-serif; resize: none; box-sizing: border-box;"></textarea>
+            <textarea id="scrSupportMsgInput" placeholder="Apna masla yahan type krein..." style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: sans-serif; resize: none; box-sizing: border-box;"></textarea>
             <div style="display: flex; gap: 8px; margin-top: 10px;">
                 <button onclick="sendSupportAlert('whatsapp')" style="flex: 1; background: #25D366; color: white; border: none; padding: 8px 0; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">💬 WhatsApp</button>
                 <button onclick="sendSupportAlert('email')" style="flex: 1; background: #ea4335; color: white; border: none; padding: 8px 0; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">📧 Email Send</button>
@@ -1023,7 +1053,7 @@ window.sendSupportAlert = function(channel) {
     const userMsg = textInput.value.trim();
     const cleanClient = window.scrClientID || "unknown_user";
     
-    const finalFormattedText = `*★ FMCSA Scraper Support Alert ★*\n\n*From User:* ${cleanClient}\n*Tab ID:* ${window.name}\n\n*Message:* ${userMsg}`;
+    const finalFormattedText = `*★ FMCSA Scraper Support Alert ★*\n\n*From User:* ${cleanClient}\n*Name:* ${dispatcherNickname}\n\n*Message:* ${userMsg}`;
 
     if (channel === 'whatsapp') {
         const targetPhone = "923037654849"; 
@@ -1032,7 +1062,7 @@ window.sendSupportAlert = function(channel) {
     } else {
         const targetEmail = "admin@example.com"; 
         const emailSubject = `Scraper Support Ticket from [${cleanClient}]`;
-        const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(finalFormattedText.replace(/\*/g, ''))}`;
+        const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(finalFormattedText)}`;
         window.open(mailtoUrl, '_blank');
     }
     
@@ -1045,32 +1075,27 @@ async function fetchViaProxy(targetUrl) {
     const fetchOptions = {
         method: 'GET',
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
     };
 
     try {
         let directRes = await fetch(targetUrl, fetchOptions);
         if (directRes.ok) return await directRes.text();
-    } catch (directErr) {
-        console.log("Direct fetch blocked by CORS, trying Proxy Cluster...");
-    }
+    } catch (e) {}
 
     let proxy1 = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
     try {
         let res1 = await fetch(proxy1);
         if (res1.ok) return await res1.text();
-    } catch (err1) {
-        console.log("Proxy Cluster 1 failed, trying Backup Cluster 2...");
-    }
+    } catch (err1) {}
 
     let proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}&_cb=${Date.now()}`;
     try {
         let res2 = await fetch(proxy2);
         if (res2.ok) return await res2.text();
     } catch (err2) {
-        throw new Error("All data streams are currently blocked by FMCSA server throttling.");
+        throw new Error("FMCSA server throttling active.");
     }
 }
 
@@ -1082,7 +1107,6 @@ window.stopScraping = function() {
     if (statusBox) {
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
-        statusBox.style.padding = "10px 15px";
         statusBox.innerText = "Stopping..."; 
     }
 }
@@ -1113,15 +1137,9 @@ window.startScraping = async function() {
     let statusBox = document.getElementById('status');
     if (statusBox) {
         statusBox.style.display = "flex";
-        statusBox.style.flexDirection = "row"; 
-        statusBox.style.alignItems = "center";
-        statusBox.style.justifyContent = "space-between"; 
-        statusBox.style.padding = "10px 15px"; 
         statusBox.style.background = "#f8f9fa"; 
         statusBox.style.color = "#333";
-        statusBox.style.border = "1px solid #e9ecef";
         statusBox.style.borderLeft = "5px solid #002d62";
-        statusBox.style.borderRadius = "4px";
     }
 
     if (db) {
@@ -1148,31 +1166,16 @@ window.startScraping = async function() {
         if (!scraping) break;
         
         totalProcessed++;
-        if (startTime === null) {
-            startTime = Date.now(); 
-        }
+        if (startTime === null) startTime = Date.now(); 
 
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
-        let elapsedSeconds = (Date.now() - startTime) / 1000;
-        let avgTimePerMC = elapsedSeconds / totalProcessed;
-        let remainingMCs = totalToScan - totalProcessed;
-        let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
-
-        let mins = Math.floor(estimatedRemainingSeconds / 60);
-        let secs = Math.floor(estimatedRemainingSeconds % 60);
-
-        let timeString = (totalProcessed < 3) ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
         if (statusBox) {
             statusBox.innerHTML = `
-                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 14px; font-weight: bold; color: #333;">Scanning MC <b>${mc}</b>...</div>
-                    <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
-                </div>
-                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
-                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                <div>Scanning MC <b>${mc}</b>...</div>
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center;">
+                    <span style="position: relative; font-size: 11px; font-weight: bold;">${percentage}%</span>
                 </div>
             `;
         }
@@ -1220,9 +1223,7 @@ window.startScraping = async function() {
                 }
             }
 
-            if (record.status !== "AUTHORIZED") {
-                continue;
-            }
+            if (record.status !== "AUTHORIZED") continue;
 
             if (record.usdot !== 'N/A' && scraping) {
                 try {
@@ -1240,7 +1241,7 @@ window.startScraping = async function() {
                             }
                         }
                     }
-                } catch (smsErr) { console.log(smsErr); }
+                } catch (smsErr) {}
 
                 scrapedData.push(record);
                 let recordIndex = scrapedData.length - 1;
@@ -1260,13 +1261,13 @@ window.startScraping = async function() {
                     <td>${record.address}</td> 
                     ${emailCellHTML}
                     <td>${record.powerUnits}</td>
-                    <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
+                    <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
                     <td>${peerOptionsHTML}</td>
                 </tr>`;
                 
                 executePremiumUIPipeline(); 
             }
-        } catch (e) { console.log(e); }
+        } catch (e) {}
         await new Promise(r => setTimeout(r, 2000));
     }
     
@@ -1276,21 +1277,13 @@ window.startScraping = async function() {
     document.getElementById('stopBtn').style.display = 'none';
     
     if (statusBox) {
-        statusBox.style.padding = "15px";
-        statusBox.style.display = "block";
-        statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
+        statusBox.innerHTML = `<strong style="color: #28a745;">Done! Found ${scrapedData.length} records.</strong>`;
     }
     
     if(scrapedData.length > 0) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
         if(document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'inline-block';
         updateRealTimeHistory(scrapedData, true);
-    } else {
-        if(currentHistoryId !== null) {
-            const tx = db.transaction("history", "readwrite");
-            tx.objectStore("history").delete(currentHistoryId);
-        }
     }
     executePremiumUIPipeline();
 }
@@ -1299,6 +1292,6 @@ window.downloadCSV = function() {
     if(scrapedData.length > 0) {
         const start = document.getElementById('startMc').value;
         const end = document.getElementById('endMc').value;
-        triggerCSVDownload(scrapedData, `SAFER_Clean_Data_${start}_to_${end}.csv`);
+        triggerCSVDownload(scrapedData, `SAFER_Data_${start}_to_${end}.csv`);
     }
 }
