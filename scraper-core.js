@@ -265,12 +265,14 @@ function injectHistoryUIFramework() {
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
-            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #1e7e34; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
+            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #1e7e34; margin-left: 6px; transition: background 0.2s; vertical-align: middle; }
             .premium-call-btn:hover { background: #1e7e34; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
-            .clickable-phone-cell { color: #002d62; font-weight: bold; cursor: pointer; }
-            .clickable-phone-cell:hover { color: #17a2b8; }
+            .phone-cell-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; padding: 4px; border-radius: 4px; transition: background 0.2s; }
+            .phone-cell-wrapper:hover { background: #e2eafc; }
+            .clickable-phone-text { color: #002d62; font-weight: bold; cursor: pointer; font-size: 13px; }
+            .clickable-phone-text:hover { color: #17a2b8; text-decoration: underline; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -551,9 +553,9 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
     return `
         <td style="position: relative; vertical-align: middle;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone-cell" title="Click to Copy Phone">${phoneNum}</span>
+            <div class="phone-cell-wrapper">
                 <a href="tel:${phoneNum}" class="premium-call-btn" title="Direct Call">📞 Call</a>
+                <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone-text" title="Click to Copy Phone">${phoneNum}</span>
             </div>
         </td>
     `;
