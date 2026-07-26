@@ -24,6 +24,48 @@ const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com
 let currentClient = "unknown";
 let userLimit = 0;
 
+// Dynamic UI Notification Toast System Creator
+function showPremiumNotification(message, duration = 4500) {
+    let toast = document.createElement('div');
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="background: #28a745; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px #28a745; animate: pulse 1s infinite;"></div>
+            <span>${message}</span>
+        </div>
+    `;
+    toast.style.cssText = `
+        position: fixed;
+        top: -100px;
+        right: 20px;
+        background: #002d62;
+        color: #ffffff;
+        padding: 14px 22px;
+        border-radius: 6px;
+        font-family: sans-serif;
+        font-size: 13px;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+        border-left: 5px solid #17a2b8;
+        z-index: 1000000;
+        transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+        opacity: 0;
+    `;
+    document.body.appendChild(toast);
+    
+    // Trigger Slide Down
+    setTimeout(() => {
+        toast.style.top = "20px";
+        toast.style.opacity = "1";
+    }, 100);
+
+    // Trigger Fade Out & Remove
+    setTimeout(() => {
+        toast.style.top = "-100px";
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 400);
+    }, duration);
+}
+
 // Function to safely execute security check after DOM and variables load completely
 function initializeAccessControl() {
     currentClient = window.scrClientID || "unknown";
@@ -45,6 +87,9 @@ function initializeAccessControl() {
     if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
+
+    // Success subscription message pop-up on start
+    showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Max Laptops: ${userLimit})`);
 
     // Start network sync loop immediately after validation
     checkGlobalSessions();
@@ -578,6 +623,7 @@ window.startScraping = async function() {
             }
 
             if (record.status !== "AUTHORIZED") {
+                
                 continue;
             }
 
