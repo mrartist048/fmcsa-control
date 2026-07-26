@@ -390,11 +390,11 @@ function injectHistoryUIFramework() {
             table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
             
-            /* LOCKED COLUMN TEXTAREA STYLING */
+            /* SMART EXPANDING LOCKED COLUMN TEXTAREA STYLING */
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; }
             .remarks-input-field { 
                 width: 100% !important; 
-                height: 115px !important;
+                height: 38px !important; /* COMPACT DEFAULT LOOK */
                 border: 1px solid #b6ccfe !important; 
                 border-radius: 6px !important; 
                 padding: 6px 10px !important; 
@@ -405,12 +405,15 @@ function injectHistoryUIFramework() {
                 background: #fafafa !important; 
                 resize: none !important;
                 font-family: monospace !important;
-                transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; 
+                overflow: hidden !important;
+                transition: height 0.25s ease-in-out, border-color 0.2s, background 0.2s, box-shadow 0.2s; 
             }
             .remarks-input-field:focus { 
+                height: 115px !important; /* EXPANDS ON CLICK */
                 border-color: #002d62 !important; 
                 background: #ffffff !important; 
                 outline: none !important; 
+                overflow-y: auto !important;
                 box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
             }
 
@@ -671,28 +674,48 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== SMART HEADINGS PROTECTOR ENGINE LOGIC ======
-window.handleLockedRemarksInput = function(index, textarea) {
-    let currentVal = textarea.value;
-    
-    // Core structure check list
-    const linesCheck = [
-        "Truck Type:",
-        "Length:",
-        "Accessories:",
-        "Load:",
-        "Zip Code:",
-        "Summary:"
-    ];
+// ====== SMART FOCUS & AUTO-CLEAN UP ENGINE ======
+window.remarksFocus = function(index, textarea) {
+    if (!textarea.value || textarea.value.trim() === "") {
+        textarea.value = DEFAULT_REMARKS_TEMPLATE;
+        if (scrapedData[index]) {
+            scrapedData[index].remarks = DEFAULT_REMARKS_TEMPLATE;
+        }
+    }
+};
 
-    let lines = currentVal.split('\n');
+window.remarksBlur = function(index, textarea) {
+    let currentVal = textarea.value.trim();
+    let hasData = false;
+    let lines = textarea.value.split('\n');
+    const linesCheck = ["Truck Type:", "Length:", "Accessories:", "Load:", "Zip Code:", "Summary:"];
     
-    // Automatically pad lines if dispatcher clears or ruins the spacing layout
-    while(lines.length < 6) {
-        lines.push("");
+    for(let i = 0; i < 6; i++) {
+        if (lines[i]) {
+            let data = lines[i].replace(linesCheck[i], "").trim();
+            if (data !== "") {
+                hasData = true;
+                break;
+            }
+        }
     }
 
-    // Forces headings back into place if changed/deleted
+    if (!hasData) {
+        textarea.value = "";
+        if (scrapedData[index]) {
+            scrapedData[index].remarks = "";
+            updateRealTimeHistory(scrapedData, false);
+        }
+    }
+};
+
+window.handleLockedRemarksInput = function(index, textarea) {
+    let currentVal = textarea.value;
+    const linesCheck = ["Truck Type:", "Length:", "Accessories:", "Load:", "Zip Code:", "Summary:"];
+    let lines = currentVal.split('\n');
+    
+    while(lines.length < 6) { lines.push(""); }
+
     for(let i = 0; i < 6; i++) {
         if (!lines[i].startsWith(linesCheck[i])) {
             let actualData = lines[i].replace(/^(Truck Type|Length|Accessories|Load|Zip Code|Summary):\s*/i, "");
@@ -700,7 +723,6 @@ window.handleLockedRemarksInput = function(index, textarea) {
         }
     }
 
-    // Keep only 6 formatted fields structured
     let formattedText = lines.slice(0,6).join('\n');
     
     if (textarea.value !== formattedText) {
@@ -709,7 +731,6 @@ window.handleLockedRemarksInput = function(index, textarea) {
         textarea.setSelectionRange(cursorStart, cursorStart);
     }
 
-    // Synchronize to production database tracker
     if (scrapedData[index]) {
         scrapedData[index].remarks = formattedText;
         updateRealTimeHistory(scrapedData, false);
@@ -719,8 +740,7 @@ window.handleLockedRemarksInput = function(index, textarea) {
 function generateCSVString(recordsData) {
     let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n"; 
     recordsData.forEach(r => { 
-        // Handles cell newline serialization carefully for CSV formats
-        let safeRemarks = r.remarks || DEFAULT_REMARKS_TEMPLATE;
+        let safeRemarks = r.remarks || "";
         csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone || 'N/A'}","${r.address}","${r.email}","${r.powerUnits}","${safeRemarks.replace(/"/g, '""')}"\n`; 
     });
     return csv;
@@ -777,7 +797,7 @@ window.loadHistorySheetToTable = async function(id) {
             let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             
-            let activeRemarksValue = record.remarks || DEFAULT_REMARKS_TEMPLATE;
+            let activeRemarksValue = record.remarks || "";
 
             tableBody.innerHTML += `<tr ${rowStyleHTML}>
                 <td><b>${record.mc}</b></td>
@@ -790,7 +810,7 @@ window.loadHistorySheetToTable = async function(id) {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" oninput="handleLockedRemarksInput(${index}, this)">${activeRemarksValue}</textarea>
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="handleLockedRemarksInput(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
@@ -901,7 +921,7 @@ window.startScraping = async function() {
             const htmlText = await fetchViaProxy(`https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`);
             if (!htmlText || !htmlText.includes("USDOT Number:")) continue;
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: DEFAULT_REMARKS_TEMPLATE };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
             let el = document.createElement('html'); el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
             
@@ -941,7 +961,7 @@ window.startScraping = async function() {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" oninput="handleLockedRemarksInput(${recordIndex}, this)">${DEFAULT_REMARKS_TEMPLATE}</textarea>
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="handleLockedRemarksInput(${recordIndex}, this)"></textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             `;
