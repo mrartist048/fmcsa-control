@@ -210,8 +210,8 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
 
-// ====== CORE FOLLOW-UP ENGINE ======
-window.addLeadToFollowUpList = function(index) {
+// ====== CORE FOLLOW-UP ENGINE WITH LIVE ROW COLOR CHANGE ======
+window.addLeadToFollowUpList = function(index, buttonElement) {
     let record = scrapedData[index];
     if (!record) return;
 
@@ -226,6 +226,13 @@ window.addLeadToFollowUpList = function(index) {
     localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
     
     showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, false, 3000);
+    
+    // Dynamically change row color to soft green upon insertion
+    let row = buttonElement.closest('tr');
+    if (row) {
+        row.style.background = "#d4edda";
+    }
+
     if (document.getElementById('scraperFollowUpDrawer').style.right === "0px") renderFollowUpItems();
 };
 
@@ -258,6 +265,15 @@ window.deleteFollowUpItem = function(mcNumber) {
         followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
         localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
         renderFollowUpItems();
+        
+        // Find and reset live matching active table rows back to plain design if matched
+        let tableRows = document.querySelectorAll('#resultsTable tr');
+        tableRows.forEach(row => {
+            let cellMc = parseInt(row.cells[0]?.textContent);
+            if (cellMc === mcNumber) {
+                row.style.background = "";
+            }
+        });
     }
 };
 
@@ -622,12 +638,18 @@ window.loadHistorySheetToTable = async function(id) {
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
         
+        let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+
         for (let index = 0; index < scrapedData.length; index++) {
             let record = scrapedData[index];
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            
+            // Check if this carrier already exists in follow-ups database
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
 
-            tableBody.innerHTML += `<tr>
+            tableBody.innerHTML += `<tr ${rowStyleHTML}>
                 <td><b>${record.mc}</b></td>
                 <td>${record.usdot}</td>
                 <td>${record.name}</td>
@@ -638,7 +660,7 @@ window.loadHistorySheetToTable = async function(id) {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${record.remarks || ''}" class="remarks-input-field" oninput="syncRemarksData(${index}, this.value)" /></td>
-                <td><button onclick="addLeadToFollowUpList(${index})" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         executePremiumUIPipeline(); 
@@ -787,7 +809,7 @@ window.startScraping = async function() {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
-                <td><button onclick="addLeadToFollowUpList(${recordIndex})" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             `;
             tableBody.appendChild(tr);
             executePremiumUIPipeline();
