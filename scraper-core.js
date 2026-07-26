@@ -24,6 +24,20 @@ let currentClient = "unknown";
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
+// US State Code to Full Name Mapping Dictionary
+const usStatesMap = {
+    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
+    "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
+    "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri",
+    "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
+    "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
+    "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
+    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
+    "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
+};
+
 function showPremiumNotification(message, duration = 4500) {
     let toast = document.createElement('div');
     toast.innerHTML = `
@@ -265,13 +279,13 @@ function injectHistoryUIFramework() {
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
-            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #1e7e34; margin-left: 6px; transition: background 0.2s; vertical-align: middle; }
+            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 4px; border: 1px solid #1e7e34; transition: background 0.2s; text-align: center; margin-bottom: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             .premium-call-btn:hover { background: #1e7e34; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
-            .phone-cell-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; padding: 4px; border-radius: 4px; transition: background 0.2s; }
-            .phone-cell-wrapper:hover { background: #e2eafc; }
-            .clickable-phone-text { color: #002d62; font-weight: bold; cursor: pointer; font-size: 13px; }
+            .phone-cell-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px; border-radius: 6px; transition: background 0.2s, box-shadow 0.2s; background: #fdfdfd; border: 1px solid #e2eafc; width: fit-content; min-width: 120px; margin: 0 auto; }
+            .phone-cell-wrapper:hover { background: #e2eafc; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+            .clickable-phone-text { color: #002d62; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap; }
             .clickable-phone-text:hover { color: #17a2b8; text-decoration: underline; }
         `;
         document.head.appendChild(styleTag);
@@ -378,7 +392,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR (STATE DROPDOWN + UNIVERSAL SEARCH) ======
+// ====== ADVANCED FILTER BAR (STATE DROPDOWN WITH FULL NAMES + UNIVERSAL SEARCH) ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -420,11 +434,19 @@ function populateStateDropdown() {
 
     let currentVal = select.value;
     select.innerHTML = '<option value="">All States</option>';
-    let sortedStates = Array.from(statesSet).sort();
-    sortedStates.forEach(st => {
+    
+    // Sort states alphabetically by their full names
+    let sortedCodes = Array.from(statesSet).sort((a, b) => {
+        let nameA = usStatesMap[a] || a;
+        let nameB = usStatesMap[b] || b;
+        return nameA.localeCompare(nameB);
+    });
+
+    sortedCodes.forEach(code => {
+        let fullName = usStatesMap[code] || code;
         let opt = document.createElement('option');
-        opt.value = st;
-        opt.textContent = st;
+        opt.value = code; // Value remains code for filtering matching
+        opt.textContent = `${fullName} (${code})`; // Display Full Name with Code
         select.appendChild(opt);
     });
     select.value = currentVal;
@@ -550,9 +572,9 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 }
 
 function buildPhoneCellMarkup(phoneNum) {
-    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
+    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td style="position: relative; vertical-align: middle;">
+        <td style="position: relative; vertical-align: middle; text-align: center;">
             <div class="phone-cell-wrapper">
                 <a href="tel:${phoneNum}" class="premium-call-btn" title="Direct Call">📞 Call</a>
                 <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone-text" title="Click to Copy Phone">${phoneNum}</span>
