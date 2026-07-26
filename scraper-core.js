@@ -14,9 +14,9 @@
 // ====== GLOBAL ACCESS CONTROL & SUBSCRIPTION MANAGEMENT ======
 // Aap yahan har user ki Max Laptops limit aur Expiry Date (YYYY-MM-DD) set kar sakte hain
 const allowedUsers = {
-    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   // Active till 26 August 2026
-    "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  // Already Blocked/Expired
-    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     // Active till 1st Sept 2026
+    "dispatcher_lahore": { maxLaptops: 1, expires: "2026-08-26" },   // Active till 26 August 2026
+    "dispatcher_karachi": { maxLaptops: 0, expires: "2026-07-26" },  // Already Blocked/Expired
+    "dispatchloadify": { maxLaptops: 2, expires: "2026-08-01" },     // Active till 1st Sept 2026
 };
 
 // Auto-configured URL from your Firebase console link
