@@ -242,6 +242,22 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Summary:";
 
 function injectHistoryUIFramework() {
+    document.title = "Dispatch Link";
+
+    let brandHeading = document.querySelector('h1, h2, .heading');
+    if (!brandHeading) {
+        const headings = document.querySelectorAll('div, h1, h2, h3');
+        for (let h of headings) {
+            if (h.textContent.includes("FMCSA SAFER") || h.textContent.includes("SAFER")) {
+                brandHeading = h;
+                break;
+            }
+        }
+    }
+    if (brandHeading) {
+        brandHeading.innerHTML = "Dispatch Link <span style='font-size:14px; color:#6c757d; font-weight:normal;'>| FMCSA Lead Scraper & CRM</span>";
+    }
+
     if (!document.getElementById('scrResponsiveTheme')) {
         let styleTag = document.createElement('style');
         styleTag.id = 'scrResponsiveTheme';
@@ -305,7 +321,7 @@ function injectHistoryUIFramework() {
     if (!mainHeading) {
         const headings = document.querySelectorAll('div, h1, h2, h3');
         for (let h of headings) {
-            if (h.textContent.includes("FMCSA SAFER")) {
+            if (h.textContent.includes("Dispatch Link") || h.textContent.includes("FMCSA SAFER")) {
                 mainHeading = h;
                 break;
             }
@@ -677,7 +693,7 @@ window.deleteFollowUpItem = function(mcNumber) {
 window.downloadFollowUpsCSV = function() {
     let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
     if (followUpStore.length === 0) return alert("The follow-up list is currently empty.");
-    triggerCSVDownload(followUpStore, `FMCSA_FollowUps_${dispatcherNickname}.csv`);
+    triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
 };
 
 function renderFollowUpItems() {
@@ -1160,6 +1176,6 @@ window.downloadCSV = function() {
     if(scrapedData.length > 0) {
         const start = document.getElementById('startMc').value;
         const end = document.getElementById('endMc').value;
-        triggerCSVDownload(scrapedData, `SAFER_Clean_Data_${start}_to_${end}.csv`);
+        triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
