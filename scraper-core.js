@@ -100,6 +100,7 @@ function initializeAccessControl() {
     injectHistoryUIFramework();
     injectLiveSupportSystem();
     injectPremiumFiltersUI(); 
+    injectEmailProposalPanel(); // Proposal System Interface Injection
 }
 
 if (document.readyState === 'loading') {
@@ -195,6 +196,8 @@ function injectHistoryUIFramework() {
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .google-maps-btn { display: inline-flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; text-decoration: none; color: #333; font-size: 11px; font-weight: bold; margin-left: 6px; transition: background 0.2s, border-color 0.2s; vertical-align: middle; }
             .google-maps-btn:hover { background: #f1f3f4; border-color: #4285F4; color: #4285F4; }
+            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
+            .premium-pitch-btn:hover { background: #138496; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -402,6 +405,70 @@ function injectPremiumFiltersUI() {
     document.getElementById('premiumStateFilter').addEventListener('change', executePremiumUIPipeline);
 }
 
+// ====== DYNAMIC EMAIL PROPOSAL MANAGER INJECTION ======
+function injectEmailProposalPanel() {
+    let filterWrapper = document.getElementById('premiumFilterWrapper');
+    if (!filterWrapper || document.getElementById('premiumProposalWrapper')) return;
+
+    // Load saved template elements from local storage so companies don't re-type
+    let savedSubject = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal - Special Offer";
+    let savedBody = localStorage.getItem(`scr_body_${currentClient}`) || "Hello,\n\nWe found your company profile via FMCSA. We are offering professional truck dispatching services with premium load boards access at a 5% flat rate.\n\nLet us know if you have empty trucks.\n\nBest Regards,\nDispatch Team";
+
+    let proposalPanel = document.createElement('div');
+    proposalPanel.id = 'premiumProposalWrapper';
+    proposalPanel.style.cssText = `
+        background: #f4f7fe;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #b6ccfe;
+        border-radius: 6px;
+        font-family: sans-serif;
+    `;
+
+    proposalPanel.innerHTML = `
+        <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template (One-Click Cold Mail System)</strong>
+            <span style="font-size: 12px; color: #002d62; font-weight: bold;">⚙️ Click to Edit</span>
+        </div>
+        
+        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Email Subject</label>
+                <input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Email Body Content</label>
+                <textarea id="propBodyInput" style="width: 100%; height: 100px; padding: 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: sans-serif; resize: vertical;">${savedBody}</textarea>
+            </div>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 Save Proposal Template</button>
+        </div>
+    `;
+
+    filterWrapper.parentNode.insertBefore(proposalPanel, filterWrapper.nextSibling);
+}
+
+window.saveProposalTemplateSettings = function() {
+    let subj = document.getElementById('propSubjectInput').value;
+    let body = document.getElementById('propBodyInput').value;
+    localStorage.setItem(`scr_subj_${currentClient}`, subj);
+    localStorage.setItem(`scr_body_${currentClient}`, body);
+    alert("Proposal Template successfully saved for your company account!");
+    document.getElementById('proposalInputsBlock').style.display = 'none';
+};
+
+window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
+    if (!emailAddress || emailAddress === 'N/A') return;
+    
+    let subj = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal";
+    let body = localStorage.getItem(`scr_body_${currentClient}`) || "Hello, We are offering dispatch services.";
+
+    // Dynamically insert company name into template payload if placeholder matches
+    let customizedBody = body.replace(/{company}/gi, companyName);
+
+    let mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
+    window.open(mailtoUrl, '_blank');
+};
+
 function executePremiumUIPipeline() {
     let searchText = document.getElementById('premiumLiveSearch').value.toLowerCase().trim();
     let selectedState = document.getElementById('premiumStateFilter').value;
@@ -465,6 +532,22 @@ function buildGoogleMapsButton(addressStr) {
                 📍 Maps
             </a>
         </div>
+    `;
+}
+
+function buildEmailCellMarkup(emailAddress, companyName) {
+    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d; font-style: italic;">N/A</td>`;
+    
+    let escapedName = companyName.replace(/'/g, "\\'");
+    return `
+        <td style="position: relative; vertical-align: middle;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;" title="Click to Copy">${emailAddress}</span>
+                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn" title="Send Proposal Template">
+                    📩 Pitch
+                </a>
+            </div>
+        </td>
     `;
 }
 
@@ -598,6 +681,7 @@ window.loadHistorySheetToTable = function(id) {
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let existingRemarks = record.remarks || "";
             let addressCellHTML = buildGoogleMapsButton(record.address);
+            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
 
             tableBody.innerHTML += `<tr>
                 <td><b>${record.mc}</b></td>
@@ -607,7 +691,7 @@ window.loadHistorySheetToTable = function(id) {
                 <td><span class="badge badge-active">${record.status}</span></td>
                 ${dialerCellHTML}
                 <td>${addressCellHTML}</td> 
-                <td style="color: #002d62; font-weight: bold; position: relative; cursor: pointer;" onclick="copyEmailToClipboard(this, '${record.email}')">${record.email}</td> 
+                ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${existingRemarks}" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${index}, this.value)" /></td>
             </tr>`;
@@ -1024,6 +1108,7 @@ window.startScraping = async function() {
 
                 let dialerCellHTML = buildDialerCellMarkup(record.phone);
                 let addressCellHTML = buildGoogleMapsButton(record.address);
+                let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
 
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -1033,7 +1118,7 @@ window.startScraping = async function() {
                     <td><span class="badge badge-active">${record.status}</span></td>
                     ${dialerCellHTML}
                     <td>${addressCellHTML}</td> 
-                    <td style="color: #002d62; font-weight: bold; position: relative; cursor: pointer;" onclick="copyEmailToClipboard(this, '${record.email}')">${record.email}</td> 
+                    ${emailCellHTML}
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
                 </tr>`;
@@ -1076,3 +1161,4 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `SAFER_Clean_Data_${start}_to_${end}.csv`);
     }
 }
+            
