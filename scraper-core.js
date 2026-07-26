@@ -227,7 +227,6 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
     
     showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, false, 3000);
     
-    // Dynamically change row color to soft green upon insertion
     let row = buttonElement.closest('tr');
     if (row) {
         row.style.background = "#d4edda";
@@ -266,7 +265,6 @@ window.deleteFollowUpItem = function(mcNumber) {
         localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
         renderFollowUpItems();
         
-        // Find and reset live matching active table rows back to plain design if matched
         let tableRows = document.querySelectorAll('#resultsTable tr');
         tableRows.forEach(row => {
             let cellMc = parseInt(row.cells[0]?.textContent);
@@ -367,6 +365,32 @@ function injectHistoryUIFramework() {
             .premium-pitch-btn:hover { background: #138496; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
+            
+            /* DYNAMIC PRESTIGE HOVER ARCHITECTURE FOR STABLE DIALER LINK */
+            .premium-dialer-link {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                background: #e2eafc !important;
+                color: #002d62 !important;
+                text-decoration: none !important;
+                padding: 10px 12px !important;
+                border-radius: 4px !important;
+                border: 1px solid #b6ccfe !important;
+                font-size: 13px !important;
+                font-weight: bold !important;
+                min-height: 42px !important;
+                white-space: nowrap !important;
+                transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+                cursor: pointer !important;
+            }
+            .premium-dialer-link:hover {
+                background: #002d62 !important;
+                color: #ffffff !important;
+                border-color: #001a3a !important;
+            }
         `;
         document.head.appendChild(styleTag);
     }
@@ -612,12 +636,13 @@ window.toggleHistoryDrawer = function() {
     if (drawer.style.right === "0px") { drawer.style.right = "-420px"; } else { drawer.style.right = "0px"; renderHistoryItems(); }
 };
 
+// ====== HOVER-ACTIVE DIALER CELL ENGINE ======
 function buildDialerCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td>N/A</td>`;
     let rawDigits = phoneNum.replace(/[^0-9+]/g, '');
     return `
-        <td style="padding: 4px !important; width: 140px; vertical-align: middle;">
-            <a href="tel:${rawDigits}" style="display: flex; flex-direction: column; align-items: center; background: #e2eafc; color: #002d62; text-decoration: none; padding: 8px 4px; border-radius: 4px; border: 1px solid #b6ccfe; font-size: 11px; font-weight: bold; min-height: 52px; justify-content: center;">
+        <td style="padding: 4px !important; min-width: 160px !important; width: 160px !important; vertical-align: middle; white-space: nowrap !important;">
+            <a href="tel:${rawDigits}" class="premium-dialer-link">
                 <span>📞</span><span>${phoneNum}</span>
             </a>
         </td>
@@ -645,7 +670,6 @@ window.loadHistorySheetToTable = async function(id) {
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
             
-            // Check if this carrier already exists in follow-ups database
             let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
 
