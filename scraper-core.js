@@ -141,7 +141,6 @@ function initializeAccessControl() {
     setInterval(checkGlobalSessions, 5000);
     
     injectHistoryUIFramework();
-    injectLiveSupportSystem();
     injectPremiumFiltersUI(); 
     injectEmailProposalPanel(); 
 }
@@ -211,7 +210,7 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
 
-// ====== CORE FOLLOW-UP ENGINE WITH LOCAL TIMEZONE SYNC ======
+// ====== CORE FOLLOW-UP ENGINE ======
 window.addLeadToFollowUpList = function(index) {
     let record = scrapedData[index];
     if (!record) return;
@@ -222,15 +221,7 @@ window.addLeadToFollowUpList = function(index) {
         return alert("Yeh carrier pehle se hi Follow-Up list mein add hai.");
     }
     
-    let d = new Date();
-    record.addedAt = d.toLocaleString();
-    
-    // Exact Local Date Construction (Avoids ISO UTC structural alignment gaps)
-    let yyyy = d.getFullYear();
-    let mm = String(d.getMonth() + 1).padStart(2, '0');
-    let dd = String(d.getDate()).padStart(2, '0');
-    record.addedDateRaw = `${yyyy}-${mm}-${dd}`; 
-    
+    record.addedAt = new Date().toLocaleString();
     followUpStore.push(record);
     localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
     
@@ -250,18 +241,14 @@ window.toggleFollowUpDrawer = function() {
     } else {
         drawer.style.right = "0px";
         let searchInput = document.getElementById('followUpSearchInput');
-        let dateInput = document.getElementById('followUpDateInput');
         if(searchInput) searchInput.value = ""; 
-        if(dateInput) dateInput.value = ""; 
         renderFollowUpItems(); 
     }
 };
 
 window.clearFollowUpFilters = function() {
     let searchInput = document.getElementById('followUpSearchInput');
-    let dateInput = document.getElementById('followUpDateInput');
     if(searchInput) searchInput.value = "";
-    if(dateInput) dateInput.value = "";
     renderFollowUpItems();
 };
 
@@ -288,7 +275,6 @@ function renderFollowUpItems() {
     data = data.reverse(); 
 
     let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
-    let filterDate = document.getElementById('followUpDateInput')?.value || ""; 
 
     if (data.length === 0) {
         listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
@@ -302,15 +288,10 @@ function renderFollowUpItems() {
         let mcString = (item.mc || "").toString().toLowerCase();
         let nameString = (item.name || "").toLowerCase();
         let phoneString = (item.phone || "").toLowerCase();
-        let itemDateRaw = item.addedDateRaw || ""; 
 
         if (filterQuery !== "") {
             let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
             if (!textMatches) return;
-        }
-
-        if (filterDate !== "") {
-            if (itemDateRaw !== filterDate) return; 
         }
 
         matchCount++;
@@ -435,12 +416,6 @@ function injectHistoryUIFramework() {
             
             <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
                 <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
-                
-                <div style="position: relative; display: flex; align-items: center; border: 1px solid #b6ccfe; border-radius: 4px; padding: 3px 6px; background: #fff;">
-                    <span style="font-size: 14px; margin-right: 4px; cursor: pointer;" onclick="document.getElementById('followUpDateInput').showPicker()">📅</span>
-                    <input type="date" id="followUpDateInput" style="border: none; font-size: 12px; font-family: sans-serif; outline: none; width: 105px; cursor: pointer;" onchange="renderFollowUpItems()">
-                </div>
-
                 <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
             </div>
 
@@ -732,14 +707,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
             store.put(data);
         }
     };
-}
-
-function injectLiveSupportSystem() {
-    if (document.getElementById('scrSupportFloatingBtn')) return;
-    let btn = document.createElement('button');
-    btn.id = 'scrSupportFloatingBtn'; btn.innerHTML = "💬 Help";
-    btn.style.cssText = "position: fixed; bottom: 20px; left: 20px; background: #002d62; color: #fff; padding: 10px 18px; border-radius: 30px; cursor: pointer; z-index: 999998;";
-    document.body.appendChild(btn);
 }
 
 async function fetchViaProxy(targetUrl) {
