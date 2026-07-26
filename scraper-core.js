@@ -211,7 +211,7 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
 
-// ====== CORE FOLLOW-UP ENGINE WITH LIVE SEARCH FILTER ======
+// ====== CORE FOLLOW-UP ENGINE WITH LIVE TEXT & CALENDAR DATE FILTER ======
 window.addLeadToFollowUpList = function(index) {
     let record = scrapedData[index];
     if (!record) return;
@@ -222,7 +222,11 @@ window.addLeadToFollowUpList = function(index) {
         return alert("Yeh carrier pehle se hi Follow-Up list mein add hai.");
     }
     
-    record.addedAt = new Date().toLocaleString();
+    // Store precise timestamp and local date format
+    let d = new Date();
+    record.addedAt = d.toLocaleString();
+    record.addedDateRaw = d.toISOString().split('T')[0]; // Format: YYYY-MM-DD for picker mapping
+    
     followUpStore.push(record);
     localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
     
@@ -242,9 +246,19 @@ window.toggleFollowUpDrawer = function() {
     } else {
         drawer.style.right = "0px";
         let searchInput = document.getElementById('followUpSearchInput');
-        if(searchInput) searchInput.value = ""; // Clear filter on re-open
+        let dateInput = document.getElementById('followUpDateInput');
+        if(searchInput) searchInput.value = ""; 
+        if(dateInput) dateInput.value = ""; // Reset filters on open
         renderFollowUpItems(); 
     }
+};
+
+window.clearFollowUpFilters = function() {
+    let searchInput = document.getElementById('followUpSearchInput');
+    let dateInput = document.getElementById('followUpDateInput');
+    if(searchInput) searchInput.value = "";
+    if(dateInput) dateInput.value = "";
+    renderFollowUpItems();
 };
 
 window.deleteFollowUpItem = function(mcNumber) {
@@ -269,8 +283,9 @@ function renderFollowUpItems() {
     let data = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
     data = data.reverse(); 
 
-    // Read search term if available
+    // Read pipeline parameters
     let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
+    let filterDate = document.getElementById('followUpDateInput')?.value || ""; // Format: YYYY-MM-DD
 
     if (data.length === 0) {
         listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
@@ -284,11 +299,17 @@ function renderFollowUpItems() {
         let mcString = (item.mc || "").toString().toLowerCase();
         let nameString = (item.name || "").toLowerCase();
         let phoneString = (item.phone || "").toLowerCase();
-        
-        // Match condition check
+        let itemDateRaw = item.addedDateRaw || ""; 
+
+        // 1. Check Text Filter Constraints
         if (filterQuery !== "") {
-            let matches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
-            if (!matches) return; // Skip item if it doesn't match search payload
+            let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
+            if (!textMatches) return;
+        }
+
+        // 2. Check Calendar Date Filter Constraints
+        if (filterDate !== "") {
+            if (itemDateRaw !== filterDate) return; // Skip if date block does not match picker value
         }
 
         matchCount++;
@@ -309,8 +330,8 @@ function renderFollowUpItems() {
         `;
     });
 
-    if (matchCount === 0 && filterQuery !== "") {
-        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">Search criteria down matches 0 rows.</p>`;
+    if (matchCount === 0) {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up rows found.</p>`;
     } else {
         listContainer.innerHTML = itemsHTML;
     }
@@ -401,7 +422,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
-    // Dynamic Follow-Up Drawer Structural Injection with Live Search Header
+    // Dynamic Follow-Up Drawer Structural Injection with Dual Search/Calendar Row
     if (!document.getElementById('scraperFollowUpDrawer')) {
         let fDrawer = document.createElement('div');
         fDrawer.id = 'scraperFollowUpDrawer';
@@ -412,9 +433,16 @@ function injectHistoryUIFramework() {
                 <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             
-            <!-- Live Search Bar Injected Inside Panel -->
-            <div style="margin-bottom: 10px;">
-                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, or Phone..." style="width: 100%; padding: 8px 12px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
+            <!-- Dual Filtering Layout (Text Search + Calendar Input Node) -->
+            <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
+                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
+                
+                <div style="position: relative; display: flex; align-items: center; border: 1px solid #b6ccfe; border-radius: 4px; padding: 3px 6px; background: #fff;">
+                    <span style="font-size: 14px; margin-right: 4px; cursor: pointer;" onclick="document.getElementById('followUpDateInput').showPicker()">📅</span>
+                    <input type="date" id="followUpDateInput" style="border: none; font-size: 12px; font-family: sans-serif; outline: none; width: 105px; cursor: pointer;" onchange="renderFollowUpItems()">
+                </div>
+
+                <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
             </div>
 
             <div style="margin-bottom: 12px;">
