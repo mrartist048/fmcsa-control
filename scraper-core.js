@@ -1,6 +1,6 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";
+    const faviconUrl = "https://cdn.jsdelivr.gh/mrartist048/fmcsa-control@main/fav.png";
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
         link = document.createElement('link');
@@ -97,6 +97,7 @@ function initializeAccessControl() {
     checkGlobalSessions();
     setInterval(checkGlobalSessions, 5000);
     
+    injectHistoryUIFramework();
     injectLiveSupportSystem();
 }
 
@@ -190,6 +191,31 @@ request.onsuccess = function(e) {
 };
 
 function injectHistoryUIFramework() {
+    // Inject global responsive layout stylesheet configuration overrides
+    if (!document.getElementById('scrResponsiveLayoutTheme')) {
+        let styleTag = document.createElement('style');
+        styleTag.id = 'scrResponsiveLayoutTheme';
+        styleTag.innerHTML = `
+            .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 15px !important; box-sizing: border-box !important; }
+            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 4px !important; }
+            table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
+            table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
+            .remarks-cell-container { min-width: 200px !important; width: 220px !important; }
+            .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
+            .remarks-input-field:focus { border-color: #002d62 !important; background: #ffffff !important; outline: none !important; box-shadow: 0 0 4px rgba(0,45,98,0.15) !important; }
+        `;
+        document.head.appendChild(styleTag);
+    }
+
+    // Force wrap main table element structure if missing inside parent hierarchy
+    let coreTable = document.querySelector('table');
+    if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
+        let wrapperDiv = document.createElement('div');
+        wrapperDiv.className = 'table-responsive';
+        coreTable.parentNode.insertBefore(wrapperDiv, coreTable);
+        wrapperDiv.appendChild(coreTable);
+    }
+
     let mainHeading = document.querySelector('h1, h2, .heading'); 
     if (!mainHeading) {
         const headings = document.querySelectorAll('div, h1, h2, h3');
@@ -317,8 +343,9 @@ function injectHistoryUIFramework() {
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
         remTh.id = 'remarksHeaderCol';
+        remTh.className = 'remarks-cell-container';
         remTh.innerText = "Remarks";
-        remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
+        remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px; text-align: left;";
         tableHeader.appendChild(remTh);
     }
 }
@@ -334,7 +361,6 @@ function generateCSVString(recordsData) {
     let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n"; 
     recordsData.forEach(r => { 
         let currentRem = r.remarks || "";
-        // Clean text formatting numbers safely mapped to raw output string structure
         let cleanNum = r.phone ? r.phone.replace(/"/g, '""') : 'N/A';
         csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${cleanNum}","${r.address}","${r.email}","${r.powerUnits}","${currentRem.replace(/"/g, '""')}"\n`; 
     });
@@ -348,7 +374,7 @@ function buildSharingTextContent() {
 }
 
 window.executeGlobalSharing = async function(platform) {
-    if (scrapedData.length === 0) return alert("Kindly scan the data before proceeding.");
+    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
     
     const start = document.getElementById('startMc').value;
     const end = document.getElementById('endMc').value;
@@ -405,15 +431,13 @@ window.toggleHistoryDrawer = function() {
     }
 };
 
-// HELPER FUNCTION: Generates interactive UI block layout for Full-Cell Dialer Button
 function buildDialerCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="text-align: center; vertical-align: middle; color: #6c757d;">N/A</td>`;
     
     let rawDigits = phoneNum.replace(/[^0-9+]/g, '');
     
-    // Returns full block styling button link container mapping icon perfectly over minor text details
     return `
-        <td style="padding: 0 !important; width: 130px; min-width: 120px; vertical-align: middle;">
+        <td style="padding: 4px !important; width: 140px; min-width: 130px; vertical-align: middle;">
             <a href="tel:${rawDigits}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #e2eafc; color: #002d62; text-decoration: none; padding: 8px 4px; border-radius: 4px; border: 1px solid #b6ccfe; transition: background 0.2s, transform 0.1s; box-sizing: border-box; font-family: sans-serif; height: 100%; min-height: 52px;" 
                onmouseover="this.style.background='#d0dfff';" 
                onmouseout="this.style.background='#e2eafc';"
@@ -466,7 +490,7 @@ window.loadHistorySheetToTable = function(id) {
                 <td>${record.address}</td> 
                 <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
                 <td>${record.powerUnits}</td>
-                <td><input type="text" value="${existingRemarks}" placeholder="Add remarks..." oninput="syncRemarksData(${index}, this.value)" style="width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 4px; font-size: 12px; box-sizing: border-box;" /></td>
+                <td class="remarks-cell-container"><input type="text" value="${existingRemarks}" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${index}, this.value)" /></td>
             </tr>`;
         });
 
@@ -889,7 +913,7 @@ window.startScraping = async function() {
                     <td>${record.address}</td> 
                     <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
                     <td>${record.powerUnits}</td>
-                    <td><input type="text" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" style="width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 4px; font-size: 12px; box-sizing: border-box;" /></td>
+                    <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
                 </tr>`;
             }
         } catch (e) { console.log(e); }
