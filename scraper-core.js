@@ -646,8 +646,9 @@ function renderHistoryItems() {
                     <div style="font-size: 12px; margin-bottom: 6px;">Status: ${displayStatus}</div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                         <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
-                        <div>
-                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;"'}>📥 Get CSV</button>
+                        <div style="display: flex; gap: 4px;">
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">📂 Open</button>
+                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;"'}>📥 CSV</button>
                             <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
                         </div>
                     </div>
@@ -657,6 +658,49 @@ function renderHistoryItems() {
         listContainer.innerHTML = itemsHTML;
     };
 }
+
+window.loadHistorySheetToTable = async function(id) {
+    const tx = db.transaction("history", "readonly");
+    const req = tx.objectStore("history").get(id);
+
+    req.onsuccess = async function() {
+        const item = req.result;
+        if (!item || !item.records) return;
+        scrapedData = item.records; 
+        currentHistoryId = item.id;
+
+        const tableBody = document.getElementById('resultsTable');
+        tableBody.innerHTML = '';
+        
+        let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+
+        for (let index = 0; index < scrapedData.length; index++) {
+            let record = scrapedData[index];
+            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
+            let activeRemarksValue = record.remarks || "";
+
+            tableBody.innerHTML += `<tr ${rowStyleHTML}>
+                <td><b>${record.mc}</b></td>
+                <td>${record.usdot}</td>
+                <td>${record.name}</td>
+                <td>${record.entityType}</td>
+                <td><span class="badge badge-active">${record.status}</span></td>
+                <td>${record.phone}</td>
+                <td>${record.address}</td> 
+                ${emailCellHTML}
+                <td>${record.powerUnits}</td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                </td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+            </tr>`;
+        }
+        toggleHistoryDrawer(); 
+    };
+};
 
 window.downloadHistoryCSV = function(id) {
     const tx = db.transaction("history", "readonly");
