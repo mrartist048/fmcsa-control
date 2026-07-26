@@ -175,7 +175,7 @@ async function checkGlobalSessions() {
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
-        if (!currentTabRecord && activeTabs.length >= userLimit) {
+        if (!document.getElementById('devCreditTag') && !currentTabRecord && activeTabs.length >= userLimit) {
             document.body.innerHTML = `
                 <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
                     <h1 style="color:#dc3545; font-size:30px;">⚠️ Global License Limit Exceeded</h1>
@@ -380,9 +380,54 @@ function injectHistoryUIFramework() {
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 4px !important; }
             table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
-            .remarks-cell-container { min-width: 200px !important; width: 220px !important; }
-            .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
-            .remarks-input-field:focus { border-color: #002d62 !important; background: #ffffff !important; outline: none !important; box-shadow: 0 0 4px rgba(0,45,98,0.15) !important; }
+            
+            /* ADVANCED SEPARATED LINE REMARKS ENGINE WITH AUTOPILOT CHECKLIST */
+            .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; }
+            .remarks-input-field { 
+                width: 100% !important; 
+                height: 36px;
+                border: 1px solid #b6ccfe !important; 
+                border-radius: 4px !important; 
+                padding: 6px 10px !important; 
+                font-size: 12px !important; 
+                box-sizing: border-box !important; 
+                color: #333 !important; 
+                background: #fafafa !important; 
+                resize: none !important;
+                overflow-y: hidden;
+                font-family: sans-serif !important;
+                transition: height 0.25s ease, border-color 0.2s, background 0.2s, box-shadow 0.2s; 
+            }
+            .remarks-input-field:focus { 
+                height: 110px !important;
+                border-color: #002d62 !important; 
+                background: #ffffff !important; 
+                outline: none !important; 
+                overflow-y: auto;
+                box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
+            }
+            .remarks-checklist-guide {
+                display: none;
+                position: absolute;
+                bottom: 100%;
+                left: 8px;
+                background: #002d62;
+                color: #ffffff;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 6px 10px;
+                border-radius: 4px;
+                box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+                margin-bottom: 6px;
+                z-index: 999;
+                pointer-events: none;
+                font-family: sans-serif;
+                line-height: 1.4;
+            }
+            .remarks-input-field:focus + .remarks-checklist-guide {
+                display: block !important;
+            }
+
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
@@ -716,7 +761,10 @@ window.loadHistorySheetToTable = async function(id) {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
-                <td class="remarks-cell-container"><input type="text" value="${record.remarks || ''}" class="remarks-input-field" oninput="syncRemarksData(${index}, this.value)" /></td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." oninput="syncRemarksData(${index}, this.value)">${record.remarks || ''}</textarea>
+                    <div class="remarks-checklist-guide">📋 Ask Carrier:<br>• Truck Type<br>• Length<br>• Accessories<br>• Load Zip Code</div>
+                </td>
                 <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
@@ -865,7 +913,10 @@ window.startScraping = async function() {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
-                <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)"></textarea>
+                    <div class="remarks-checklist-guide">📋 Ask Carrier:<br>• Truck Type<br>• Length<br>• Accessories<br>• Load Zip Code</div>
+                </td>
                 <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             `;
             tableBody.appendChild(tr);
