@@ -15,7 +15,7 @@
 const allowedUsers = {
     "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   
     "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  
-    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     
+    "dispatchloadify": { maxLaptops: 5, expires: "2026-09-01" },     
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
