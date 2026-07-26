@@ -22,12 +22,16 @@ const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com
 
 let currentClient = "unknown";
 let userLimit = 0;
+let mySessionKey = ""; // Tracks current laptop's private sync key
 
-function showPremiumNotification(message, duration = 4500) {
+function showPremiumNotification(message, isAlert = false, duration = 4500) {
     let toast = document.createElement('div');
+    let bgColor = isAlert ? "#dc3545" : "#002d62";
+    let borderColor = isAlert ? "#f8d7da" : "#17a2b8";
+    
     toast.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="background: #28a745; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px #28a745; animate: pulse 1s infinite;"></div>
+            <div style="background: ${isAlert ? '#dc3545' : '#28a745'}; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px ${isAlert ? '#dc3545' : '#28a745'}; animate: pulse 1s infinite;"></div>
             <span>${message}</span>
         </div>
     `;
@@ -35,7 +39,7 @@ function showPremiumNotification(message, duration = 4500) {
         position: fixed;
         top: -100px;
         right: 20px;
-        background: #002d62;
+        background: ${bgColor};
         color: #ffffff;
         padding: 14px 22px;
         border-radius: 6px;
@@ -43,7 +47,7 @@ function showPremiumNotification(message, duration = 4500) {
         font-size: 13px;
         font-weight: bold;
         box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-        border-left: 5px solid #17a2b8;
+        border-left: 5px solid ${borderColor};
         z-index: 1000000;
         transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
         opacity: 0;
@@ -94,7 +98,11 @@ function initializeAccessControl() {
 
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
-    checkGlobalSessions();
+    checkGlobalSessions().then(() => {
+        // Start listening for incoming leads pushed by team members
+        listenForIncomingLeads();
+    });
+    
     setInterval(checkGlobalSessions, 5000);
     
     injectHistoryUIFramework();
@@ -128,7 +136,7 @@ async function checkGlobalSessions() {
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: data[key].timestamp }));
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp }));
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
@@ -145,15 +153,18 @@ async function checkGlobalSessions() {
         }
         
         if (currentTabRecord) {
-            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${currentTabRecord.dbKey}/timestamp.json`, {
+            mySessionKey = currentTabRecord.dbKey;
+            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}/timestamp.json`, {
                 method: 'PUT',
                 body: JSON.stringify(now)
             });
         } else {
-            await fetch(url, {
+            let postRes = await fetch(url, {
                 method: 'POST',
                 body: JSON.stringify({ id: window.name, timestamp: now })
             });
+            let postData = await postRes.json();
+            mySessionKey = postData.name;
         }
         
     } catch (e) {
@@ -162,9 +173,135 @@ async function checkGlobalSessions() {
 }
 
 window.addEventListener('beforeunload', function () {
-    if (currentClient === "unknown") return;
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}.json?_method=DELETE`);
+    if (currentClient === "unknown" || !mySessionKey) return;
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
+
+// ====== REAL-TIME INTER-LAPTOP LEAD SHARING SYSTEM ======
+async function fetchActivePeerLaptops() {
+    try {
+        const res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
+        const data = await res.json() || {};
+        return Object.keys(data).map(key => ({
+            sessionKey: key,
+            id: data[key].id
+        })).filter(peer => peer.id !== window.name);
+    } catch (e) {
+        return [];
+    }
+}
+
+window.shareLeadWithPeerLaptop = async function(index, selectElement) {
+    let targetSessionKey = selectElement.value;
+    if (!targetSessionKey || targetSessionKey === "") return;
+    
+    let record = scrapedData[index];
+    if (!record) return;
+
+    selectElement.disabled = true;
+    
+    try {
+        let senderNickname = window.name.split('_').pop();
+        let payload = {
+            sender: senderNickname,
+            timestamp: Date.now(),
+            record: record
+        };
+
+        // Push lead into target laptop's message queue node inside Firebase Realtime DB
+        await fetch(`${FIREBASE_DB_URL}transfers/${currentClient}/${targetSessionKey}.json`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        
+        alert("Lead transferred successfully to your team member's dashboard!");
+    } catch (err) {
+        alert("Transfer failed. Please check network connectivity.");
+    } finally {
+        selectElement.value = "";
+        selectElement.disabled = false;
+    }
+};
+
+function listenForIncomingLeads() {
+    if (!mySessionKey || currentClient === "unknown") return;
+    
+    setInterval(async () => {
+        try {
+            const url = `${FIREBASE_DB_URL}transfers/${currentClient}/${mySessionKey}.json`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data && data.record) {
+                // Delete message node instantly right after acknowledgment to clear queue
+                await fetch(url, { method: 'DELETE' });
+                
+                let incomingRecord = data.record;
+                incomingRecord.remarks = `[From Laptop ${data.sender}] ` + (incomingRecord.remarks || "");
+                
+                // Avoid injecting exact duplicates
+                if (!scrapedData.some(r => r.mc === incomingRecord.mc)) {
+                    scrapedData.unshift(incomingRecord); // Prepend to current volatile data array
+                    
+                    showPremiumNotification(`📥 Incoming Lead! Laptop-${data.sender} sent you MC ${incomingRecord.mc}`, true, 6000);
+                    
+                    // Live interface raw updates insertion
+                    const tableBody = document.getElementById('resultsTable');
+                    if (tableBody) {
+                        let recordIndex = scrapedData.length - 1; 
+                        let dialerCellHTML = buildDialerCellMarkup(incomingRecord.phone);
+                        let emailCellHTML = buildEmailCellMarkup(incomingRecord.email, incomingRecord.name);
+                        let peerOptionsHTML = await buildPeerSelectionOptionsMarkup(recordIndex);
+
+                        let rowHTML = `<tr style="background: #fff3cd; transition: background 2s;">
+                            <td><b>${incomingRecord.mc}</b></td>
+                            <td>${incomingRecord.usdot}</td>
+                            <td>${incomingRecord.name}</td>
+                            <td>${incomingRecord.entityType}</td>
+                            <td><span class="badge badge-active">${incomingRecord.status}</span></td>
+                            ${dialerCellHTML}
+                            <td>${incomingRecord.address}</td> 
+                            ${emailCellHTML}
+                            <td>${incomingRecord.powerUnits}</td>
+                            <td class="remarks-cell-container"><input type="text" value="${incomingRecord.remarks}" class="remarks-input-field" oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
+                            <td>${peerOptionsHTML}</td>
+                        </tr>`;
+                        
+                        tableBody.insertAdjacentHTML('afterbegin', rowHTML);
+                        
+                        setTimeout(() => {
+                            let firstRow = tableBody.querySelector('tr');
+                            if(firstRow) firstRow.style.background = "";
+                        }, 3000);
+                    }
+                    updateRealTimeHistory(scrapedData, false);
+                    executePremiumUIPipeline();
+                }
+            }
+        } catch (e) {
+            console.error("Error polling lead transfers:", e);
+        }
+    }, 3500);
+}
+
+async function buildPeerSelectionOptionsMarkup(index) {
+    let peers = await fetchActivePeerLaptops();
+    if (peers.length === 0) {
+        return `<span style="color: #6c757d; font-size: 11px; font-style: italic;">No peers online</span>`;
+    }
+    
+    let options = `<option value="" selected disabled>Select Laptop</option>`;
+    peers.forEach(p => {
+        let nick = p.id.split('_').pop();
+        options += `<option value="${p.sessionKey}">💻 Laptop ${nick}</option>`;
+    });
+
+    return `
+        <select onchange="shareLeadWithPeerLaptop(${index}, this)" style="padding: 4px; font-size: 11px; font-weight: bold; border: 1px solid #b6ccfe; border-radius: 4px; background: #fff; max-width: 110px;">
+            ${options}
+        </select>
+    `;
+}
 
 // ====== INDEXEDDB HISTORY SETUP ======
 let db;
@@ -188,7 +325,7 @@ function injectHistoryUIFramework() {
         styleTag.innerHTML = `
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 15px !important; box-sizing: border-box !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 4px !important; }
-            table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
+            table.table { width: 100% !important; min-width: 1300px !important; table-layout: auto !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
             .remarks-cell-container { min-width: 200px !important; width: 220px !important; }
             .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
@@ -339,6 +476,12 @@ function injectHistoryUIFramework() {
         remTh.innerText = "Remarks";
         remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px; text-align: left;";
         tableHeader.appendChild(remTh);
+        
+        let shareTh = document.createElement('th');
+        shareTh.id = 'peerShareHeaderCol';
+        shareTh.innerText = "Send Lead To";
+        shareTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px; text-align: left;";
+        tableHeader.appendChild(shareTh);
     }
 }
 
@@ -647,12 +790,12 @@ function buildDialerCellMarkup(phoneNum) {
 }
 
 // ====== INTERACTIVE HISTORY RESTORATION LOGIC ======
-window.loadHistorySheetToTable = function(id) {
+window.loadHistorySheetToTable = async function(id) {
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
     const req = store.get(id);
 
-    req.onsuccess = function() {
+    req.onsuccess = async function() {
         const item = req.result;
         if (!item || !item.records) return alert("Sheet record not found.");
 
@@ -672,10 +815,12 @@ window.loadHistorySheetToTable = function(id) {
 
         tableBody.innerHTML = '';
         
-        scrapedData.forEach((record, index) => {
+        for (let index = 0; index < scrapedData.length; index++) {
+            let record = scrapedData[index];
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let existingRemarks = record.remarks || "";
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            let peerOptionsHTML = await buildPeerSelectionOptionsMarkup(index);
 
             tableBody.innerHTML += `<tr>
                 <td><b>${record.mc}</b></td>
@@ -688,8 +833,9 @@ window.loadHistorySheetToTable = function(id) {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${existingRemarks}" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${index}, this.value)" /></td>
+                <td>${peerOptionsHTML}</td>
             </tr>`;
-        });
+        }
 
         document.getElementById('downloadBtn').style.display = 'inline-block';
         if (document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'inline-block';
@@ -1102,6 +1248,7 @@ window.startScraping = async function() {
 
                 let dialerCellHTML = buildDialerCellMarkup(record.phone);
                 let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+                let peerOptionsHTML = await buildPeerSelectionOptionsMarkup(recordIndex);
 
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -1114,6 +1261,7 @@ window.startScraping = async function() {
                     ${emailCellHTML}
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
+                    <td>${peerOptionsHTML}</td>
                 </tr>`;
                 
                 executePremiumUIPipeline(); 
