@@ -306,7 +306,13 @@ function injectHistoryUIFramework() {
         }
     }
 
-    // Dynamic Header Clean Check (Driver Column Safely Omitted)
+    let allHeaders = document.querySelectorAll('table th');
+    allHeaders.forEach(th => {
+        if (th.textContent.trim().toLowerCase() === 'drivers') {
+            th.remove(); 
+        }
+    });
+
     let tableHeader = document.querySelector('table.table thead tr, table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
@@ -410,7 +416,6 @@ window.loadHistorySheetToTable = function(id) {
         currentHistoryId = item.id; 
         scrapedData = item.records; 
 
-        // Set inputs if layout bounds allow
         if (document.getElementById('startMc') && item.range) {
             let ranges = item.range.split('-');
             if (ranges.length === 2) {
@@ -647,6 +652,24 @@ window.sendSupportAlert = function(channel) {
     toggleSupportChatbox();
 };
 
+// ====== HELPER MULTI-PROXY AUTO FETCH ENGINE ======
+async function fetchViaProxy(targetUrl) {
+    // Primary Edge Fast Proxy
+    let primaryProxy = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+    // Secondary Backup Proxy
+    let backupProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    
+    try {
+        let res = await fetch(primaryProxy);
+        if(!res.ok) throw new Error("Primary failed");
+        return await res.text();
+    } catch(err) {
+        console.log("Switching to backup CORS proxy...");
+        let resBackup = await fetch(backupProxy);
+        return await resBackup.text();
+    }
+}
+
 // ====== ONLY AUTHORIZED SCRAPING LOGIC ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() { 
@@ -758,8 +781,7 @@ window.startScraping = async function() {
 
         try {
             const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
-            const response = await fetch(snapshotUrl);
-            const htmlText = await response.text();
+            const htmlText = await fetchViaProxy(snapshotUrl);
             
             if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
                 continue;
@@ -820,8 +842,7 @@ window.startScraping = async function() {
 
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
-                    const smsResponse = await fetch(smsUrl);
-                    const smsHtml = await smsResponse.text();
+                    const smsHtml = await fetchViaProxy(smsUrl);
                     let smsEl = document.createElement('html');
                     smsEl.innerHTML = smsHtml;
                     let smsCells = smsEl.querySelectorAll('td, th, span, label');
