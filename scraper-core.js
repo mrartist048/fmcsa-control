@@ -12,10 +12,11 @@
 })();
 
 // ====== GLOBAL ACCESS CONTROL & SUBSCRIPTION MANAGEMENT ======
+// Aap yahan har user ki Max Laptops limit aur Expiry Date (YYYY-MM-DD) set kar sakte hain
 const allowedUsers = {
-    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   
-    "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  
-    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     
+    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   // Active till 26 August 2026
+    "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  // Already Blocked/Expired
+    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     // Active till 1st Sept 2026
 };
 
 // Auto-configured URL from your Firebase console link
@@ -52,11 +53,13 @@ function showPremiumNotification(message, duration = 4500) {
     `;
     document.body.appendChild(toast);
     
+    // Trigger Slide Down
     setTimeout(() => {
         toast.style.top = "20px";
         toast.style.opacity = "1";
     }, 100);
 
+    // Trigger Fade Out & Remove
     setTimeout(() => {
         toast.style.top = "-100px";
         toast.style.opacity = "0";
@@ -73,13 +76,17 @@ function initializeAccessControl() {
 
     if (clientConfig) {
         userLimit = clientConfig.maxLaptops || 0;
+        
+        // System date format (YYYY-MM-DD) me nikalte hain comparison k liye
         const todayStr = new Date().toISOString().split('T')[0]; 
         
+        // Agar laptop limit 0 se bari hai aur aaj ki date expiry date se pehle ya barabar hai
         if (userLimit > 0 && todayStr <= clientConfig.expires) {
             isAccessValid = true;
         }
     }
 
+    // Check if user is allowed at all or expired
     if (!isAccessValid) {
         document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
         document.getElementById('status').style.background = "#f8d7da";
@@ -91,19 +98,20 @@ function initializeAccessControl() {
         throw new Error("Access Denied");
     }
 
+    // Global Unique Tab/Laptop Identity
     if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
 
+    // Success subscription message pop-up on start (With Expiry Alert)
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
+    // Start network sync loop immediately after validation
     checkGlobalSessions();
     setInterval(checkGlobalSessions, 5000);
-    
-    // Inject Live Support Box System
-    injectLiveSupportSystem();
 }
 
+// Safely execute when script variable bindings are finished
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeAccessControl);
 } else {
@@ -473,103 +481,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
         }
     };
 }
-
-// ====== PRE-INJECTED LIVE HELP & CHATBOX MODULE ======
-function injectLiveSupportSystem() {
-    if (document.getElementById('scrSupportFloatingBtn')) return;
-
-    // 1. Floating Trigger Button Layout Setup
-    let btn = document.createElement('button');
-    btn.id = 'scrSupportFloatingBtn';
-    btn.innerHTML = "💬 Technical Support";
-    btn.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        background: #002d62;
-        color: #fff;
-        border: 2px solid #17a2b8;
-        padding: 10px 18px;
-        border-radius: 30px;
-        font-family: sans-serif;
-        font-weight: bold;
-        font-size: 13px;
-        cursor: pointer;
-        z-index: 999998;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        transition: transform 0.2s;
-    `;
-    btn.onmouseover = () => btn.style.transform = "scale(1.05)";
-    btn.onmouseout = () => btn.style.transform = "scale(1)";
-    btn.onclick = toggleSupportChatbox;
-    document.body.appendChild(btn);
-
-    // 2. Chat interface container initialization
-    let chatBox = document.createElement('div');
-    chatBox.id = 'scrSupportChatboxWindow';
-    chatBox.style.cssText = `
-        position: fixed;
-        bottom: 75px;
-        left: 20px;
-        width: 330px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 5px 25px rgba(0,0,0,0.25);
-        border: 1px solid #ddd;
-        font-family: sans-serif;
-        display: none;
-        z-index: 999998;
-        overflow: hidden;
-    `;
-    chatBox.innerHTML = `
-        <div style="background: #002d62; color: white; padding: 12px 15px; font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
-            <span>🛡️ System Helpdesk</span>
-            <span onclick="toggleSupportChatbox()" style="cursor: pointer; font-size: 18px;">&times;</span>
-        </div>
-        <div style="padding: 12px; background: #fdfdfd; font-size: 12px; color: #555; border-bottom: 1px solid #eee;">
-            Assalam-o-Alaikum! Aapko tool me koi b help chahiye ya licence renewal krwana ho, niche message likh kr send krein.
-        </div>
-        <div style="padding: 15px;">
-            <textarea id="scrSupportMsgInput" placeholder="Apna masla ya message yahan type krein..." style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: sans-serif; resize: none; box-sizing: border-box;"></textarea>
-            <div style="display: flex; gap: 8px; margin-top: 10px;">
-                <button onclick="sendSupportAlert('whatsapp')" style="flex: 1; background: #25D366; color: white; border: none; padding: 8px 0; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">💬 WhatsApp</button>
-                <button onclick="sendSupportAlert('email')" style="flex: 1; background: #ea4335; color: white; border: none; padding: 8px 0; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">📧 Email Send</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(chatBox);
-}
-
-window.toggleSupportChatbox = function() {
-    let box = document.getElementById('scrSupportChatboxWindow');
-    if (!box) return;
-    box.style.display = box.style.display === 'block' ? 'none' : 'block';
-};
-
-window.sendSupportAlert = function(channel) {
-    const textInput = document.getElementById('scrSupportMsgInput');
-    if (!textInput || textInput.value.trim() === "") return alert("Meharbani karke pehle message type karein.");
-
-    const userMsg = textInput.value.trim();
-    const cleanClient = window.scrClientID || "unknown_user";
-    
-    // Auto-formatted message structure injection
-    const finalFormattedText = `*★ FMCSA Scraper Support Alert ★*\n\n*From User:* ${cleanClient}\n*Tab ID:* ${window.name}\n\n*Message:* ${userMsg}`;
-
-    if (channel === 'whatsapp') {
-        const targetPhone = "923037654849"; // Aapka verified target number format
-        const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(finalFormattedText)}`;
-        window.open(waUrl, '_blank');
-    } else {
-        const targetEmail = "noumannaseer048@gmail.com"; // Yahan aap apni admin email insert kr sakty hain
-        const emailSubject = `Scraper Support Ticket from [${cleanClient}]`;
-        const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(finalFormattedText.replace(/\*/g, ''))}`;
-        window.open(mailtoUrl, '_blank');
-    }
-    
-    textInput.value = "";
-    toggleSupportChatbox();
-};
 
 // ====== ONLY AUTHORIZED SCRAPING LOGIC ======
 let scraping = false; let scrapedData = [];
