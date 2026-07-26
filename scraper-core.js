@@ -374,7 +374,7 @@ function buildSharingTextContent() {
 }
 
 window.executeGlobalSharing = async function(platform) {
-    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
+    if (scrapedData.length === 0) return alert("Kindly scan the data before proceeding.");
     
     const start = document.getElementById('startMc').value;
     const end = document.getElementById('endMc').value;
