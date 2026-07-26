@@ -143,7 +143,7 @@ function initializeAccessControl() {
     injectHistoryUIFramework();
     injectPremiumFiltersUI(); 
     injectEmailProposalPanel(); 
-    setupClickOutsideToCloseEngine(); // Active Click Outside Logic Injection
+    setupClickOutsideToCloseEngine(); 
 }
 
 if (document.readyState === 'loading') {
@@ -219,14 +219,12 @@ function setupClickOutsideToCloseEngine() {
         let openHistoryBtn = document.getElementById('openHistoryBtn');
         let openFollowUpBtn = document.getElementById('openFollowUpDrawerBtn');
 
-        // Close History Drawer if clicked outside
         if (historyDrawer && historyDrawer.style.right === "0px") {
             if (!historyDrawer.contains(event.target) && openHistoryBtn && !openHistoryBtn.contains(event.target)) {
                 historyDrawer.style.right = "-420px";
             }
         }
 
-        // Close Follow-Up Drawer if clicked outside
         if (followUpDrawer && followUpDrawer.style.right === "0px") {
             if (!followUpDrawer.contains(event.target) && openFollowUpBtn && !openFollowUpBtn.contains(event.target)) {
                 followUpDrawer.style.right = "-420px";
@@ -270,7 +268,6 @@ window.toggleFollowUpDrawer = function() {
     if (drawer.style.right === "0px") {
         drawer.style.right = "-420px";
     } else {
-        // Simple propagation block delay to ensure single thread toggle execution
         setTimeout(() => { drawer.style.right = "0px"; }, 50);
         let searchInput = document.getElementById('followUpSearchInput');
         if(searchInput) searchInput.value = ""; 
@@ -428,14 +425,20 @@ function injectHistoryUIFramework() {
         wrapperDiv.appendChild(coreTable);
     }
 
+    // ====== BRANDING REPLACEMENT LOGIC (DISPATCHLINK CRM) ======
     let mainHeading = document.querySelector('h1, h2, .heading') || document.querySelector('div'); 
-    if (mainHeading && !document.getElementById('devCreditTag')) {
+    if (mainHeading) {
+        mainHeading.innerHTML = "DispatchLink CRM"; 
         mainHeading.style.position = 'relative';
-        let creditTag = document.createElement('span');
-        creditTag.id = 'devCreditTag';
-        creditTag.innerHTML = "Created by <b>Mr. Nauman (Ph: 03037654849)</b>";
-        creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #6c757d; font-family: sans-serif; font-weight: normal;";
-        mainHeading.appendChild(creditTag);
+        mainHeading.style.color = '#002d62'; 
+
+        if (!document.getElementById('devCreditTag')) {
+            let creditTag = document.createElement('span');
+            creditTag.id = 'devCreditTag';
+            creditTag.innerHTML = "Created by <b>Mr. Nauman (Ph: 03037654849)</b>";
+            creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #6c757d; font-family: sans-serif; font-weight: normal;";
+            mainHeading.appendChild(creditTag);
+        }
     }
 
     let startBtn = document.getElementById('startBtn');
