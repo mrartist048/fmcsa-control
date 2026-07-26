@@ -15,7 +15,7 @@
 // Aap yahan har user ki Max Laptops limit aur Expiry Date (YYYY-MM-DD) set kar sakte hain
 const allowedUsers = {
     "dispatcher_lahore": { maxLaptops: 1, expires: "2026-08-26" },   // Active till 26 August 2026
-    "dispatcher_karachi": { maxLaptops: 1, expires: "2026-07-26" },  // Already Blocked/Expired
+    "dispatcher_karachi": { maxLaptops: 1, expires: "2026-07-25" },  // Already Blocked/Expired
     "dispatchloadify": { maxLaptops: 2, expires: "2026-08-01" },     // Active till 1st Sept 2026
 };
 
