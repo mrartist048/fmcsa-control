@@ -198,7 +198,7 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}.json?_method=DELETE`);
 });
 
-// ====== INDEXEDDB HISTORY & UI FRAMEWORK ======
+// ====== INDEXEDDB HISTORY & RESPONSIVE UI FRAMEWORK ======
 let db;
 let currentHistoryId = null;
 const request = indexedDB.open("ScraperHistoryDB", 1);
@@ -222,10 +222,15 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Summary:";
 
 function injectHistoryUIFramework() {
-    if (!document.getElementById('scrRemarksStyle')) {
+    if (!document.getElementById('scrResponsiveTheme')) {
         let styleTag = document.createElement('style');
-        styleTag.id = 'scrRemarksStyle';
+        styleTag.id = 'scrResponsiveTheme';
         styleTag.innerHTML = `
+            .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
+            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
+            table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
+            table.table th, table.table td { padding: 12px 10px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; }
+            
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; }
             .remarks-input-field { 
                 width: 100% !important; 
@@ -258,6 +263,14 @@ function injectHistoryUIFramework() {
             .premium-followup-btn:hover { background: #e0a800; }
         `;
         document.head.appendChild(styleTag);
+    }
+
+    let coreTable = document.querySelector('table');
+    if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
+        let wrapperDiv = document.createElement('div');
+        wrapperDiv.className = 'table-responsive';
+        coreTable.parentNode.insertBefore(wrapperDiv, coreTable);
+        wrapperDiv.appendChild(coreTable);
     }
 
     let mainHeading = document.querySelector('h1, h2, .heading');
@@ -581,10 +594,10 @@ window.syncRemarksData = function(index, textarea) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n";
     recordsData.forEach(r => {
         let safeRemarks = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.drivers}","${safeRemarks.replace(/"/g, '""')}"\n`;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -801,7 +814,7 @@ window.startScraping = async function() {
                 continue;
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', drivers: 'N/A', remarks: '' };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -830,7 +843,6 @@ window.startScraping = async function() {
                     }
                 }
                 if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                if (text.startsWith("Drivers:")) { if(cells[i+1]) record.drivers = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
                 if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
                 if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
                     if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
@@ -885,7 +897,6 @@ window.startScraping = async function() {
                     <td>${record.address}</td>
                     ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
-                    <td>${record.drivers}</td>
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)"></textarea>
                     </td>
