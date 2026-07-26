@@ -306,7 +306,7 @@ function injectHistoryUIFramework() {
         }
     }
 
-    // Dynamic Header Check for Remarks Column
+    // Dynamic Header Clean Check (Driver Column Safely Omitted)
     let tableHeader = document.querySelector('table.table thead tr, table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
@@ -317,7 +317,6 @@ function injectHistoryUIFramework() {
     }
 }
 
-// Live sync input data to core records array
 window.syncRemarksData = function(index, value) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = value;
@@ -326,10 +325,10 @@ window.syncRemarksData = function(index, value) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers,Remarks\n"; 
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n"; 
     recordsData.forEach(r => { 
         let currentRem = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.drivers}","${currentRem.replace(/"/g, '""')}"\n`; 
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${currentRem.replace(/"/g, '""')}"\n`; 
     });
     return csv;
 }
@@ -398,6 +397,69 @@ window.toggleHistoryDrawer = function() {
     }
 };
 
+// ====== INTERACTIVE HISTORY RESTORATION LOGIC ======
+window.loadHistorySheetToTable = function(id) {
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const req = store.get(id);
+
+    req.onsuccess = function() {
+        const item = req.result;
+        if (!item || !item.records) return alert("Sheet record not found.");
+
+        currentHistoryId = item.id; 
+        scrapedData = item.records; 
+
+        // Set inputs if layout bounds allow
+        if (document.getElementById('startMc') && item.range) {
+            let ranges = item.range.split('-');
+            if (ranges.length === 2) {
+                document.getElementById('startMc').value = ranges[0].trim();
+                document.getElementById('endMc').value = ranges[1].trim();
+            }
+        }
+
+        const tableBody = document.getElementById('resultsTable');
+        if (!tableBody) return alert("Main Results Table view element missing.");
+
+        tableBody.innerHTML = '';
+        
+        scrapedData.forEach((record, index) => {
+            let dialerLink = record.phone !== 'N/A' 
+                ? `<a href="tel:${record.phone.replace(/[^0-9+]/g, '')}" style="color: #002d62; font-weight: bold; text-decoration: underline;">${record.phone}</a>` 
+                : 'N/A';
+            
+            let existingRemarks = record.remarks || "";
+
+            tableBody.innerHTML += `<tr>
+                <td><b>${record.mc}</b></td>
+                <td>${record.usdot}</td>
+                <td>${record.name}</td>
+                <td>${record.entityType}</td>
+                <td><span class="badge badge-active">${record.status}</span></td>
+                <td>${dialerLink}</td>
+                <td>${record.address}</td> 
+                <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
+                <td>${record.powerUnits}</td>
+                <td><input type="text" value="${existingRemarks}" placeholder="Add remarks..." oninput="syncRemarksData(${index}, this.value)" style="width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 4px; font-size: 12px; box-sizing: border-box;" /></td>
+            </tr>`;
+        });
+
+        document.getElementById('downloadBtn').style.display = 'inline-block';
+        if (document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'inline-block';
+
+        let statusBox = document.getElementById('status');
+        if (statusBox) {
+            statusBox.style.padding = "15px";
+            statusBox.style.display = "block";
+            statusBox.style.borderLeft = "5px solid #17a2b8";
+            statusBox.innerHTML = `<strong style="font-size: 14px; color: #17a2b8; font-family: sans-serif;">📂 Loaded Sheet from History (${scrapedData.length} Records)</strong>`;
+        }
+
+        toggleHistoryDrawer(); 
+    };
+};
+
 function renderHistoryItems() {
     if (!db) return;
     const listContainer = document.getElementById('drawerHistoryList');
@@ -429,7 +491,8 @@ function renderHistoryItems() {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                         <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
                         <div>
-                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;"'}>📥 Get CSV</button>
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;">📂 Open</button>
+                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 4px;"'}>📥 CSV</button>
                             <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
                         </div>
                     </div>
@@ -702,7 +765,7 @@ window.startScraping = async function() {
                 continue;
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', drivers: 'N/A', remarks: '' };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -731,7 +794,6 @@ window.startScraping = async function() {
                     }
                 }
                 if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                if (text.startsWith("Drivers:")) { if(cells[i+1]) record.drivers = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
                 if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
                 if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
                     if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
@@ -776,7 +838,6 @@ window.startScraping = async function() {
                 let recordIndex = scrapedData.length - 1;
                 updateRealTimeHistory(scrapedData, false);
 
-                // Phone number wrapped inside secure click-to-dial link format
                 let dialerLink = record.phone !== 'N/A' 
                     ? `<a href="tel:${record.phone.replace(/[^0-9+]/g, '')}" style="color: #002d62; font-weight: bold; text-decoration: underline;">${record.phone}</a>` 
                     : 'N/A';
@@ -791,7 +852,6 @@ window.startScraping = async function() {
                     <td>${record.address}</td> 
                     <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
                     <td>${record.powerUnits}</td>
-                    <td>${record.drivers}</td>
                     <td><input type="text" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" style="width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 4px; font-size: 12px; box-sizing: border-box;" /></td>
                 </tr>`;
             }
