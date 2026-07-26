@@ -334,7 +334,9 @@ function generateCSVString(recordsData) {
     let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n"; 
     recordsData.forEach(r => { 
         let currentRem = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${currentRem.replace(/"/g, '""')}"\n`; 
+        // Clean text formatting numbers safely mapped to raw output string structure
+        let cleanNum = r.phone ? r.phone.replace(/"/g, '""') : 'N/A';
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${cleanNum}","${r.address}","${r.email}","${r.powerUnits}","${currentRem.replace(/"/g, '""')}"\n`; 
     });
     return csv;
 }
@@ -346,7 +348,7 @@ function buildSharingTextContent() {
 }
 
 window.executeGlobalSharing = async function(platform) {
-    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
+    if (scrapedData.length === 0) return alert("Kindly scan the data before proceeding.");
     
     const start = document.getElementById('startMc').value;
     const end = document.getElementById('endMc').value;
@@ -379,7 +381,7 @@ function fallbackTextShare(platform, basicText) {
     let limit = Math.min(scrapedData.length, 3);
     for(let i=0; i<limit; i++) {
         let curRemStr = scrapedData[i].remarks ? ` | Remarks: ${scrapedData[i].remarks}` : '';
-        fullText += `- MC: ${scrapedData[i].mc} | Email: ${scrapedData[i].email}${curRemStr}\n`;
+        fullText += `- MC: ${scrapedData[i].mc} | Phone: ${scrapedData[i].phone}${curRemStr}\n`;
     }
     fullText += `\nFile share format issue, please download report directly.`;
     
@@ -402,6 +404,27 @@ window.toggleHistoryDrawer = function() {
         renderHistoryItems(); 
     }
 };
+
+// HELPER FUNCTION: Generates interactive UI block layout for Full-Cell Dialer Button
+function buildDialerCellMarkup(phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return `<td style="text-align: center; vertical-align: middle; color: #6c757d;">N/A</td>`;
+    
+    let rawDigits = phoneNum.replace(/[^0-9+]/g, '');
+    
+    // Returns full block styling button link container mapping icon perfectly over minor text details
+    return `
+        <td style="padding: 0 !important; width: 130px; min-width: 120px; vertical-align: middle;">
+            <a href="tel:${rawDigits}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #e2eafc; color: #002d62; text-decoration: none; padding: 8px 4px; border-radius: 4px; border: 1px solid #b6ccfe; transition: background 0.2s, transform 0.1s; box-sizing: border-box; font-family: sans-serif; height: 100%; min-height: 52px;" 
+               onmouseover="this.style.background='#d0dfff';" 
+               onmouseout="this.style.background='#e2eafc';"
+               onmousedown="this.style.transform='scale(0.96)';"
+               onmouseup="this.style.transform='scale(1)';">
+                <span style="font-size: 16px; margin-bottom: 2px; line-height: 1;">📞</span>
+                <span style="font-size: 11px; font-weight: bold; color: #001a3a; text-align: center; letter-spacing: -0.2px; display: block; word-break: break-all;">${phoneNum}</span>
+            </a>
+        </td>
+    `;
+}
 
 // ====== INTERACTIVE HISTORY RESTORATION LOGIC ======
 window.loadHistorySheetToTable = function(id) {
@@ -430,10 +453,7 @@ window.loadHistorySheetToTable = function(id) {
         tableBody.innerHTML = '';
         
         scrapedData.forEach((record, index) => {
-            let dialerLink = record.phone !== 'N/A' 
-                ? `<a href="tel:${record.phone.replace(/[^0-9+]/g, '')}" style="color: #002d62; font-weight: bold; text-decoration: underline;">${record.phone}</a>` 
-                : 'N/A';
-            
+            let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let existingRemarks = record.remarks || "";
 
             tableBody.innerHTML += `<tr>
@@ -442,7 +462,7 @@ window.loadHistorySheetToTable = function(id) {
                 <td>${record.name}</td>
                 <td>${record.entityType}</td>
                 <td><span class="badge badge-active">${record.status}</span></td>
-                <td>${dialerLink}</td>
+                ${dialerCellHTML}
                 <td>${record.address}</td> 
                 <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
                 <td>${record.powerUnits}</td>
@@ -654,9 +674,7 @@ window.sendSupportAlert = function(channel) {
 
 // ====== HELPER MULTI-PROXY AUTO FETCH ENGINE ======
 async function fetchViaProxy(targetUrl) {
-    // Primary Edge Fast Proxy
     let primaryProxy = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
-    // Secondary Backup Proxy
     let backupProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
     
     try {
@@ -859,9 +877,7 @@ window.startScraping = async function() {
                 let recordIndex = scrapedData.length - 1;
                 updateRealTimeHistory(scrapedData, false);
 
-                let dialerLink = record.phone !== 'N/A' 
-                    ? `<a href="tel:${record.phone.replace(/[^0-9+]/g, '')}" style="color: #002d62; font-weight: bold; text-decoration: underline;">${record.phone}</a>` 
-                    : 'N/A';
+                let dialerCellHTML = buildDialerCellMarkup(record.phone);
 
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -869,7 +885,7 @@ window.startScraping = async function() {
                     <td>${record.name}</td>
                     <td>${record.entityType}</td>
                     <td><span class="badge badge-active">${record.status}</span></td>
-                    <td>${dialerLink}</td>
+                    ${dialerCellHTML}
                     <td>${record.address}</td> 
                     <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
                     <td>${record.powerUnits}</td>
