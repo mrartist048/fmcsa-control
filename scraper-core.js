@@ -211,7 +211,7 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
 
-// ====== CORE FOLLOW-UP ENGINE ======
+// ====== CORE FOLLOW-UP ENGINE WITH LIVE SEARCH FILTER ======
 window.addLeadToFollowUpList = function(index) {
     let record = scrapedData[index];
     if (!record) return;
@@ -235,12 +235,14 @@ window.toggleFollowUpDrawer = function() {
     let historyDrawer = document.getElementById('scraperHistoryDrawer');
     if (!drawer) return;
     
-    if(historyDrawer) historyDrawer.style.right = "-420px"; // Close history if open
+    if(historyDrawer) historyDrawer.style.right = "-420px"; 
     
     if (drawer.style.right === "0px") {
         drawer.style.right = "-420px";
     } else {
         drawer.style.right = "0px";
+        let searchInput = document.getElementById('followUpSearchInput');
+        if(searchInput) searchInput.value = ""; // Clear filter on re-open
         renderFollowUpItems(); 
     }
 };
@@ -267,13 +269,29 @@ function renderFollowUpItems() {
     let data = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
     data = data.reverse(); 
 
+    // Read search term if available
+    let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
+
     if (data.length === 0) {
         listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
         return;
     }
 
     let itemsHTML = "";
+    let matchCount = 0;
+
     data.forEach(item => {
+        let mcString = (item.mc || "").toString().toLowerCase();
+        let nameString = (item.name || "").toLowerCase();
+        let phoneString = (item.phone || "").toLowerCase();
+        
+        // Match condition check
+        if (filterQuery !== "") {
+            let matches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
+            if (!matches) return; // Skip item if it doesn't match search payload
+        }
+
+        matchCount++;
         itemsHTML += `
             <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
                 <div style="font-size: 11px; color: #6c757d; font-weight: bold;">Saved: ${item.addedAt}</div>
@@ -290,7 +308,12 @@ function renderFollowUpItems() {
             </div>
         `;
     });
-    listContainer.innerHTML = itemsHTML;
+
+    if (matchCount === 0 && filterQuery !== "") {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">Search criteria down matches 0 rows.</p>`;
+    } else {
+        listContainer.innerHTML = itemsHTML;
+    }
 }
 
 // ====== INDEXEDDB HISTORY SETUP ======
@@ -378,16 +401,22 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
-    // Dynamic Follow-Up Drawer Structural Injection
+    // Dynamic Follow-Up Drawer Structural Injection with Live Search Header
     if (!document.getElementById('scraperFollowUpDrawer')) {
         let fDrawer = document.createElement('div');
         fDrawer.id = 'scraperFollowUpDrawer';
         fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         fDrawer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
                 <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
                 <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
+            
+            <!-- Live Search Bar Injected Inside Panel -->
+            <div style="margin-bottom: 10px;">
+                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, or Phone..." style="width: 100%; padding: 8px 12px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
+            </div>
+
             <div style="margin-bottom: 12px;">
                 <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
             </div>
@@ -560,7 +589,7 @@ window.toggleHistoryDrawer = function() {
     let followUpDrawer = document.getElementById('scraperFollowUpDrawer');
     if (!drawer) return;
     
-    if(followUpDrawer) followUpDrawer.style.right = "-420px"; // Close follow-ups if open
+    if(followUpDrawer) followUpDrawer.style.right = "-420px"; 
     
     if (drawer.style.right === "0px") { drawer.style.right = "-420px"; } else { drawer.style.right = "0px"; renderHistoryItems(); }
 };
