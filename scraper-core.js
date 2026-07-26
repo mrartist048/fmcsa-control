@@ -211,7 +211,7 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
 
-// ====== CORE FOLLOW-UP ENGINE WITH LIVE TEXT & CALENDAR DATE FILTER ======
+// ====== CORE FOLLOW-UP ENGINE WITH LOCAL TIMEZONE SYNC ======
 window.addLeadToFollowUpList = function(index) {
     let record = scrapedData[index];
     if (!record) return;
@@ -222,10 +222,14 @@ window.addLeadToFollowUpList = function(index) {
         return alert("Yeh carrier pehle se hi Follow-Up list mein add hai.");
     }
     
-    // Store precise timestamp and local date format
     let d = new Date();
     record.addedAt = d.toLocaleString();
-    record.addedDateRaw = d.toISOString().split('T')[0]; // Format: YYYY-MM-DD for picker mapping
+    
+    // Exact Local Date Construction (Avoids ISO UTC structural alignment gaps)
+    let yyyy = d.getFullYear();
+    let mm = String(d.getMonth() + 1).padStart(2, '0');
+    let dd = String(d.getDate()).padStart(2, '0');
+    record.addedDateRaw = `${yyyy}-${mm}-${dd}`; 
     
     followUpStore.push(record);
     localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
@@ -248,7 +252,7 @@ window.toggleFollowUpDrawer = function() {
         let searchInput = document.getElementById('followUpSearchInput');
         let dateInput = document.getElementById('followUpDateInput');
         if(searchInput) searchInput.value = ""; 
-        if(dateInput) dateInput.value = ""; // Reset filters on open
+        if(dateInput) dateInput.value = ""; 
         renderFollowUpItems(); 
     }
 };
@@ -283,9 +287,8 @@ function renderFollowUpItems() {
     let data = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
     data = data.reverse(); 
 
-    // Read pipeline parameters
     let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
-    let filterDate = document.getElementById('followUpDateInput')?.value || ""; // Format: YYYY-MM-DD
+    let filterDate = document.getElementById('followUpDateInput')?.value || ""; 
 
     if (data.length === 0) {
         listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
@@ -301,15 +304,13 @@ function renderFollowUpItems() {
         let phoneString = (item.phone || "").toLowerCase();
         let itemDateRaw = item.addedDateRaw || ""; 
 
-        // 1. Check Text Filter Constraints
         if (filterQuery !== "") {
             let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
             if (!textMatches) return;
         }
 
-        // 2. Check Calendar Date Filter Constraints
         if (filterDate !== "") {
-            if (itemDateRaw !== filterDate) return; // Skip if date block does not match picker value
+            if (itemDateRaw !== filterDate) return; 
         }
 
         matchCount++;
@@ -422,7 +423,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
-    // Dynamic Follow-Up Drawer Structural Injection with Dual Search/Calendar Row
     if (!document.getElementById('scraperFollowUpDrawer')) {
         let fDrawer = document.createElement('div');
         fDrawer.id = 'scraperFollowUpDrawer';
@@ -433,7 +433,6 @@ function injectHistoryUIFramework() {
                 <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             
-            <!-- Dual Filtering Layout (Text Search + Calendar Input Node) -->
             <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
                 <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
                 
