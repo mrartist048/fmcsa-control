@@ -13,6 +13,7 @@
 
 // ====== GLOBAL ACCESS CONTROL & SUBSCRIPTION MANAGEMENT ======
 const allowedUsers = {
+    "admin_main": { maxLaptops: 99, expires: "2030-01-01", isAdmin: true },
     "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   
     "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  
     "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     
@@ -24,6 +25,7 @@ let currentClient = "unknown";
 let userLimit = 0;
 let mySessionKey = ""; 
 let dispatcherNickname = ""; 
+let loginTimeStr = "";
 
 function showPremiumNotification(message, isAlert = false, duration = 4500) {
     let toast = document.createElement('div');
@@ -78,6 +80,8 @@ function setupDispatcherIdentity() {
         }
         localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
     }
+    let d = new Date();
+    loginTimeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " (" + d.toLocaleDateString([], {month:'short', day:'numeric'}) + ")";
     injectNicknameProfileUI();
 }
 
@@ -135,7 +139,13 @@ function initializeAccessControl() {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
 
-    showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
+    if (clientConfig.isAdmin) {
+        showPremiumNotification("👑 Master Admin Dashboard Active");
+        loadAdminDashboardInterface();
+        return;
+    }
+
+    showPremiumNotification(`🚀 License Active: Verified for "${currentClient}"`);
 
     checkGlobalSessions();
     setInterval(checkGlobalSessions, 5000);
@@ -151,17 +161,18 @@ if (document.readyState === 'loading') {
     setTimeout(initializeAccessControl, 300);
 }
 
+// ====== FIREBASE SYNC WITH LIVE ADMIN DATA PIPELINE ======
 async function checkGlobalSessions() {
     if (userLimit === 0 || currentClient === "unknown") return;
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
+    let followUpList = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
     
     try {
         const res = await fetch(url);
         const data = await res.json() || {};
         
         let activeTabs = Object.keys(data).map(key => ({ dbKey: key, id: data[key].id, timestamp: data[key].timestamp }));
-        
         for (let tab of activeTabs) {
             if ((now - tab.timestamp) >= 20000 && tab.id !== window.name) {
                 await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${tab.dbKey}.json`, { method: 'DELETE' });
@@ -170,45 +181,168 @@ async function checkGlobalSessions() {
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: data[key].timestamp, nickname: cleanData[key].nickname }));
-        
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp }));
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
-        if (!currentTabRecord && activeTabs.length >= userLimit) {
-            document.body.innerHTML = `
-                <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
-                    <h1 style="color:#dc3545; font-size:30px;">⚠️ Global License Limit Exceeded</h1>
-                    <p style="font-size:16px; color:#333;">Your account is limited to a maximum of <b>${userLimit}</b> active instances.</p>
-                    <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
-                </div>
-            `;
-            throw new Error("Global Session Limit Exceeded");
-        }
-        
+        let packagePayload = { 
+            timestamp: now, 
+            nickname: dispatcherNickname, 
+            loginTime: loginTimeStr,
+            followUps: followUpList
+        };
+
         if (currentTabRecord) {
             mySessionKey = currentTabRecord.dbKey;
             await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json`, {
                 method: 'PATCH',
-                body: JSON.stringify({ timestamp: now, nickname: dispatcherNickname })
+                body: JSON.stringify(packagePayload)
             });
         } else {
             let postRes = await fetch(url, {
                 method: 'POST',
-                body: JSON.stringify({ id: window.name, timestamp: now, nickname: dispatcherNickname })
+                body: JSON.stringify({ id: window.name, ...packagePayload })
             });
             let postData = await postRes.json();
             mySessionKey = postData.name;
         }
-        
-    } catch (e) {
-        console.error("Session sync failed:", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 window.addEventListener('beforeunload', function () {
-    if (currentClient === "unknown" || !mySessionKey) return;
+    if (currentClient === "unknown" || !mySessionKey || allowedUsers[currentClient]?.isAdmin) return;
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${mySessionKey}.json?_method=DELETE`);
 });
+
+// ====== MASTER SUPER-ADMIN MONITOR INTERFACE ======
+function loadAdminDashboardInterface() {
+    document.body.innerHTML = `
+        <div style="font-family: sans-serif; padding: 25px; background: #f4f7fe; min-height: 100vh; box-sizing: border-box;">
+            <div style="background: #002d62; color: white; padding: 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 25px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h1 style="margin: 0; font-size: 24px;">👑 Central Operations Control Tower</h1>
+                    <p style="margin: 5px 0 0 0; opacity: 0.8; font-size: 13px;">Real-time Dispatcher Attendance & Follow-up Lead Pipeline Sync</p>
+                </div>
+                <button onclick="window.location.reload()" style="background:#28a745; color:white; border:none; padding:10px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">🔄 Refresh Board</button>
+            </div>
+            
+            <div style="background: white; border-radius: 6px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e2eafc;">
+                <h3 style="color:#002d62; margin-top:0;">👥 Active Team Members Tracking</h3>
+                <table style="width:100%; border-collapse:collapse; margin-top:15px; text-align:left;">
+                    <thead>
+                        <tr style="background:#e2eafc; color:#002d62;">
+                            <th style="padding:12px; border:1px solid #b6ccfe;">Company ID</th>
+                            <th style="padding:12px; border:1px solid #b6ccfe;">Dispatcher Name</th>
+                            <th style="padding:12px; border:1px solid #b6ccfe;">Status</th>
+                            <th style="padding:12px; border:1px solid #b6ccfe;">Login Time (PKT)</th>
+                            <th style="padding:12px; border:1px solid #b6ccfe;">Total Follow-Ups Saved</th>
+                            <th style="padding:12px; border:1px solid #b6ccfe;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTeamTableBody">
+                        <tr><td colspan="6" style="text-align:center; padding:30px; color:#6c757d; font-style:italic;">Loading team synchronization matrix...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Master Viewer Modal for Follow-Up Inspection -->
+            <div id="adminLeadsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center;">
+                <div style="background:white; width:650px; height:80%; border-radius:6px; padding:20px; display:flex; flex-direction:column; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #17a2b8; padding-bottom:10px; margin-bottom:15px;">
+                        <h3 style="color:#17a2b8; margin:0;" id="modalTitleName">Dispatcher Leads</h3>
+                        <button onclick="document.getElementById('adminLeadsModal').style.display='none'" style="background:none; border:none; font-size:24px; cursor:pointer; font-weight:bold; color:#6c757d;">&times;</button>
+                    </div>
+                    <div id="modalLeadsContainer" style="flex:1; overflow-y:auto; padding-right:5px;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    startAdminLivePollingEngine();
+}
+
+function startAdminLivePollingEngine() {
+    setInterval(async () => {
+        const tbody = document.getElementById('adminTeamTableBody');
+        if (!tbody) return;
+
+        try {
+            let res = await fetch(`${FIREBASE_DB_URL}sessions.json`);
+            let allSessions = await res.json() || {};
+            let rowsHTML = "";
+            let now = Date.now();
+
+            Object.keys(allowedUsers).forEach(clientId => {
+                if(allowedUsers[clientId].isAdmin) return; // Skip admin account from table rows
+
+                let clientData = allSessions[clientId] || {};
+                let targetKeys = Object.keys(clientData);
+
+                if (targetKeys.length === 0) {
+                    rowsHTML += `
+                        <tr style="background:#fff;">
+                            <td style="padding:12px; border:1px solid #e9ecef; font-weight:bold;">${clientId}</td>
+                            <td style="padding:12px; border:1px solid #e9ecef; color:#6c757d; font-style:italic;">N/A</td>
+                            <td style="padding:12px; border:1px solid #e9ecef;"><span style="background:#dc3545; color:white; padding:3px 8px; border-radius:3px; font-size:11px; font-weight:bold;">🔴 OFFLINE</span></td>
+                            <td style="padding:12px; border:1px solid #e9ecef; color:#6c757d;">--</td>
+                            <td style="padding:12px; border:1px solid #e9ecef; font-weight:bold; color:#6c757d;">0 leads</td>
+                            <td style="padding:12px; border:1px solid #e9ecef;">--</td>
+                        </tr>
+                    `;
+                } else {
+                    targetKeys.forEach(sessionKey => {
+                        let record = clientData[sessionKey];
+                        let isOnline = (now - record.timestamp) < 25000;
+                        let leadsArr = record.followUps || [];
+
+                        // Store leads into global window map temporarily for modal access via reference
+                        let globalRefKey = `leads_${clientId}_${sessionKey}`;
+                        window[globalRefKey] = leadsArr;
+
+                        rowsHTML += `
+                            <tr style="background:#fff;">
+                                <td style="padding:12px; border:1px solid #e9ecef; font-weight:bold; color:#002d62;">${clientId}</td>
+                                <td style="padding:12px; border:1px solid #e9ecef; font-weight:bold;">👤 ${record.nickname || 'Unknown'}</td>
+                                <td style="padding:12px; border:1px solid #e9ecef;">
+                                    <span style="background:${isOnline ? '#28a745' : '#dc3545'}; color:white; padding:3px 8px; border-radius:3px; font-size:11px; font-weight:bold;">
+                                        ${isOnline ? '🟢 ONLINE' : '🔴 OFFLINE'}
+                                    </span>
+                                </td>
+                                <td style="padding:12px; border:1px solid #e9ecef; font-size:13px; font-weight:bold; color:#555;">${record.loginTime || 'Just now'}</td>
+                                <td style="padding:12px; border:1px solid #e9ecef; font-weight:bold; color:#17a2b8;">⭐ ${leadsArr.length} Leads Saved</td>
+                                <td style="padding:12px; border:1px solid #e9ecef;">
+                                    <button onclick="inspectDispatcherLeadsInline('${record.nickname || clientId}', '${globalRefKey}')" style="background:#002d62; color:white; border:none; padding:5px 12px; font-size:12px; font-weight:bold; border-radius:3px; cursor:pointer;">📂 Inspect Sheet</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+
+            tbody.innerHTML = rowsHTML;
+        } catch(err) { console.error("Admin polling gap loop failed: ", err); }
+    }, 4000);
+}
+
+window.inspectDispatcherLeadsInline = function(name, globalRefKey) {
+    let leads = window[globalRefKey] || [];
+    document.getElementById('modalTitleName').innerText = `📋 ${name}'s Saved Follow-Up Vault`;
+    
+    let listHTML = "";
+    if (leads.length === 0) {
+        listHTML = `<p style="text-align:center; padding:40px; color:#6c757d; font-style:italic;">No saved leads recorded in this profile's workspace.</p>`;
+    } else {
+        leads.forEach(item => {
+            listHTML += `
+                <div style="background:#f8f9fa; border:1px solid #ddd; border-left:4px solid #17a2b8; padding:10px; margin-bottom:8px; border-radius:4px; font-family:sans-serif;">
+                    <div style="font-size:13px; font-weight:bold; color:#002d62;">${item.name}</div>
+                    <div style="font-size:11px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'} | <b>Email:</b> ${item.email || 'N/A'}</div>
+                    <div style="font-size:11px; background:#e9ecef; padding:4px; margin-top:5px; border-radius:3px; font-style:italic; color:#555;"><b>Remarks:</b> ${item.remarks || 'No remarks added.'}</div>
+                </div>
+            `;
+        } );
+    }
+    document.getElementById('modalLeadsContainer').innerHTML = listHTML;
+    document.getElementById('adminLeadsModal').style.display = "flex";
+};
 
 // ====== CORE FOLLOW-UP ENGINE ======
 window.addLeadToFollowUpList = function(index) {
@@ -216,7 +350,6 @@ window.addLeadToFollowUpList = function(index) {
     if (!record) return;
 
     let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
-    
     if (followUpStore.some(r => r.mc === record.mc)) {
         return alert("Yeh carrier pehle se hi Follow-Up list mein add hai.");
     }
@@ -226,6 +359,7 @@ window.addLeadToFollowUpList = function(index) {
     localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
     
     showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, false, 3000);
+    checkGlobalSessions(); // Force network node update instant push
     if (document.getElementById('scraperFollowUpDrawer').style.right === "0px") renderFollowUpItems();
 };
 
@@ -235,7 +369,6 @@ window.toggleFollowUpDrawer = function() {
     if (!drawer) return;
     
     if(historyDrawer) historyDrawer.style.right = "-420px"; 
-    
     if (drawer.style.right === "0px") {
         drawer.style.right = "-420px";
     } else {
@@ -258,6 +391,7 @@ window.deleteFollowUpItem = function(mcNumber) {
         followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
         localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
         renderFollowUpItems();
+        checkGlobalSessions();
     }
 };
 
@@ -331,7 +465,7 @@ request.onupgradeneeded = function(e) {
 };
 request.onsuccess = function(e) {
     db = e.target.result;
-    injectHistoryUIFramework(); 
+    if (allowedUsers[currentClient]?.isAdmin === false) injectHistoryUIFramework(); 
 };
 
 function injectHistoryUIFramework() {
@@ -592,7 +726,6 @@ window.toggleHistoryDrawer = function() {
     if (!drawer) return;
     
     if(followUpDrawer) followUpDrawer.style.right = "-420px"; 
-    
     if (drawer.style.right === "0px") { drawer.style.right = "-420px"; } else { drawer.style.right = "0px"; renderHistoryItems(); }
 };
 
