@@ -12,20 +12,17 @@
 })();
 
 // ====== GLOBAL ACCESS CONTROL & SUBSCRIPTION MANAGEMENT ======
-// Aap yahan har user ki Max Laptops limit aur Expiry Date (YYYY-MM-DD) set kar sakte hain
 const allowedUsers = {
-    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   // Active till 26 August 2026
-    "dispatcher_karachi": { maxLaptops: 1, expires: "2026-07-25" },  // Already Blocked/Expired
-    "dispatchloadify": { maxLaptops: 2, expires: "2026-08-01" },     // Active till 1st Sept 2026
+    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   
+    "dispatcher_karachi": { maxLaptops: 0, expires: "2026-05-10" },  
+    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     
 };
 
-// Auto-configured URL from your Firebase console link
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
 
 let currentClient = "unknown";
 let userLimit = 0;
 
-// Dynamic UI Notification Toast System Creator
 function showPremiumNotification(message, duration = 4500) {
     let toast = document.createElement('div');
     toast.innerHTML = `
@@ -53,13 +50,11 @@ function showPremiumNotification(message, duration = 4500) {
     `;
     document.body.appendChild(toast);
     
-    // Trigger Slide Down
     setTimeout(() => {
         toast.style.top = "20px";
         toast.style.opacity = "1";
     }, 100);
 
-    // Trigger Fade Out & Remove
     setTimeout(() => {
         toast.style.top = "-100px";
         toast.style.opacity = "0";
@@ -67,7 +62,6 @@ function showPremiumNotification(message, duration = 4500) {
     }, duration);
 }
 
-// Function to safely execute security check after DOM and variables load completely
 function initializeAccessControl() {
     currentClient = window.scrClientID || "unknown";
     
@@ -76,17 +70,13 @@ function initializeAccessControl() {
 
     if (clientConfig) {
         userLimit = clientConfig.maxLaptops || 0;
-        
-        // System date format (YYYY-MM-DD) me nikalte hain comparison k liye
         const todayStr = new Date().toISOString().split('T')[0]; 
         
-        // Agar laptop limit 0 se bari hai aur aaj ki date expiry date se pehle ya barabar hai
         if (userLimit > 0 && todayStr <= clientConfig.expires) {
             isAccessValid = true;
         }
     }
 
-    // Check if user is allowed at all or expired
     if (!isAccessValid) {
         document.getElementById('status').innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
         document.getElementById('status').style.background = "#f8d7da";
@@ -98,20 +88,18 @@ function initializeAccessControl() {
         throw new Error("Access Denied");
     }
 
-    // Global Unique Tab/Laptop Identity
     if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
 
-    // Success subscription message pop-up on start (With Expiry Alert)
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
-    // Start network sync loop immediately after validation
     checkGlobalSessions();
     setInterval(checkGlobalSessions, 5000);
+    
+    injectLiveSupportSystem();
 }
 
-// Safely execute when script variable bindings are finished
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeAccessControl);
 } else {
@@ -317,12 +305,31 @@ function injectHistoryUIFramework() {
             });
         }
     }
+
+    // Dynamic Header Check for Remarks Column
+    let tableHeader = document.querySelector('table.table thead tr, table tr');
+    if (tableHeader && !document.getElementById('remarksHeaderCol')) {
+        let remTh = document.createElement('th');
+        remTh.id = 'remarksHeaderCol';
+        remTh.innerText = "Remarks";
+        remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
+        tableHeader.appendChild(remTh);
+    }
 }
 
+// Live sync input data to core records array
+window.syncRemarksData = function(index, value) {
+    if (scrapedData[index]) {
+        scrapedData[index].remarks = value;
+        updateRealTimeHistory(scrapedData, false);
+    }
+};
+
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers\n"; 
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Drivers,Remarks\n"; 
     recordsData.forEach(r => { 
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.drivers}"\n`; 
+        let currentRem = r.remarks || "";
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.drivers}","${currentRem.replace(/"/g, '""')}"\n`; 
     });
     return csv;
 }
@@ -334,7 +341,7 @@ function buildSharingTextContent() {
 }
 
 window.executeGlobalSharing = async function(platform) {
-    if (scrapedData.length === 0) return alert("Kindly scan the data before proceeding");
+    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
     
     const start = document.getElementById('startMc').value;
     const end = document.getElementById('endMc').value;
@@ -366,7 +373,8 @@ function fallbackTextShare(platform, basicText) {
     let fullText = `*${basicText}*\n\n*Top Preview:*\n`;
     let limit = Math.min(scrapedData.length, 3);
     for(let i=0; i<limit; i++) {
-        fullText += `- MC: ${scrapedData[i].mc} | Email: ${scrapedData[i].email}\n`;
+        let curRemStr = scrapedData[i].remarks ? ` | Remarks: ${scrapedData[i].remarks}` : '';
+        fullText += `- MC: ${scrapedData[i].mc} | Email: ${scrapedData[i].email}${curRemStr}\n`;
     }
     fullText += `\nFile share format issue, please download report directly.`;
     
@@ -481,6 +489,100 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
         }
     };
 }
+
+// ====== PRE-INJECTED LIVE HELP & CHATBOX MODULE ======
+function injectLiveSupportSystem() {
+    if (document.getElementById('scrSupportFloatingBtn')) return;
+
+    let btn = document.createElement('button');
+    btn.id = 'scrSupportFloatingBtn';
+    btn.innerHTML = "💬 Technical Support";
+    btn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: #002d62;
+        color: #fff;
+        border: 2px solid #17a2b8;
+        padding: 10px 18px;
+        border-radius: 30px;
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 13px;
+        cursor: pointer;
+        z-index: 999998;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    `;
+    btn.onmouseover = () => btn.style.transform = "scale(1.05)";
+    btn.onmouseout = () => btn.style.transform = "scale(1)";
+    btn.onclick = toggleSupportChatbox;
+    document.body.appendChild(btn);
+
+    let chatBox = document.createElement('div');
+    chatBox.id = 'scrSupportChatboxWindow';
+    chatBox.style.cssText = `
+        position: fixed;
+        bottom: 75px;
+        left: 20px;
+        width: 330px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 5px 25px rgba(0,0,0,0.25);
+        border: 1px solid #ddd;
+        font-family: sans-serif;
+        display: none;
+        z-index: 999998;
+        overflow: hidden;
+    `;
+    chatBox.innerHTML = `
+        <div style="background: #002d62; color: white; padding: 12px 15px; font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <span>🛡️ System Helpdesk</span>
+            <span onclick="toggleSupportChatbox()" style="cursor: pointer; font-size: 18px;">&times;</span>
+        </div>
+        <div style="padding: 12px; background: #fdfdfd; font-size: 12px; color: #555; border-bottom: 1px solid #eee;">
+            Assalam-o-Alaikum! Aapko tool me koi b help chahiye ya licence renewal krwana ho, niche message likh kr send krein.
+        </div>
+        <div style="padding: 15px;">
+            <textarea id="scrSupportMsgInput" placeholder="Apna masla ya message yahan type krein..." style="width: 100%; height: 80px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: sans-serif; resize: none; box-sizing: border-box;"></textarea>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button onclick="sendSupportAlert('whatsapp')" style="flex: 1; background: #25D366; color: white; border: none; padding: 8px 0; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">💬 WhatsApp</button>
+                <button onclick="sendSupportAlert('email')" style="flex: 1; background: #ea4335; color: white; border: none; padding: 8px 0; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">📧 Email Send</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(chatBox);
+}
+
+window.toggleSupportChatbox = function() {
+    let box = document.getElementById('scrSupportChatboxWindow');
+    if (!box) return;
+    box.style.display = box.style.display === 'block' ? 'none' : 'block';
+};
+
+window.sendSupportAlert = function(channel) {
+    const textInput = document.getElementById('scrSupportMsgInput');
+    if (!textInput || textInput.value.trim() === "") return alert("Meharbani karke pehle message type karein.");
+
+    const userMsg = textInput.value.trim();
+    const cleanClient = window.scrClientID || "unknown_user";
+    
+    const finalFormattedText = `*★ FMCSA Scraper Support Alert ★*\n\n*From User:* ${cleanClient}\n*Tab ID:* ${window.name}\n\n*Message:* ${userMsg}`;
+
+    if (channel === 'whatsapp') {
+        const targetPhone = "923037654849"; 
+        const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(finalFormattedText)}`;
+        window.open(waUrl, '_blank');
+    } else {
+        const targetEmail = "admin@example.com"; 
+        const emailSubject = `Scraper Support Ticket from [${cleanClient}]`;
+        const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(finalFormattedText.replace(/\*/g, ''))}`;
+        window.open(mailtoUrl, '_blank');
+    }
+    
+    textInput.value = "";
+    toggleSupportChatbox();
+};
 
 // ====== ONLY AUTHORIZED SCRAPING LOGIC ======
 let scraping = false; let scrapedData = [];
@@ -600,7 +702,7 @@ window.startScraping = async function() {
                 continue;
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', drivers: 'N/A' };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', drivers: 'N/A', remarks: '' };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -671,7 +773,13 @@ window.startScraping = async function() {
                 } catch (smsErr) { console.log(smsErr); }
 
                 scrapedData.push(record);
+                let recordIndex = scrapedData.length - 1;
                 updateRealTimeHistory(scrapedData, false);
+
+                // Phone number wrapped inside secure click-to-dial link format
+                let dialerLink = record.phone !== 'N/A' 
+                    ? `<a href="tel:${record.phone.replace(/[^0-9+]/g, '')}" style="color: #002d62; font-weight: bold; text-decoration: underline;">${record.phone}</a>` 
+                    : 'N/A';
 
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -679,11 +787,12 @@ window.startScraping = async function() {
                     <td>${record.name}</td>
                     <td>${record.entityType}</td>
                     <td><span class="badge badge-active">${record.status}</span></td>
-                    <td>${record.phone}</td>
+                    <td>${dialerLink}</td>
                     <td>${record.address}</td> 
                     <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
                     <td>${record.powerUnits}</td>
                     <td>${record.drivers}</td>
+                    <td><input type="text" placeholder="Add remarks..." oninput="syncRemarksData(${recordIndex}, this.value)" style="width: 100%; border: 1px solid #ccc; border-radius: 3px; padding: 4px; font-size: 12px; box-sizing: border-box;" /></td>
                 </tr>`;
             }
         } catch (e) { console.log(e); }
