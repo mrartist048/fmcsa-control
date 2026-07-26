@@ -1,6 +1,6 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.gh/mrartist048/fmcsa-control@main/fav.png";
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
         link = document.createElement('link');
@@ -371,6 +371,15 @@ request.onsuccess = function(e) {
     injectHistoryUIFramework(); 
 };
 
+// CONSTANT HEADINGS CONFIGURATION
+const DEFAULT_REMARKS_TEMPLATE = 
+    "Truck Type:\n" +
+    "Length:\n" +
+    "Accessories:\n" +
+    "Load:\n" +
+    "Zip Code:\n" +
+    "Summary:";
+
 function injectHistoryUIFramework() {
     if (!document.getElementById('scrResponsiveLayoutTheme')) {
         let styleTag = document.createElement('style');
@@ -381,58 +390,28 @@ function injectHistoryUIFramework() {
             table.table { width: 100% !important; min-width: 1200px !important; table-layout: auto !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; }
             
-            /* DYNAMIC PREMIUM 2x2 ROW-LINE STRUCTURED MIX SUB-FORM STYLING */
-            .remarks-cell-container { min-width: 320px !important; width: 330px !important; position: relative; vertical-align: middle !important; }
-            
-            .remarks-mini-form {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-                background: #f8f9fa;
-                border: 1px solid #b6ccfe;
-                border-radius: 6px;
-                padding: 6px;
-                box-sizing: border-box;
-                transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+            /* LOCKED COLUMN TEXTAREA STYLING */
+            .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; }
+            .remarks-input-field { 
+                width: 100% !important; 
+                height: 115px !important;
+                border: 1px solid #b6ccfe !important; 
+                border-radius: 6px !important; 
+                padding: 6px 10px !important; 
+                font-size: 12px !important; 
+                line-height: 1.4 !important;
+                box-sizing: border-box !important; 
+                color: #222 !important; 
+                background: #fafafa !important; 
+                resize: none !important;
+                font-family: monospace !important;
+                transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; 
             }
-            .remarks-mini-form:focus-within {
-                background: #ffffff;
-                border-color: #002d62;
-                box-shadow: 0 4px 12px rgba(0,45,98,0.12);
-            }
-            .remarks-form-line {
-                display: flex;
-                gap: 6px;
-                width: 100%;
-            }
-            .remarks-form-row {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                flex: 1;
-            }
-            .remarks-form-label {
-                font-family: sans-serif;
-                font-size: 11px;
-                font-weight: bold;
-                color: #495057;
-                white-space: nowrap;
-                user-select: none;
-            }
-            .remarks-form-input {
-                width: 100%;
-                border: 1px solid #ced4da;
-                border-radius: 3px;
-                padding: 3px 5px;
-                font-size: 11px;
-                color: #333;
-                background: #fff;
-                box-sizing: border-box;
-                transition: border-color 0.15s;
-            }
-            .remarks-form-input:focus {
-                border-color: #002d62;
-                outline: none;
+            .remarks-input-field:focus { 
+                border-color: #002d62 !important; 
+                background: #ffffff !important; 
+                outline: none !important; 
+                box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
             }
 
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
@@ -552,7 +531,7 @@ function injectHistoryUIFramework() {
         let remTh = document.createElement('th');
         remTh.id = 'remarksHeaderCol';
         remTh.className = 'remarks-cell-container';
-        remTh.innerText = "Remarks Matrix";
+        remTh.innerText = "Remarks";
         remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
         tableHeader.appendChild(remTh);
         
@@ -692,23 +671,47 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== AUTOMATIC SERIALIZER FOR SUB-FORM CELLS ======
-window.processSubFormInputMatrix = function(index, cellContainerElement) {
-    let tType = cellContainerElement.querySelector('.matrix-t-type').value.trim();
-    let len   = cellContainerElement.querySelector('.matrix-length').value.trim();
-    let acc   = cellContainerElement.querySelector('.matrix-acc').value.trim();
-    let zip   = cellContainerElement.querySelector('.matrix-zip').value.trim();
+// ====== SMART HEADINGS PROTECTOR ENGINE LOGIC ======
+window.handleLockedRemarksInput = function(index, textarea) {
+    let currentVal = textarea.value;
+    
+    // Core structure check list
+    const linesCheck = [
+        "Truck Type:",
+        "Length:",
+        "Accessories:",
+        "Load:",
+        "Zip Code:",
+        "Summary:"
+    ];
 
-    let compiledRemarks = [];
-    if (tType) compiledRemarks.push(`Truck Type: ${tType}`);
-    if (len)   compiledRemarks.push(`Length: ${len}`);
-    if (acc)   compiledRemarks.push(`Accessories: ${acc}`);
-    if (zip)   compiledRemarks.push(`Load Zip Code: ${zip}`);
+    let lines = currentVal.split('\n');
+    
+    // Automatically pad lines if dispatcher clears or ruins the spacing layout
+    while(lines.length < 6) {
+        lines.push("");
+    }
 
-    let flatResultText = compiledRemarks.join(' | ');
+    // Forces headings back into place if changed/deleted
+    for(let i = 0; i < 6; i++) {
+        if (!lines[i].startsWith(linesCheck[i])) {
+            let actualData = lines[i].replace(/^(Truck Type|Length|Accessories|Load|Zip Code|Summary):\s*/i, "");
+            lines[i] = linesCheck[i] + " " + actualData;
+        }
+    }
 
+    // Keep only 6 formatted fields structured
+    let formattedText = lines.slice(0,6).join('\n');
+    
+    if (textarea.value !== formattedText) {
+        let cursorStart = textarea.selectionStart;
+        textarea.value = formattedText;
+        textarea.setSelectionRange(cursorStart, cursorStart);
+    }
+
+    // Synchronize to production database tracker
     if (scrapedData[index]) {
-        scrapedData[index].remarks = flatResultText;
+        scrapedData[index].remarks = formattedText;
         updateRealTimeHistory(scrapedData, false);
     }
 };
@@ -716,7 +719,9 @@ window.processSubFormInputMatrix = function(index, cellContainerElement) {
 function generateCSVString(recordsData) {
     let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n"; 
     recordsData.forEach(r => { 
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone || 'N/A'}","${r.address}","${r.email}","${r.powerUnits}","${(r.remarks || '').replace(/"/g, '""')}"\n`; 
+        // Handles cell newline serialization carefully for CSV formats
+        let safeRemarks = r.remarks || DEFAULT_REMARKS_TEMPLATE;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone || 'N/A'}","${r.address}","${r.email}","${r.powerUnits}","${safeRemarks.replace(/"/g, '""')}"\n`; 
     });
     return csv;
 }
@@ -748,20 +753,6 @@ function buildDialerCellMarkup(phoneNum) {
     `;
 }
 
-// Helper to extract fields from old saved flat text remarks
-function parseSavedRemarksToMatrix(flatString) {
-    let obj = { type: '', len: '', acc: '', zip: '' };
-    if (!flatString) return obj;
-    let parts = flatString.split(' | ');
-    parts.forEach(p => {
-        if (p.startsWith("Truck Type: "))   obj.type = p.replace("Truck Type: ", "");
-        if (p.startsWith("Length: "))       obj.len  = p.replace("Length: ", "");
-        if (p.startsWith("Accessories: "))  obj.acc  = p.replace("Accessories: ", "");
-        if (p.startsWith("Load Zip Code: ")) obj.zip  = p.replace("Load Zip Code: ", "");
-    });
-    return obj;
-}
-
 // ====== INTERACTIVE HISTORY RESTORATION LOGIC ======
 window.loadHistorySheetToTable = async function(id) {
     const tx = db.transaction("history", "readonly");
@@ -786,7 +777,7 @@ window.loadHistorySheetToTable = async function(id) {
             let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             
-            let vals = parseSavedRemarksToMatrix(record.remarks);
+            let activeRemarksValue = record.remarks || DEFAULT_REMARKS_TEMPLATE;
 
             tableBody.innerHTML += `<tr ${rowStyleHTML}>
                 <td><b>${record.mc}</b></td>
@@ -799,18 +790,7 @@ window.loadHistorySheetToTable = async function(id) {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container">
-                    <div class="remarks-mini-form" oninput="processSubFormInputMatrix(${index}, this)">
-                        <!-- Line 1: Load Type Configuration -->
-                        <div class="remarks-form-line">
-                            <div class="remarks-form-row"><span class="remarks-form-label">Type:</span><input type="text" class="remarks-form-input matrix-t-type" value="${vals.type}"></div>
-                            <div class="remarks-form-row"><span class="remarks-form-label">Len:</span><input type="text" class="remarks-form-input matrix-length" value="${vals.len}"></div>
-                        </div>
-                        <!-- Line 2: Equipment & Location Configuration -->
-                        <div class="remarks-form-line">
-                            <div class="remarks-form-row"><span class="remarks-form-label">Acc:</span><input type="text" class="remarks-form-input matrix-acc" value="${vals.acc}"></div>
-                            <div class="remarks-form-row"><span class="remarks-form-label">Zip:</span><input type="text" class="remarks-form-input matrix-zip" value="${vals.zip}"></div>
-                        </div>
-                    </div>
+                    <textarea class="remarks-input-field" oninput="handleLockedRemarksInput(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
@@ -921,7 +901,7 @@ window.startScraping = async function() {
             const htmlText = await fetchViaProxy(`https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`);
             if (!htmlText || !htmlText.includes("USDOT Number:")) continue;
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: DEFAULT_REMARKS_TEMPLATE };
             let el = document.createElement('html'); el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
             
@@ -961,18 +941,7 @@ window.startScraping = async function() {
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container">
-                    <div class="remarks-mini-form" oninput="processSubFormInputMatrix(${recordIndex}, this)">
-                        <!-- Line 1: Load Type Configuration -->
-                        <div class="remarks-form-line">
-                            <div class="remarks-form-row"><span class="remarks-form-label">Type:</span><input type="text" class="remarks-form-input matrix-t-type" placeholder="e.g. Reefer"></div>
-                            <div class="remarks-form-row"><span class="remarks-form-label">Len:</span><input type="text" class="remarks-form-input matrix-length" placeholder="e.g. 53ft"></div>
-                        </div>
-                        <!-- Line 2: Equipment & Location Configuration -->
-                        <div class="remarks-form-line">
-                            <div class="remarks-form-row"><span class="remarks-form-label">Acc:</span><input type="text" class="remarks-form-input matrix-acc" placeholder="e.g. Straps"></div>
-                            <div class="remarks-form-row"><span class="remarks-form-label">Zip:</span><input type="text" class="remarks-form-input matrix-zip" placeholder="e.g. 77001"></div>
-                        </div>
-                    </div>
+                    <textarea class="remarks-input-field" oninput="handleLockedRemarksInput(${recordIndex}, this)">${DEFAULT_REMARKS_TEMPLATE}</textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             `;
