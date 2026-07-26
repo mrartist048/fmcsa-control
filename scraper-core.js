@@ -561,7 +561,7 @@ window.sendSupportAlert = function(channel) {
         const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(finalFormattedText)}`;
         window.open(waUrl, '_blank');
     } else {
-        const targetEmail = "admin@example.com"; // Yahan aap apni admin email insert kr sakty hain
+        const targetEmail = "noumannaseer048@gmail.com"; // Yahan aap apni admin email insert kr sakty hain
         const emailSubject = `Scraper Support Ticket from [${cleanClient}]`;
         const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(finalFormattedText.replace(/\*/g, ''))}`;
         window.open(mailtoUrl, '_blank');
