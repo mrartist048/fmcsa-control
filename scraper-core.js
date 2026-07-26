@@ -282,8 +282,8 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Uniform Dark-Themed Clickable Phone Cell Styling */
-            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; }
+            /* Uniform Dark-Themed Clickable Phone Cell with Rounded Corners */
+            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
             .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
             .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
@@ -583,7 +583,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td style="padding: 0 !important;">
+        <td style="padding: 4px !important;">
             <a href="tel:${phoneNum}" class="phone-clickable-cell" title="Click to Call / Copy">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
