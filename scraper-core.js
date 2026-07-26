@@ -79,7 +79,7 @@ function showPremiumNotification(message, duration = 4500) {
 
 // ====== DISPATCHER IDENTITY SETUP ======
 function setupDispatcherIdentity() {
-    dispatcherNickname = localStorage.getItem(`scr_nick_${currentClient}`) || "";
+    dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
         let inputName = prompt("Welcome! Please enter your name (e.g., Nauman, Ali, Bilal):");
         if (inputName && inputName.trim() !== "") {
@@ -87,28 +87,28 @@ function setupDispatcherIdentity() {
         } else {
             dispatcherNickname = "User_" + Math.floor(100 + Math.random() * 900);
         }
-        localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
+        localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
     }
     injectNicknameProfileUI();
 }
 
 function injectNicknameProfileUI() {
-    if (document.getElementById('scrNickProfilePanel')) return;
+    if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
     let panel = document.createElement('div');
-    panel.id = 'scrNickProfilePanel';
+    panel.id = 'dlNickProfilePanel';
     panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
-    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a>`;
+    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a>`;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
 window.changeDispatcherName = function() {
-    let oldName = localStorage.getItem(`scr_nick_${currentClient}`) || "";
+    let oldName = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     let newName = prompt("Enter your new display name:", oldName);
     if (newName && newName.trim() !== "") {
         dispatcherNickname = newName.trim();
-        localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
-        let label = document.getElementById('scrDispCurrentName');
+        localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
+        let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
     }
 };
@@ -147,8 +147,8 @@ function initializeAccessControl() {
 
     setupDispatcherIdentity();
 
-    if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
-        window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+    if (!window.name || !window.name.startsWith("dl_tab_")) {
+        window.name = "dl_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     }
 
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
@@ -221,7 +221,7 @@ window.addEventListener('beforeunload', function () {
 // ====== INDEXEDDB HISTORY & RESPONSIVE UI FRAMEWORK ======
 let db;
 let currentHistoryId = null;
-const request = indexedDB.open("ScraperHistoryDB", 1);
+const request = indexedDB.open("DispatchLinkHistoryDB", 1);
 request.onupgradeneeded = function(e) {
     db = e.target.result;
     if (!db.objectStoreNames.contains("history")) {
@@ -255,12 +255,12 @@ function injectHistoryUIFramework() {
         }
     }
     if (brandHeading) {
-        brandHeading.innerHTML = "Dispatch Link <span style='font-size:14px; color:#6c757d; font-weight:normal;'>| FMCSA Lead Scraper & CRM</span>";
+        brandHeading.innerHTML = "Dispatch Link <span style='font-size:14px; color:#6c757d; font-weight:normal;'>| Lead Processor & CRM</span>";
     }
 
-    if (!document.getElementById('scrResponsiveTheme')) {
+    if (!document.getElementById('dlResponsiveTheme')) {
         let styleTag = document.createElement('style');
-        styleTag.id = 'scrResponsiveTheme';
+        styleTag.id = 'dlResponsiveTheme';
         styleTag.innerHTML = `
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
@@ -354,9 +354,9 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    if (!document.getElementById('scraperHistoryDrawer')) {
+    if (!document.getElementById('dlHistoryDrawer')) {
         let drawer = document.createElement('div');
-        drawer.id = 'scraperHistoryDrawer';
+        drawer.id = 'dlHistoryDrawer';
         drawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         drawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
@@ -368,9 +368,9 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
-    if (!document.getElementById('scraperFollowUpDrawer')) {
+    if (!document.getElementById('dlFollowUpDrawer')) {
         let fDrawer = document.createElement('div');
-        fDrawer.id = 'scraperFollowUpDrawer';
+        fDrawer.id = 'dlFollowUpDrawer';
         fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         fDrawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
@@ -391,8 +391,8 @@ function injectHistoryUIFramework() {
 
     // Global Click Listener to close drawers when clicking outside
     document.addEventListener('click', function(event) {
-        let hDrawer = document.getElementById('scraperHistoryDrawer');
-        let fDrawer = document.getElementById('scraperFollowUpDrawer');
+        let hDrawer = document.getElementById('dlHistoryDrawer');
+        let fDrawer = document.getElementById('dlFollowUpDrawer');
         let hBtn = document.getElementById('openHistoryBtn');
         let fBtn = document.getElementById('openFollowUpDrawerBtn');
 
@@ -546,8 +546,8 @@ function injectEmailProposalPanel() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('premiumProposalWrapper')) return;
 
-    let savedSubject = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal";
-    let savedBody = localStorage.getItem(`scr_body_${currentClient}`) || "Hello,\n\nWe found your profile via FMCSA. We offer dispatching services at 5% rate.\n\nBest Regards.";
+    let savedSubject = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Service Proposal";
+    let savedBody = localStorage.getItem(`dl_body_${currentClient}`) || "Hello,\n\nWe found your profile via FMCSA. We offer dispatching services at 5% rate.\n\nBest Regards.";
 
     let proposalPanel = document.createElement('div');
     proposalPanel.id = 'premiumProposalWrapper';
@@ -567,16 +567,16 @@ function injectEmailProposalPanel() {
 }
 
 window.saveProposalTemplateSettings = function() {
-    localStorage.setItem(`scr_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
-    localStorage.setItem(`scr_body_${currentClient}`, document.getElementById('propBodyInput').value);
+    localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
+    localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('propBodyInput').value);
     alert("Template saved successfully.");
     document.getElementById('proposalInputsBlock').style.display = 'none';
 };
 
 window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
     if (!emailAddress || emailAddress === 'N/A') return;
-    let subj = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Proposal";
-    let body = localStorage.getItem(`scr_body_${currentClient}`) || "Hello";
+    let subj = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Proposal";
+    let body = localStorage.getItem(`dl_body_${currentClient}`) || "Hello";
     let customizedBody = body.replace(/{company}/gi, companyName);
 
     let mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
@@ -635,26 +635,26 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
     let record = scrapedData[index];
     if (!record) return;
 
-    let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     if (followUpStore.some(r => r.mc === record.mc)) {
         return alert("This carrier is already added to your Follow-Up list.");
     }
     
     record.addedAt = new Date().toLocaleString();
     followUpStore.push(record);
-    localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
+    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
     showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, 3000);
     
     let row = buttonElement.closest('tr');
     if (row) row.style.background = "#d4edda";
 
-    if (document.getElementById('scraperFollowUpDrawer').style.right === "0px") renderFollowUpItems();
+    if (document.getElementById('dlFollowUpDrawer').style.right === "0px") renderFollowUpItems();
 };
 
 window.toggleFollowUpDrawer = function() {
-    let drawer = document.getElementById('scraperFollowUpDrawer');
-    let historyDrawer = document.getElementById('scraperHistoryDrawer');
+    let drawer = document.getElementById('dlFollowUpDrawer');
+    let historyDrawer = document.getElementById('dlHistoryDrawer');
     if (!drawer) return;
     
     if(historyDrawer) historyDrawer.style.right = "-420px"; 
@@ -677,9 +677,9 @@ window.clearFollowUpFilters = function() {
 
 window.deleteFollowUpItem = function(mcNumber) {
     if (confirm("Remove carrier from Follow-Ups?")) {
-        let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
         followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
-        localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
+        localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
         renderFollowUpItems();
         
         let tableRows = document.querySelectorAll('#resultsTable tr');
@@ -691,7 +691,7 @@ window.deleteFollowUpItem = function(mcNumber) {
 };
 
 window.downloadFollowUpsCSV = function() {
-    let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     if (followUpStore.length === 0) return alert("The follow-up list is currently empty.");
     triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
 };
@@ -700,7 +700,7 @@ function renderFollowUpItems() {
     const listContainer = document.getElementById('drawerFollowUpList');
     if (!listContainer) return;
 
-    let data = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    let data = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     data = data.reverse(); 
 
     let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
@@ -794,8 +794,8 @@ function generateCSVString(recordsData) {
 }
 
 window.toggleHistoryDrawer = function() {
-    let drawer = document.getElementById('scraperHistoryDrawer');
-    let followUpDrawer = document.getElementById('scraperFollowUpDrawer');
+    let drawer = document.getElementById('dlHistoryDrawer');
+    let followUpDrawer = document.getElementById('dlFollowUpDrawer');
     if (!drawer) return;
     
     if(followUpDrawer) followUpDrawer.style.right = "-420px"; 
@@ -863,7 +863,7 @@ window.loadHistorySheetToTable = async function(id) {
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
         
-        let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
 
         for (let index = 0; index < scrapedData.length; index++) {
             let record = scrapedData[index];
@@ -941,7 +941,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== PURE WORKING SCRAPING ENGINE (DIRECT FETCH) ======
+// ====== PURE WORKING PROCESSING ENGINE (DIRECT FETCH) ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() {
     scraping = false;
@@ -1032,7 +1032,7 @@ window.startScraping = async function() {
         if (statusBox) {
             statusBox.innerHTML = `
                 <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 14px; font-weight: bold; color: #333;">Scanning MC <b>${mc}</b>...</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processing MC <b>${mc}</b>...</div>
                     <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
                 </div>
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
