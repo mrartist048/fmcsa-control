@@ -99,6 +99,7 @@ function initializeAccessControl() {
     
     injectHistoryUIFramework();
     injectLiveSupportSystem();
+    injectPremiumFiltersUI(); // Inject Filters & Search Elements dynamically
 }
 
 if (document.readyState === 'loading') {
@@ -162,17 +163,6 @@ async function checkGlobalSessions() {
 window.addEventListener('beforeunload', function () {
     if (currentClient === "unknown") return;
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}.json?_method=DELETE`);
-    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`)
-        .then(res => res.json())
-        .then(data => {
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    if (data[key].id === window.name) {
-                        fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
-                    }
-                });
-            }
-        });
 });
 
 // ====== INDEXEDDB HISTORY SETUP ======
@@ -202,6 +192,7 @@ function injectHistoryUIFramework() {
             .remarks-cell-container { min-width: 200px !important; width: 220px !important; }
             .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
             .remarks-input-field:focus { border-color: #002d62 !important; background: #ffffff !important; outline: none !important; box-shadow: 0 0 4px rgba(0,45,98,0.15) !important; }
+            .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -348,6 +339,125 @@ function injectHistoryUIFramework() {
     }
 }
 
+// ====== PREMIUM INTERFACE FILTERS INJECTION ======
+function injectPremiumFiltersUI() {
+    let statusBox = document.getElementById('status');
+    if (!statusBox || document.getElementById('premiumFilterWrapper')) return;
+
+    let filterPanel = document.createElement('div');
+    filterPanel.id = 'premiumFilterWrapper';
+    filterPanel.style.cssText = `
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+        background: #fdfdfd;
+        padding: 15px;
+        margin: 15px 0;
+        border: 1px solid #e2eafc;
+        border-radius: 6px;
+        font-family: sans-serif;
+    `;
+
+    filterPanel.innerHTML = `
+        <div style="flex: 1; min-width: 240px; position: relative;">
+            <label style="font-size: 11px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">🔍 Live Text Filter (Search Name, MC, Phone)</label>
+            <input type="text" id="premiumLiveSearch" placeholder="Type to filter rows instantly..." style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+        </div>
+        
+        <div style="width: 180px;">
+            <label style="font-size: 11px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">📍 Filter by US State</label>
+            <select id="premiumStateFilter" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; background: white;">
+                <option value="ALL">All States (No Filter)</option>
+                <option value="AL">AL - Alabama</option><option value="AK">AK - Alaska</option><option value="AZ">AZ - Arizona</option>
+                <option value="AR">AR - Arkansas</option><option value="CA">CA - California</option><option value="CO">CO - Colorado</option>
+                <option value="CT">CT - Connecticut</option><option value="DE">DE - Delaware</option><option value="FL">FL - Florida</option>
+                <option value="GA">GA - Georgia</option><option value="HI">HI - Hawaii</option><option value="ID">ID - Idaho</option>
+                <option value="IL">IL - Illinois</option><option value="IN">IN - Indiana</option><option value="IA">IA - Iowa</option>
+                <option value="KS">KS - Kansas</option><option value="KY">KY - Kentucky</option><option value="LA">LA - Louisiana</option>
+                <option value="ME">ME - Maine</option><option value="MD">MD - Maryland</option><option value="MA">MA - Massachusetts</option>
+                <option value="MI">MI - Michigan</option><option value="MN">MN - Minnesota</option><option value="MS">MS - Mississippi</option>
+                <option value="MO">MO - Missouri</option><option value="MT">MT - Montana</option><option value="NE">NE - Nebraska</option>
+                <option value="NV">NV - Nevada</option><option value="NH">NH - New Hampshire</option><option value="NJ">NJ - New Jersey</option>
+                <option value="NM">NM - New Mexico</option><option value="NY">NY - New York</option><option value="NC">NC - North Carolina</option>
+                <option value="ND">ND - North Dakota</option><option value="OH">OH - Ohio</option><option value="OK">OK - Oklahoma</option>
+                <option value="OR">OR - Oregon</option><option value="PA">PA - Pennsylvania</option><option value="RI">RI - Rhode Island</option>
+                <option value="SC">SC - South Carolina</option><option value="SD">SD - South Dakota</option><option value="TN">TN - Tennessee</option>
+                <option value="TX">TX - Texas</option><option value="UT">UT - Utah</option><option value="VT">VT - Vermont</option>
+                <option value="VA">VA - Virginia</option><option value="WA">WA - Washington</option><option value="WV">WV - West Virginia</option>
+                <option value="WI">WI - Wisconsin</option><option value="WY">WY - Wyoming</option>
+            </select>
+        </div>
+
+        <div style="background: #e2eafc; padding: 8px 15px; border-radius: 4px; display: flex; gap: 15px; font-size: 12px; font-weight: bold; color: #001a3a; height: 35px; align-items: center; margin-top: 15px;">
+            <div>Scraped: <span id="premiumCountTotal" style="color: #17a2b8;">0</span></div>
+            <div style="border-left: 1px solid #b6ccfe; padding-left: 15px;">Visible: <span id="premiumCountVisible" style="color: #28a745;">0</span></div>
+        </div>
+    `;
+
+    statusBox.parentNode.insertBefore(filterPanel, statusBox.nextSibling);
+
+    // Event Listeners for real-time calculation pipeline
+    document.getElementById('premiumLiveSearch').addEventListener('input', executePremiumUIPipeline);
+    document.getElementById('premiumStateFilter').addEventListener('change', executePremiumUIPipeline);
+}
+
+function executePremiumUIPipeline() {
+    let searchText = document.getElementById('premiumLiveSearch').value.toLowerCase().trim();
+    let selectedState = document.getElementById('premiumStateFilter').value;
+    
+    let tableRows = document.querySelectorAll('#resultsTable tr');
+    let visibleCounter = 0;
+
+    tableRows.forEach(row => {
+        let cells = row.getElementsByTagName('td');
+        if (cells.length === 0) return;
+
+        let mcText = cells[0]?.textContent.toLowerCase() || "";
+        let nameText = cells[2]?.textContent.toLowerCase() || "";
+        let phoneText = cells[5]?.textContent.toLowerCase() || "";
+        let addressText = cells[6]?.textContent.toUpperCase() || ""; // US States always capitalized
+
+        // Match Text Search Criteria
+        let textMatch = mcText.includes(searchText) || nameText.includes(searchText) || phoneText.includes(searchText);
+        
+        // Match State Search Criteria
+        let stateMatch = (selectedState === "ALL");
+        if (!stateMatch) {
+            // Evaluates state codes bounded correctly inside address text block
+            let stateRegex = new RegExp(`\\b${selectedState}\\b`);
+            stateMatch = stateRegex.test(addressText);
+        }
+
+        if (textMatch && stateMatch) {
+            row.style.display = "";
+            visibleCounter++;
+        } else {
+            row.style.display = "none";
+        }
+    });
+
+    document.getElementById('premiumCountTotal').innerText = scrapedData.length;
+    document.getElementById('premiumCountVisible').innerText = visibleCounter;
+}
+
+window.copyEmailToClipboard = function(element, emailAddress) {
+    if (!emailAddress || emailAddress === 'N/A') return;
+    
+    navigator.clipboard.writeText(emailAddress).then(() => {
+        if (element.querySelector('.premium-copy-badge')) return;
+
+        let badge = document.createElement('span');
+        badge.className = 'premium-copy-badge';
+        badge.innerText = "Copied!";
+        element.appendChild(badge);
+
+        setTimeout(() => { badge.remove(); }, 1200);
+    }).catch(err => {
+        console.error("Failed to copy token details", err);
+    });
+};
+
 window.syncRemarksData = function(index, value) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = value;
@@ -372,7 +482,7 @@ function buildSharingTextContent() {
 }
 
 window.executeGlobalSharing = async function(platform) {
-    if (scrapedData.length === 0) return alert("Kindly scan the data before proceeding.");
+    if (scrapedData.length === 0) return alert("Pehle data scan kar lein.");
     
     const start = document.getElementById('startMc').value;
     const end = document.getElementById('endMc').value;
@@ -486,7 +596,7 @@ window.loadHistorySheetToTable = function(id) {
                 <td><span class="badge badge-active">${record.status}</span></td>
                 ${dialerCellHTML}
                 <td>${record.address}</td> 
-                <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
+                <td style="color: #002d62; font-weight: bold; position: relative; cursor: pointer;" onclick="copyEmailToClipboard(this, '${record.email}')">${record.email}</td> 
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${existingRemarks}" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${index}, this.value)" /></td>
             </tr>`;
@@ -503,6 +613,7 @@ window.loadHistorySheetToTable = function(id) {
             statusBox.innerHTML = `<strong style="font-size: 14px; color: #17a2b8; font-family: sans-serif;">📂 Loaded Sheet from History (${scrapedData.length} Records)</strong>`;
         }
 
+        executePremiumUIPipeline(); // Run instant text sync calculations on recovery
         toggleHistoryDrawer(); 
     };
 };
@@ -704,7 +815,6 @@ async function fetchViaProxy(targetUrl) {
         }
     };
 
-    // 1st Attempt: Direct fetch (Works perfectly if Allow CORS extension is active)
     try {
         let directRes = await fetch(targetUrl, fetchOptions);
         if (directRes.ok) return await directRes.text();
@@ -712,7 +822,6 @@ async function fetchViaProxy(targetUrl) {
         console.log("Direct fetch blocked by CORS, trying Proxy Cluster...");
     }
 
-    // 2nd Attempt: Premium Proxy Cluster 1 (corsproxy.io)
     let proxy1 = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
     try {
         let res1 = await fetch(proxy1);
@@ -721,7 +830,6 @@ async function fetchViaProxy(targetUrl) {
         console.log("Proxy Cluster 1 failed, trying Backup Cluster 2...");
     }
 
-    // 3rd Attempt: Backup Proxy Cluster 2 (allorigins) with cache-buster
     let proxy2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}&_cb=${Date.now()}`;
     try {
         let res2 = await fetch(proxy2);
@@ -818,13 +926,7 @@ window.startScraping = async function() {
         let mins = Math.floor(estimatedRemainingSeconds / 60);
         let secs = Math.floor(estimatedRemainingSeconds % 60);
 
-        let timeString = "";
-        if (totalProcessed < 3) {
-            timeString = "Calculating ETA..."; 
-        } else {
-            timeString = `Estimated Time Remaining: ${mins}m ${secs}s`;
-        }
-
+        let timeString = (totalProcessed < 3) ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
         if (statusBox) {
@@ -888,19 +990,6 @@ window.startScraping = async function() {
             }
 
             if (record.usdot !== 'N/A' && scraping) {
-                if (statusBox) {
-                    statusBox.innerHTML = `
-                        <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                            <div style="font-size: 14px; font-weight: bold; color: #002d62;">Extracting Email for USDOT <b>${record.usdot}</b>...</div>
-                            <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
-                        </div>
-                        <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
-                            <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
-                        </div>
-                    `;
-                }
-
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsHtml = await fetchViaProxy(smsUrl);
@@ -932,10 +1021,12 @@ window.startScraping = async function() {
                     <td><span class="badge badge-active">${record.status}</span></td>
                     ${dialerCellHTML}
                     <td>${record.address}</td> 
-                    <td style="color: #002d62; font-weight: bold;">${record.email}</td> 
+                    <td style="color: #002d62; font-weight: bold; position: relative; cursor: pointer;" onclick="copyEmailToClipboard(this, '${record.email}')">${record.email}</td> 
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
                 </tr>`;
+                
+                executePremiumUIPipeline(); // Instant calculation on real-time append
             }
         } catch (e) { console.log(e); }
         await new Promise(r => setTimeout(r, 2000));
@@ -963,6 +1054,7 @@ window.startScraping = async function() {
             tx.objectStore("history").delete(currentHistoryId);
         }
     }
+    executePremiumUIPipeline();
 }
 
 window.downloadCSV = function() {
