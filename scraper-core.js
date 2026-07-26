@@ -283,8 +283,11 @@ function injectHistoryUIFramework() {
             .premium-call-btn:hover { background: #1e7e34; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
-            .phone-cell-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px; border-radius: 6px; transition: background 0.2s, box-shadow 0.2s; background: #fdfdfd; border: 1px solid #e2eafc; width: fit-content; min-width: 120px; margin: 0 auto; }
-            .phone-cell-wrapper:hover { background: #e2eafc; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+            
+            /* Unified Phone Cell Styling */
+            .phone-cell-container { padding: 8px 10px !important; text-align: center !important; transition: background-color 0.2s ease-in-out; }
+            .phone-cell-wrapper { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 3px; }
+            table.table tr:hover .phone-cell-container { background-color: #e2eafc !important; }
             .clickable-phone-text { color: #002d62; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap; }
             .clickable-phone-text:hover { color: #17a2b8; text-decoration: underline; }
         `;
@@ -435,7 +438,6 @@ function populateStateDropdown() {
     let currentVal = select.value;
     select.innerHTML = '<option value="">All States</option>';
     
-    // Sort states alphabetically by their full names
     let sortedCodes = Array.from(statesSet).sort((a, b) => {
         let nameA = usStatesMap[a] || a;
         let nameB = usStatesMap[b] || b;
@@ -445,8 +447,8 @@ function populateStateDropdown() {
     sortedCodes.forEach(code => {
         let fullName = usStatesMap[code] || code;
         let opt = document.createElement('option');
-        opt.value = code; // Value remains code for filtering matching
-        opt.textContent = `${fullName} (${code})`; // Display Full Name with Code
+        opt.value = code;
+        opt.textContent = `${fullName} (${code})`;
         select.appendChild(opt);
     });
     select.value = currentVal;
@@ -574,7 +576,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td style="position: relative; vertical-align: middle; text-align: center;">
+        <td class="phone-cell-container">
             <div class="phone-cell-wrapper">
                 <a href="tel:${phoneNum}" class="premium-call-btn" title="Direct Call">📞 Call</a>
                 <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone-text" title="Click to Copy Phone">${phoneNum}</span>
