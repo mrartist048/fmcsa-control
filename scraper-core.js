@@ -22,7 +22,7 @@ const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com
 
 let currentClient = "unknown";
 let userLimit = 0;
-let mySessionKey = ""; 
+let dispatcherNickname = ""; 
 
 function showPremiumNotification(message, duration = 4500) {
     let toast = document.createElement('div');
@@ -63,6 +63,42 @@ function showPremiumNotification(message, duration = 4500) {
     }, duration);
 }
 
+// ====== DISPATCHER IDENTITY SETUP ======
+function setupDispatcherIdentity() {
+    dispatcherNickname = localStorage.getItem(`scr_nick_${currentClient}`) || "";
+    if (!dispatcherNickname) {
+        let inputName = prompt("Welcome! Please enter your name (e.g., Nauman, Ali, Bilal):");
+        if (inputName && inputName.trim() !== "") {
+            dispatcherNickname = inputName.trim();
+        } else {
+            dispatcherNickname = "User_" + Math.floor(100 + Math.random() * 900);
+        }
+        localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
+    }
+    injectNicknameProfileUI();
+}
+
+function injectNicknameProfileUI() {
+    if (document.getElementById('scrNickProfilePanel')) return;
+    let heading = document.querySelector('h1, h2, .heading') || document.body;
+    let panel = document.createElement('div');
+    panel.id = 'scrNickProfilePanel';
+    panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
+    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="scrDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a>`;
+    heading.parentNode.insertBefore(panel, heading.nextSibling);
+}
+
+window.changeDispatcherName = function() {
+    let oldName = localStorage.getItem(`scr_nick_${currentClient}`) || "";
+    let newName = prompt("Enter your new display name:", oldName);
+    if (newName && newName.trim() !== "") {
+        dispatcherNickname = newName.trim();
+        localStorage.setItem(`scr_nick_${currentClient}`, dispatcherNickname);
+        let label = document.getElementById('scrDispCurrentName');
+        if (label) label.innerText = dispatcherNickname;
+    }
+};
+
 function initializeAccessControl() {
     currentClient = window.scrClientID || "unknown";
     
@@ -88,6 +124,8 @@ function initializeAccessControl() {
         alert("Your access has been revoked or expired. Contact admin for renewal.");
         throw new Error("Access Denied");
     }
+
+    setupDispatcherIdentity();
 
     if (!window.name || !window.name.startsWith("fmcsa_tab_")) {
         window.name = "fmcsa_tab_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
@@ -184,7 +222,6 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Summary:";
 
 function injectHistoryUIFramework() {
-    // Inject Custom CSS for expanding remarks field & styling
     if (!document.getElementById('scrRemarksStyle')) {
         let styleTag = document.createElement('style');
         styleTag.id = 'scrRemarksStyle';
@@ -214,6 +251,11 @@ function injectHistoryUIFramework() {
                 overflow-y: auto !important;
                 box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
             }
+            .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
+            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
+            .premium-pitch-btn:hover { background: #138496; }
+            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
+            .premium-followup-btn:hover { background: #e0a800; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -246,6 +288,13 @@ function injectHistoryUIFramework() {
         historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
         historyBtn.onclick = toggleHistoryDrawer;
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
+
+        let followUpBtn = document.createElement('button');
+        followUpBtn.id = 'openFollowUpDrawerBtn';
+        followUpBtn.innerHTML = "📅 View Follow-Ups";
+        followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
+        followUpBtn.onclick = toggleFollowUpDrawer;
+        startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
     if (!document.getElementById('scraperHistoryDrawer')) {
@@ -262,7 +311,27 @@ function injectHistoryUIFramework() {
         document.body.appendChild(drawer);
     }
 
-    // Append Remarks column header if table exists
+    if (!document.getElementById('scraperFollowUpDrawer')) {
+        let fDrawer = document.createElement('div');
+        fDrawer.id = 'scraperFollowUpDrawer';
+        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
+        fDrawer.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
+                <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
+                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+            </div>
+            <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
+                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
+                <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
+            </div>
+            <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
+        `;
+        document.body.appendChild(fDrawer);
+    }
+
     let tableHeader = document.querySelector('table.table thead tr, table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
@@ -271,45 +340,215 @@ function injectHistoryUIFramework() {
         remTh.innerText = "Remarks";
         remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
         tableHeader.appendChild(remTh);
+
+        let followTh = document.createElement('th');
+        followTh.id = 'followUpHeaderCol';
+        followTh.innerText = "Action";
+        followTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
+        tableHeader.appendChild(followTh);
     }
 
-    if (startBtn && !document.getElementById('shareContainerPanel')) {
-        let downloadBtn = document.getElementById('downloadBtn');
-        if (downloadBtn) {
-            let shareWrap = document.createElement('div');
-            shareWrap.id = 'shareContainerPanel';
-            shareWrap.style.cssText = "display: none; position: relative; display: inline-block; vertical-align: middle; margin-left: 8px;";
-            shareWrap.innerHTML = `
-                <button id="mainShareTriggerBtn" style="background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer;">📤 Share Sheet</button>
-                <div id="shareMenuDropdown" style="display: none; position: absolute; top: 40px; left: 0; background: white; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border-radius: 4px; width: 160px; z-index: 99999; font-family: sans-serif;">
-                    <a href="#" onclick="executeGlobalSharing('whatsapp'); return false;" style="display: block; padding: 10px; color: #25D366; text-decoration: none; font-weight: bold; border-bottom: 1px solid #eee; font-size: 13px;">💬 WhatsApp File</a>
-                    <a href="#" onclick="executeGlobalSharing('email'); return false;" style="display: block; padding: 10px; color: #ea4335; text-decoration: none; font-weight: bold; font-size: 13px;">📧 Email File</a>
-                </div>
-            `;
-            downloadBtn.parentNode.insertBefore(shareWrap, downloadBtn.nextSibling);
+    injectEmailProposalPanel();
+}
 
-            document.addEventListener('click', function(event) {
-                let trigger = document.getElementById('mainShareTriggerBtn');
-                let dropdown = document.getElementById('shareMenuDropdown');
-                if (trigger && dropdown) {
-                    if (trigger.contains(event.target)) {
-                        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-                    } else {
-                        dropdown.style.display = 'none';
-                    }
-                }
-            });
+// ====== EMAIL PROPOSAL TEMPLATE PANEL ======
+function injectEmailProposalPanel() {
+    let table = document.querySelector('table');
+    if (!table || document.getElementById('premiumProposalWrapper')) return;
+
+    let savedSubject = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal";
+    let savedBody = localStorage.getItem(`scr_body_${currentClient}`) || "Hello,\n\nWe found your profile via FMCSA. We offer dispatching services at 5% rate.\n\nBest Regards.";
+
+    let proposalPanel = document.createElement('div');
+    proposalPanel.id = 'premiumProposalWrapper';
+    proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif;";
+    proposalPanel.innerHTML = `
+        <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
+            <span style="font-size: 12px; font-weight: bold;">⚙️ Click to Edit</span>
+        </div>
+        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
+            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px;"></div>
+            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px;">${savedBody}</textarea></div>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
+        </div>
+    `;
+    table.parentNode.insertBefore(proposalPanel, table);
+}
+
+window.saveProposalTemplateSettings = function() {
+    localStorage.setItem(`scr_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
+    localStorage.setItem(`scr_body_${currentClient}`, document.getElementById('propBodyInput').value);
+    alert("Template saved successfully.");
+    document.getElementById('proposalInputsBlock').style.display = 'none';
+};
+
+window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
+    if (!emailAddress || emailAddress === 'N/A') return;
+    let subj = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Proposal";
+    let body = localStorage.getItem(`scr_body_${currentClient}`) || "Hello";
+    let customizedBody = body.replace(/{company}/gi, companyName);
+
+    let mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
+    let gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
+
+    let activeWindow = window.open(mailtoUrl, '_blank');
+    setTimeout(() => {
+        try {
+            if (!activeWindow || activeWindow.location.href === 'about:blank' || activeWindow.document.body.innerHTML === '') {
+                if (activeWindow) activeWindow.location.href = gmailUrl;
+            }
+        } catch (e) {}
+    }, 500);
+};
+
+window.copyEmailToClipboard = function(element, emailAddress) {
+    if (!emailAddress || emailAddress === 'N/A') return;
+    navigator.clipboard.writeText(emailAddress).then(() => {
+        let badge = document.createElement('span');
+        badge.className = 'premium-copy-badge';
+        badge.innerText = "Copied!";
+        element.appendChild(badge);
+        setTimeout(() => badge.remove(), 1200);
+    });
+};
+
+function buildEmailCellMarkup(emailAddress, companyName) {
+    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
+    let escapedName = companyName.replace(/'/g, "\\'");
+    return `
+        <td style="position: relative; vertical-align: middle;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${emailAddress}</span>
+                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📩 Pitch</a>
+            </div>
+        </td>
+    `;
+}
+
+// ====== FOLLOW-UP ENGINE ======
+window.addLeadToFollowUpList = function(index, buttonElement) {
+    let record = scrapedData[index];
+    if (!record) return;
+
+    let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    if (followUpStore.some(r => r.mc === record.mc)) {
+        return alert("This carrier is already added to your Follow-Up list.");
+    }
+    
+    record.addedAt = new Date().toLocaleString();
+    followUpStore.push(record);
+    localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
+    
+    showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, 3000);
+    
+    let row = buttonElement.closest('tr');
+    if (row) row.style.background = "#d4edda";
+
+    if (document.getElementById('scraperFollowUpDrawer').style.right === "0px") renderFollowUpItems();
+};
+
+window.toggleFollowUpDrawer = function() {
+    let drawer = document.getElementById('scraperFollowUpDrawer');
+    let historyDrawer = document.getElementById('scraperHistoryDrawer');
+    if (!drawer) return;
+    
+    if(historyDrawer) historyDrawer.style.right = "-420px"; 
+    
+    if (drawer.style.right === "0px") {
+        drawer.style.right = "-420px";
+    } else {
+        drawer.style.right = "0px";
+        let searchInput = document.getElementById('followUpSearchInput');
+        if(searchInput) searchInput.value = ""; 
+        renderFollowUpItems(); 
+    }
+};
+
+window.clearFollowUpFilters = function() {
+    let searchInput = document.getElementById('followUpSearchInput');
+    if(searchInput) searchInput.value = "";
+    renderFollowUpItems();
+};
+
+window.deleteFollowUpItem = function(mcNumber) {
+    if (confirm("Remove carrier from Follow-Ups?")) {
+        let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+        followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
+        localStorage.setItem(`scr_followups_${currentClient}`, JSON.stringify(followUpStore));
+        renderFollowUpItems();
+        
+        let tableRows = document.querySelectorAll('#resultsTable tr');
+        tableRows.forEach(row => {
+            let cellMc = parseInt(row.cells[0]?.textContent);
+            if (cellMc === mcNumber) row.style.background = "";
+        });
+    }
+};
+
+window.downloadFollowUpsCSV = function() {
+    let followUpStore = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    if (followUpStore.length === 0) return alert("The follow-up list is currently empty.");
+    triggerCSVDownload(followUpStore, `FMCSA_FollowUps_${dispatcherNickname}.csv`);
+};
+
+function renderFollowUpItems() {
+    const listContainer = document.getElementById('drawerFollowUpList');
+    if (!listContainer) return;
+
+    let data = JSON.parse(localStorage.getItem(`scr_followups_${currentClient}`)) || [];
+    data = data.reverse(); 
+
+    let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
+
+    if (data.length === 0) {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
+        return;
+    }
+
+    let itemsHTML = "";
+    let matchCount = 0;
+
+    data.forEach(item => {
+        let mcString = (item.mc || "").toString().toLowerCase();
+        let nameString = (item.name || "").toLowerCase();
+        let phoneString = (item.phone || "").toLowerCase();
+
+        if (filterQuery !== "") {
+            let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
+            if (!textMatches) return;
         }
+
+        matchCount++;
+        itemsHTML += `
+            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+                <div style="font-size: 11px; color: #6c757d; font-weight: bold;">Saved: ${item.addedAt}</div>
+                <div style="font-size: 14px; font-weight: bold; color: #002d62; margin: 4px 0;">${item.name}</div>
+                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
+                    <b>Remarks:</b> ${item.remarks || 'No remarks added'}
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📩 Pitch</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
+                </div>
+            </div>
+        `;
+    });
+
+    if (matchCount === 0) {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found.</p>`;
+    } else {
+        listContainer.innerHTML = itemsHTML;
     }
 }
 
-// Remarks Focus & Blur Engine
+// Remarks Handlers
 window.remarksFocus = function(index, textarea) {
     if (!textarea.value || textarea.value.trim() === "") {
         textarea.value = DEFAULT_REMARKS_TEMPLATE;
-        if (scrapedData[index]) {
-            scrapedData[index].remarks = DEFAULT_REMARKS_TEMPLATE;
-        }
+        if (scrapedData[index]) scrapedData[index].remarks = DEFAULT_REMARKS_TEMPLATE;
     }
 };
 
@@ -321,10 +560,7 @@ window.remarksBlur = function(index, textarea) {
     for(let i = 0; i < 6; i++) {
         if (lines[i]) {
             let data = lines[i].replace(linesCheck[i], "").trim();
-            if (data !== "") {
-                hasData = true;
-                break;
-            }
+            if (data !== "") { hasData = true; break; }
         }
     }
 
@@ -355,7 +591,11 @@ function generateCSVString(recordsData) {
 
 window.toggleHistoryDrawer = function() {
     let drawer = document.getElementById('scraperHistoryDrawer');
+    let followUpDrawer = document.getElementById('scraperFollowUpDrawer');
     if (!drawer) return;
+    
+    if(followUpDrawer) followUpDrawer.style.right = "-420px"; 
+    
     if (drawer.style.right === "0px") {
         drawer.style.right = "-420px";
     } else {
@@ -476,9 +716,9 @@ window.startScraping = async function() {
     scraping = true; scrapedData = [];
     document.getElementById('startBtn').style.display = 'none';
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
-    if(document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'none';
 
     const tableBody = document.getElementById('resultsTable');
     tableBody.innerHTML = '';
@@ -633,6 +873,8 @@ window.startScraping = async function() {
                 let recordIndex = scrapedData.length - 1;
                 updateRealTimeHistory(scrapedData, false);
 
+                let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
                     <td>${record.usdot}</td>
@@ -641,12 +883,13 @@ window.startScraping = async function() {
                     <td><span class="badge badge-active">${record.status}</span></td>
                     <td>${record.phone}</td>
                     <td>${record.address}</td>
-                    <td style="color: #002d62; font-weight: bold;">${record.email}</td>
+                    ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
                     <td>${record.drivers}</td>
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)"></textarea>
                     </td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 </tr>`;
             }
         } catch (e) { console.log(e); }
@@ -656,6 +899,7 @@ window.startScraping = async function() {
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
 
     if (statusBox) {
@@ -667,7 +911,6 @@ window.startScraping = async function() {
 
     if(scrapedData.length > 0) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
-        if(document.getElementById('shareContainerPanel')) document.getElementById('shareContainerPanel').style.display = 'inline-block';
         updateRealTimeHistory(scrapedData, true);
     } else {
         if(currentHistoryId !== null) {
