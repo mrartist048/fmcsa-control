@@ -267,8 +267,8 @@ function injectHistoryUIFramework() {
             .premium-pitch-btn:hover { background: #138496; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
-            .clickable-phone { color: #002d62; font-weight: bold; cursor: pointer; text-decoration: underline; }
-            .clickable-phone:hover { color: #17a2b8; }
+            .clickable-phone-cell { color: #002d62; font-weight: bold; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.2s, color 0.2s; display: inline-block; }
+            .clickable-phone-cell:hover { background: #e2eafc; color: #17a2b8; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -353,7 +353,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(fDrawer);
     }
 
-    injectStateFilterBar();
+    injectAdvancedFilterBar();
 
     let tableHeader = document.querySelector('table.table thead tr, table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
@@ -374,40 +374,89 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== STATE FILTER BAR ======
-function injectStateFilterBar() {
+// ====== ADVANCED FILTER BAR (STATE DROPDOWN + UNIVERSAL SEARCH) ======
+function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
-    if (!table || document.getElementById('stateFilterWrapper')) return;
+    if (!table || document.getElementById('advancedFilterWrapper')) return;
 
     let filterDiv = document.createElement('div');
-    filterDiv.id = 'stateFilterWrapper';
-    filterDiv.style.cssText = "background: #e2eafc; padding: 10px 15px; margin: 10px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; align-items: center; gap: 10px;";
+    filterDiv.id = 'advancedFilterWrapper';
+    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;";
     filterDiv.innerHTML = `
-        <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 Filter by State:</span>
-        <input type="text" id="stateFilterInput" placeholder="e.g. TX, CA, FL..." style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; width: 160px;" oninput="applyStateFilter()">
-        <button onclick="clearStateFilter()" style="background: #002d62; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Show All</button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
+            <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold;" onchange="applyAdvancedFilters()">
+                <option value="">All States</option>
+            </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 240px;">
+            <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
+            <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+        </div>
+        <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset Filters</button>
     `;
     table.parentNode.insertBefore(filterDiv, table);
+    populateStateDropdown();
 }
 
-window.applyStateFilter = function() {
-    let query = (document.getElementById('stateFilterInput')?.value || "").toUpperCase().trim();
+function populateStateDropdown() {
+    let select = document.getElementById('stateDropdownSelect');
+    if (!select) return;
+    
+    let statesSet = new Set();
+    if (typeof scrapedData !== 'undefined' && scrapedData.length > 0) {
+        scrapedData.forEach(r => {
+            let addr = r.address || "";
+            let match = addr.match(/\b([A-Z]{2})\b(?=\s+\d{5}(-\d{4})?$)/);
+            if (match) {
+                statesSet.add(match[1]);
+            }
+        });
+    }
+
+    let currentVal = select.value;
+    select.innerHTML = '<option value="">All States</option>';
+    let sortedStates = Array.from(statesSet).sort();
+    sortedStates.forEach(st => {
+        let opt = document.createElement('option');
+        opt.value = st;
+        opt.textContent = st;
+        select.appendChild(opt);
+    });
+    select.value = currentVal;
+}
+
+window.applyAdvancedFilters = function() {
+    let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
+    let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
     let rows = document.querySelectorAll('#resultsTable tr');
+
     rows.forEach(row => {
-        let addressCell = row.cells[6]?.textContent || "";
-        if (query === "") {
-            row.style.display = "";
-        } else {
-            let hasState = addressCell.toUpperCase().includes(query);
-            row.style.display = hasState ? "" : "none";
+        let mcText = (row.cells[0]?.textContent || "").toLowerCase();
+        let nameText = (row.cells[2]?.textContent || "").toLowerCase();
+        let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
+        let addressText = (row.cells[6]?.textContent || "").toUpperCase();
+
+        let matchesState = true;
+        if (selectedState !== "") {
+            matchesState = addressText.includes(selectedState);
         }
+
+        let matchesSearch = true;
+        if (searchQuery !== "") {
+            matchesSearch = mcText.includes(searchQuery) || nameText.includes(searchQuery) || phoneText.includes(searchQuery);
+        }
+
+        row.style.display = (matchesState && matchesSearch) ? "" : "none";
     });
 };
 
-window.clearStateFilter = function() {
-    let input = document.getElementById('stateFilterInput');
-    if (input) input.value = "";
-    applyStateFilter();
+window.resetAdvancedFilters = function() {
+    let stSel = document.getElementById('stateDropdownSelect');
+    let srchInput = document.getElementById('universalSearchInput');
+    if (stSel) stSel.value = "";
+    if (srchInput) srchInput.value = "";
+    applyAdvancedFilters();
 };
 
 // ====== EMAIL PROPOSAL TEMPLATE PANEL ======
@@ -500,7 +549,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
     return `
         <td style="position: relative; vertical-align: middle;">
-            <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone" title="Click to Copy Phone">${phoneNum}</span>
+            <span onclick="copyPhoneToClipboard(this, '${phoneNum}')" class="clickable-phone-cell" title="Click to Copy Phone">${phoneNum}</span>
         </td>
     `;
 }
@@ -765,6 +814,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
+        populateStateDropdown();
         toggleHistoryDrawer(); 
     };
 };
@@ -1015,7 +1065,8 @@ window.startScraping = async function() {
                     <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 </tr>`;
 
-                applyStateFilter();
+                populateStateDropdown();
+                applyAdvancedFilters();
             }
         } catch (e) { console.log(e); }
         await new Promise(r => setTimeout(r, 2000));
