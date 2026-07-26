@@ -99,7 +99,7 @@ function initializeAccessControl() {
     
     injectHistoryUIFramework();
     injectLiveSupportSystem();
-    injectPremiumFiltersUI(); // Inject Filters & Search Elements dynamically
+    injectPremiumFiltersUI(); 
 }
 
 if (document.readyState === 'loading') {
@@ -127,7 +127,7 @@ async function checkGlobalSessions() {
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp }));
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: data[key].timestamp }));
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
@@ -193,6 +193,8 @@ function injectHistoryUIFramework() {
             .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
             .remarks-input-field:focus { border-color: #002d62 !important; background: #ffffff !important; outline: none !important; box-shadow: 0 0 4px rgba(0,45,98,0.15) !important; }
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
+            .google-maps-btn { display: inline-flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; text-decoration: none; color: #333; font-size: 11px; font-weight: bold; margin-left: 6px; transition: background 0.2s, border-color 0.2s; vertical-align: middle; }
+            .google-maps-btn:hover { background: #f1f3f4; border-color: #4285F4; color: #4285F4; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -339,7 +341,6 @@ function injectHistoryUIFramework() {
     }
 }
 
-// ====== PREMIUM INTERFACE FILTERS INJECTION ======
 function injectPremiumFiltersUI() {
     let statusBox = document.getElementById('status');
     if (!statusBox || document.getElementById('premiumFilterWrapper')) return;
@@ -397,7 +398,6 @@ function injectPremiumFiltersUI() {
 
     statusBox.parentNode.insertBefore(filterPanel, statusBox.nextSibling);
 
-    // Event Listeners for real-time calculation pipeline
     document.getElementById('premiumLiveSearch').addEventListener('input', executePremiumUIPipeline);
     document.getElementById('premiumStateFilter').addEventListener('change', executePremiumUIPipeline);
 }
@@ -416,15 +416,12 @@ function executePremiumUIPipeline() {
         let mcText = cells[0]?.textContent.toLowerCase() || "";
         let nameText = cells[2]?.textContent.toLowerCase() || "";
         let phoneText = cells[5]?.textContent.toLowerCase() || "";
-        let addressText = cells[6]?.textContent.toUpperCase() || ""; // US States always capitalized
+        let addressText = cells[6]?.textContent.toUpperCase() || ""; 
 
-        // Match Text Search Criteria
         let textMatch = mcText.includes(searchText) || nameText.includes(searchText) || phoneText.includes(searchText);
         
-        // Match State Search Criteria
         let stateMatch = (selectedState === "ALL");
         if (!stateMatch) {
-            // Evaluates state codes bounded correctly inside address text block
             let stateRegex = new RegExp(`\\b${selectedState}\\b`);
             stateMatch = stateRegex.test(addressText);
         }
@@ -457,6 +454,19 @@ window.copyEmailToClipboard = function(element, emailAddress) {
         console.error("Failed to copy token details", err);
     });
 };
+
+function buildGoogleMapsButton(addressStr) {
+    if (!addressStr || addressStr === 'N/A') return 'N/A';
+    let encodedAddress = encodeURIComponent(addressStr);
+    return `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+            <span style="font-size: 13px;">${addressStr}</span>
+            <a href="https://www.google.com/maps/search/?api=1&query=${encodedAddress}" target="_blank" class="google-maps-btn" title="View Route on Google Maps">
+                📍 Maps
+            </a>
+        </div>
+    `;
+}
 
 window.syncRemarksData = function(index, value) {
     if (scrapedData[index]) {
@@ -587,6 +597,7 @@ window.loadHistorySheetToTable = function(id) {
         scrapedData.forEach((record, index) => {
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let existingRemarks = record.remarks || "";
+            let addressCellHTML = buildGoogleMapsButton(record.address);
 
             tableBody.innerHTML += `<tr>
                 <td><b>${record.mc}</b></td>
@@ -595,7 +606,7 @@ window.loadHistorySheetToTable = function(id) {
                 <td>${record.entityType}</td>
                 <td><span class="badge badge-active">${record.status}</span></td>
                 ${dialerCellHTML}
-                <td>${record.address}</td> 
+                <td>${addressCellHTML}</td> 
                 <td style="color: #002d62; font-weight: bold; position: relative; cursor: pointer;" onclick="copyEmailToClipboard(this, '${record.email}')">${record.email}</td> 
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${existingRemarks}" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${index}, this.value)" /></td>
@@ -613,7 +624,7 @@ window.loadHistorySheetToTable = function(id) {
             statusBox.innerHTML = `<strong style="font-size: 14px; color: #17a2b8; font-family: sans-serif;">📂 Loaded Sheet from History (${scrapedData.length} Records)</strong>`;
         }
 
-        executePremiumUIPipeline(); // Run instant text sync calculations on recovery
+        executePremiumUIPipeline(); 
         toggleHistoryDrawer(); 
     };
 };
@@ -1012,6 +1023,7 @@ window.startScraping = async function() {
                 updateRealTimeHistory(scrapedData, false);
 
                 let dialerCellHTML = buildDialerCellMarkup(record.phone);
+                let addressCellHTML = buildGoogleMapsButton(record.address);
 
                 tableBody.innerHTML += `<tr>
                     <td><b>${record.mc}</b></td>
@@ -1020,13 +1032,13 @@ window.startScraping = async function() {
                     <td>${record.entityType}</td>
                     <td><span class="badge badge-active">${record.status}</span></td>
                     ${dialerCellHTML}
-                    <td>${record.address}</td> 
+                    <td>${addressCellHTML}</td> 
                     <td style="color: #002d62; font-weight: bold; position: relative; cursor: pointer;" onclick="copyEmailToClipboard(this, '${record.email}')">${record.email}</td> 
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
                 </tr>`;
                 
-                executePremiumUIPipeline(); // Instant calculation on real-time append
+                executePremiumUIPipeline(); 
             }
         } catch (e) { console.log(e); }
         await new Promise(r => setTimeout(r, 2000));
