@@ -100,7 +100,7 @@ function initializeAccessControl() {
     injectHistoryUIFramework();
     injectLiveSupportSystem();
     injectPremiumFiltersUI(); 
-    injectEmailProposalPanel(); // Proposal System Interface Injection
+    injectEmailProposalPanel(); 
 }
 
 if (document.readyState === 'loading') {
@@ -194,8 +194,6 @@ function injectHistoryUIFramework() {
             .remarks-input-field { width: 100% !important; border: 1px solid #b6ccfe !important; border-radius: 4px !important; padding: 8px 10px !important; font-size: 13px !important; box-sizing: border-box !important; color: #333 !important; background: #fafafa !important; transition: border-color 0.2s, background 0.2s; }
             .remarks-input-field:focus { border-color: #002d62 !important; background: #ffffff !important; outline: none !important; box-shadow: 0 0 4px rgba(0,45,98,0.15) !important; }
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            .google-maps-btn { display: inline-flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; text-decoration: none; color: #333; font-size: 11px; font-weight: bold; margin-left: 6px; transition: background 0.2s, border-color 0.2s; vertical-align: middle; }
-            .google-maps-btn:hover { background: #f1f3f4; border-color: #4285F4; color: #4285F4; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
         `;
@@ -410,7 +408,6 @@ function injectEmailProposalPanel() {
     let filterWrapper = document.getElementById('premiumFilterWrapper');
     if (!filterWrapper || document.getElementById('premiumProposalWrapper')) return;
 
-    // Load saved template elements from local storage so companies don't re-type
     let savedSubject = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal - Special Offer";
     let savedBody = localStorage.getItem(`scr_body_${currentClient}`) || "Hello,\n\nWe found your company profile via FMCSA. We are offering professional truck dispatching services with premium load boards access at a 5% flat rate.\n\nLet us know if you have empty trucks.\n\nBest Regards,\nDispatch Team";
 
@@ -462,11 +459,22 @@ window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
     let subj = localStorage.getItem(`scr_subj_${currentClient}`) || "Dispatch Service Proposal";
     let body = localStorage.getItem(`scr_body_${currentClient}`) || "Hello, We are offering dispatch services.";
 
-    // Dynamically insert company name into template payload if placeholder matches
     let customizedBody = body.replace(/{company}/gi, companyName);
 
     let mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
-    window.open(mailtoUrl, '_blank');
+    let gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
+
+    let activeWindow = window.open(mailtoUrl, '_blank');
+    
+    setTimeout(() => {
+        try {
+            if (!activeWindow || activeWindow.location.href === 'about:blank' || activeWindow.document.body.innerHTML === '') {
+                if (activeWindow) activeWindow.location.href = gmailUrl;
+            }
+        } catch (e) {
+            console.log("Native email application triggered successfully.");
+        }
+    }, 500);
 };
 
 function executePremiumUIPipeline() {
@@ -521,19 +529,6 @@ window.copyEmailToClipboard = function(element, emailAddress) {
         console.error("Failed to copy token details", err);
     });
 };
-
-function buildGoogleMapsButton(addressStr) {
-    if (!addressStr || addressStr === 'N/A') return 'N/A';
-    let encodedAddress = encodeURIComponent(addressStr);
-    return `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-            <span style="font-size: 13px;">${addressStr}</span>
-            <a href="https://www.google.com/maps/search/?api=1&query=${encodedAddress}" target="_blank" class="google-maps-btn" title="View Route on Google Maps">
-                📍 Maps
-            </a>
-        </div>
-    `;
-}
 
 function buildEmailCellMarkup(emailAddress, companyName) {
     if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d; font-style: italic;">N/A</td>`;
@@ -680,7 +675,6 @@ window.loadHistorySheetToTable = function(id) {
         scrapedData.forEach((record, index) => {
             let dialerCellHTML = buildDialerCellMarkup(record.phone);
             let existingRemarks = record.remarks || "";
-            let addressCellHTML = buildGoogleMapsButton(record.address);
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
 
             tableBody.innerHTML += `<tr>
@@ -690,7 +684,7 @@ window.loadHistorySheetToTable = function(id) {
                 <td>${record.entityType}</td>
                 <td><span class="badge badge-active">${record.status}</span></td>
                 ${dialerCellHTML}
-                <td>${addressCellHTML}</td> 
+                <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
                 <td class="remarks-cell-container"><input type="text" value="${existingRemarks}" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${index}, this.value)" /></td>
@@ -1107,7 +1101,6 @@ window.startScraping = async function() {
                 updateRealTimeHistory(scrapedData, false);
 
                 let dialerCellHTML = buildDialerCellMarkup(record.phone);
-                let addressCellHTML = buildGoogleMapsButton(record.address);
                 let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
 
                 tableBody.innerHTML += `<tr>
@@ -1117,7 +1110,7 @@ window.startScraping = async function() {
                     <td>${record.entityType}</td>
                     <td><span class="badge badge-active">${record.status}</span></td>
                     ${dialerCellHTML}
-                    <td>${addressCellHTML}</td> 
+                    <td>${record.address}</td> 
                     ${emailCellHTML}
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container"><input type="text" class="remarks-input-field" placeholder="Add remarks here..." oninput="syncRemarksData(${recordIndex}, this.value)" /></td>
@@ -1161,4 +1154,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `SAFER_Clean_Data_${start}_to_${end}.csv`);
     }
 }
-            
