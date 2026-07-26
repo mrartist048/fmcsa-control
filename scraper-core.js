@@ -279,15 +279,14 @@ function injectHistoryUIFramework() {
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
-            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 3px; border: 1px solid #1e7e34; transition: background 0.2s; margin-bottom: 2px; }
-            .premium-call-btn:hover { background: #1e7e34; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Fully Clickable Unified Phone Cell */
-            .phone-clickable-cell { padding: 6px 8px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; }
+            /* Uniform Fully Clickable Phone Cell Styling */
+            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; }
             .phone-clickable-cell:hover { background-color: #e2eafc !important; }
-            .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: none; }
+            .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
+            .phone-icon-span { font-size: 14px; line-height: 1; }
             .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; }
         `;
         document.head.appendChild(styleTag);
@@ -565,13 +564,6 @@ window.copyEmailToClipboard = function(element, emailAddress) {
     });
 };
 
-window.copyPhoneToClipboard = function(phoneNum) {
-    if (!phoneNum || phoneNum === 'N/A') return;
-    navigator.clipboard.writeText(phoneNum).then(() => {
-        showPremiumNotification(`📋 Copied Phone: ${phoneNum}`, 2000);
-    });
-};
-
 function buildEmailCellMarkup(emailAddress, companyName) {
     if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
     let escapedName = companyName.replace(/'/g, "\\'");
@@ -588,11 +580,13 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td class="phone-clickable-cell" onclick="copyPhoneToClipboard('${phoneNum}')" title="Click anywhere to Copy Phone">
-            <div class="phone-cell-content">
-                <a href="tel:${phoneNum}" class="premium-call-btn" onclick="event.stopPropagation();" title="Direct Call">📞 Call</a>
-                <span class="clickable-phone-text">${phoneNum}</span>
-            </div>
+        <td>
+            <a href="tel:${phoneNum}" class="phone-clickable-cell" style="display: block; text-decoration: none;" title="Click to Call / Copy">
+                <div class="phone-cell-content">
+                    <span class="phone-icon-span">📞</span>
+                    <span class="clickable-phone-text">${phoneNum}</span>
+                </div>
+            </a>
         </td>
     `;
 }
