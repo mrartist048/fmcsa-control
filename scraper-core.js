@@ -279,17 +279,16 @@ function injectHistoryUIFramework() {
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
             .premium-pitch-btn:hover { background: #138496; }
-            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 4px; border: 1px solid #1e7e34; transition: background 0.2s; text-align: center; margin-bottom: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            .premium-call-btn { display: inline-block; background: #28a745; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 3px; border: 1px solid #1e7e34; transition: background 0.2s; margin-bottom: 2px; }
             .premium-call-btn:hover { background: #1e7e34; }
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Unified Phone Cell Styling */
-            .phone-cell-container { padding: 8px 10px !important; text-align: center !important; transition: background-color 0.2s ease-in-out; }
-            .phone-cell-wrapper { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 3px; }
-            table.table tr:hover .phone-cell-container { background-color: #e2eafc !important; }
-            .clickable-phone-text { color: #002d62; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap; }
-            .clickable-phone-text:hover { color: #17a2b8; text-decoration: underline; }
+            /* Fully Clickable Unified Phone Cell */
+            .phone-clickable-cell { padding: 6px 8px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; }
+            .phone-clickable-cell:hover { background-color: #e2eafc !important; }
+            .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: none; }
+            .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -395,26 +394,31 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR (STATE DROPDOWN WITH FULL NAMES + UNIVERSAL SEARCH) ======
+// ====== ADVANCED FILTER BAR WITH LIVE VISIBLE COUNT ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
 
     let filterDiv = document.createElement('div');
     filterDiv.id = 'advancedFilterWrapper';
-    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;";
+    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
     filterDiv.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
-            <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold;" onchange="applyAdvancedFilters()">
-                <option value="">All States</option>
-            </select>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
+                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold;" onchange="applyAdvancedFilters()">
+                    <option value="">All States</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
+                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+            </div>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 240px;">
-            <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
-            <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+            📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
         </div>
-        <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset Filters</button>
     `;
     table.parentNode.insertBefore(filterDiv, table);
     populateStateDropdown();
@@ -452,6 +456,7 @@ function populateStateDropdown() {
         select.appendChild(opt);
     });
     select.value = currentVal;
+    updateVisibleRecordCount();
 }
 
 window.applyAdvancedFilters = function() {
@@ -477,6 +482,7 @@ window.applyAdvancedFilters = function() {
 
         row.style.display = (matchesState && matchesSearch) ? "" : "none";
     });
+    updateVisibleRecordCount();
 };
 
 window.resetAdvancedFilters = function() {
@@ -486,6 +492,16 @@ window.resetAdvancedFilters = function() {
     if (srchInput) srchInput.value = "";
     applyAdvancedFilters();
 };
+
+function updateVisibleRecordCount() {
+    let rows = document.querySelectorAll('#resultsTable tr');
+    let visibleCount = 0;
+    rows.forEach(r => {
+        if (r.style.display !== 'none') visibleCount++;
+    });
+    let badge = document.getElementById('visibleRecordCountBadge');
+    if (badge) badge.innerText = visibleCount;
+}
 
 // ====== EMAIL PROPOSAL TEMPLATE PANEL ======
 function injectEmailProposalPanel() {
@@ -549,14 +565,10 @@ window.copyEmailToClipboard = function(element, emailAddress) {
     });
 };
 
-window.copyPhoneToClipboard = function(element, phoneNum) {
+window.copyPhoneToClipboard = function(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
     navigator.clipboard.writeText(phoneNum).then(() => {
-        let badge = document.createElement('span');
-        badge.className = 'premium-copy-badge';
-        badge.innerText = "Copied Phone!";
-        element.appendChild(badge);
-        setTimeout(() => badge.remove(), 1200);
+        showPremiumNotification(`📋 Copied Phone: ${phoneNum}`, 2000);
     });
 };
 
@@ -576,10 +588,10 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td class="phone-cell-container">
-            <div class="phone-cell-wrapper">
-                <a href="tel:${phoneNum}" class="premium-call-btn" title="Direct Call">📞 Call</a>
-                <span onclick="copyPhoneToClipboard(this.parentNode, '${phoneNum}')" class="clickable-phone-text" title="Click to Copy Phone">${phoneNum}</span>
+        <td class="phone-clickable-cell" onclick="copyPhoneToClipboard('${phoneNum}')" title="Click anywhere to Copy Phone">
+            <div class="phone-cell-content">
+                <a href="tel:${phoneNum}" class="premium-call-btn" onclick="event.stopPropagation();" title="Direct Call">📞 Call</a>
+                <span class="clickable-phone-text">${phoneNum}</span>
             </div>
         </td>
     `;
