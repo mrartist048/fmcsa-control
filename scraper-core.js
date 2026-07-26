@@ -944,7 +944,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)"></textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${index || recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 </tr>`;
             }
         } catch (e) { console.log(e); }
