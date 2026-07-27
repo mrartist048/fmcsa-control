@@ -218,7 +218,7 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}.json?_method=DELETE`);
 });
 
-// ====== INDEXEDDB HISTORY & RESPONSIVE UI FRAMEWORK ======
+// ====== DUAL STORAGE HISTORY & RESPONSIVE UI FRAMEWORK ======
 let db;
 let currentHistoryId = null;
 const request = indexedDB.open("DispatchLinkHistoryDB", 1);
@@ -230,8 +230,29 @@ request.onupgradeneeded = function(e) {
 };
 request.onsuccess = function(e) {
     db = e.target.result;
+    syncIndexedDBWithLocalStorage();
     injectHistoryUIFramework();
 };
+
+function syncIndexedDBWithLocalStorage() {
+    if (!db) return;
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const getAll = store.getAll();
+    
+    getAll.onsuccess = function() {
+        let dbRecords = getAll.result || [];
+        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        
+        if (dbRecords.length === 0 && lsBackup.length > 0) {
+            lsBackup.forEach(item => {
+                store.put(item);
+            });
+        } else if (dbRecords.length > 0) {
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
+        }
+    };
+}
 
 const DEFAULT_REMARKS_TEMPLATE = 
     "Truck Type:\n" +
@@ -239,7 +260,7 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Accessories:\n" +
     "Load:\n" +
     "Zip Code:\n" +
-    "Call Summary:";
+    "Summary:";
 
 function injectHistoryUIFramework() {
     document.title = "Dispatch Link";
@@ -321,7 +342,7 @@ function injectHistoryUIFramework() {
     if (!mainHeading) {
         const headings = document.querySelectorAll('div, h1, h2, h3');
         for (let h of headings) {
-            if (h.textContent.includes("Dispatch Link") || h.textContent.includes("FMCSA SAFER")) {
+            if (h.textContent.includes("FMCSA SAFER") || h.textContent.includes("SAFER")) {
                 mainHeading = h;
                 break;
             }
@@ -430,7 +451,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR WITH CLEAN ALIGNED COUNTS ======
+// ====== ADVANCED FILTER BAR WITH CLEAN PADDED COUNTS ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -487,7 +508,6 @@ function populateStateDropdown() {
         return nameA.localeCompare(nameB);
     });
 
-    // Find maximum string length for alignment padding using non-breaking spaces
     let maxLabelLength = 0;
     sortedCodes.forEach(code => {
         let fullName = usStatesMap[code] || code;
@@ -835,7 +855,12 @@ function renderHistoryItems() {
     const getAll = store.getAll();
 
     getAll.onsuccess = function() {
-        const data = getAll.result.reverse();
+        let data = getAll.result || [];
+        if (data.length === 0) {
+            data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        }
+        data = data.reverse();
+
         if (data.length === 0) {
             listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
             return;
@@ -872,8 +897,13 @@ window.loadHistorySheetToTable = async function(id) {
     const req = tx.objectStore("history").get(id);
 
     req.onsuccess = async function() {
-        const item = req.result;
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
         if (!item || !item.records) return;
+        
         scrapedData = item.records; 
         currentHistoryId = item.id;
 
@@ -917,7 +947,11 @@ window.downloadHistoryCSV = function(id) {
     const store = tx.objectStore("history");
     const req = store.get(id);
     req.onsuccess = function() {
-        const item = req.result;
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
         if (item && item.records.length > 0) {
             triggerCSVDownload(item.records, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
         }
@@ -929,7 +963,12 @@ window.deleteHistoryItem = function(id) {
         const tx = db.transaction("history", "readwrite");
         const store = tx.objectStore("history");
         store.delete(id);
-        tx.oncomplete = function() { renderHistoryItems(); };
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup = lsBackup.filter(r => r.id !== id);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+            renderHistoryItems();
+        };
     }
 };
 
@@ -953,7 +992,18 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
             data.totalRecords = recordsArray.length;
             data.records = recordsArray;
             data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
+            
             store.put(data);
+            
+            // Dual storage update in localStorage backup
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            let index = lsBackup.findIndex(r => r.id === currentHistoryId);
+            if (index !== -1) {
+                lsBackup[index] = data;
+            } else {
+                lsBackup.push(data);
+            }
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
         }
     };
 }
@@ -1013,6 +1063,7 @@ window.startScraping = async function() {
         const formattedDate = now.toLocaleString('en-US', { hour12: true });
 
         const initialHistoryItem = {
+            id: Date.now(),
             date: formattedDate,
             range: `${start} - ${end}`,
             totalRecords: 0,
@@ -1020,11 +1071,15 @@ window.startScraping = async function() {
             records: []
         };
 
+        currentHistoryId = initialHistoryItem.id;
         const tx = db.transaction("history", "readwrite");
         const store = tx.objectStore("history");
-        const addReq = store.add(initialHistoryItem);
-        addReq.onsuccess = function(e) {
-            currentHistoryId = e.target.result;
+        store.add(initialHistoryItem);
+        
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup.push(initialHistoryItem);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
         };
     }
 
@@ -1157,7 +1212,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
 
@@ -1188,6 +1243,10 @@ window.startScraping = async function() {
         if(currentHistoryId !== null) {
             const tx = db.transaction("history", "readwrite");
             tx.objectStore("history").delete(currentHistoryId);
+            
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup = lsBackup.filter(r => r.id !== currentHistoryId);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
         }
     }
 }
