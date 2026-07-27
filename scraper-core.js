@@ -1194,7 +1194,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== BATCH CONCURRENT PROCESSING ENGINE ======
+// ====== BATCH CONCURRENT PROCESSING ENGINE WITH SAFE DELAY ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() {
     scraping = false;
@@ -1340,14 +1340,13 @@ window.startScraping = async function() {
         };
     }
 
-    // Generate array of all MCs in range
     let mcQueue = [];
     for (let mc = start; mc <= end; mc++) {
         mcQueue.push(mc);
     }
 
-    // Batch Concurrent Processing Loop (Batch size of 10 for high speed)
-    const BATCH_SIZE = 10;
+    // Safe Batch Size (3 items per batch with delay to prevent server blocking)
+    const BATCH_SIZE = 3;
     
     for (let i = 0; i < mcQueue.length; i += BATCH_SIZE) {
         if (!scraping) break;
@@ -1389,7 +1388,6 @@ window.startScraping = async function() {
             }
         }
 
-        // Update ETA and Progress UI
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
         let elapsedSeconds = (Date.now() - startTime) / 1000;
         let avgTimePerMC = elapsedSeconds / totalProcessed;
@@ -1415,6 +1413,9 @@ window.startScraping = async function() {
         }
         populateStateDropdown();
         applyAdvancedFilters();
+
+        // Small delay between batches to keep FMCSA server stable
+        await new Promise(r => setTimeout(r, 600));
     }
 
     scraping = false;
