@@ -13,8 +13,8 @@
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
-    "dispatcher_lahore": { pass: "lahore123", maxLaptops: 2, expires: "2026-08-26" },    
-    "dispatcher_karachi": { pass: "karachi456", maxLaptops: 1, expires: "2026-07-25" },  
+    "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 1, expires: "2026-07-29" },    
+    "Transitcoretesting": { pass: "Transitcore", maxLaptops: 1, expires: "2026-07-28" },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
 };
