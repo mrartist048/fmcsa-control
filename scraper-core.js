@@ -11,16 +11,16 @@
     link.href = faviconUrl;
 })();
 
-// ====== GLOBAL ACCESS CONTROL & SUBSCRIPTION MANAGEMENT ======
+// ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
-    "dispatcher_lahore": { maxLaptops: 2, expires: "2026-08-26" },   
-    "dispatcher_karachi": { maxLaptops: 1, expires: "2026-07-25" },  
-    "dispatchloadify": { maxLaptops: 2, expires: "2026-09-01" },     
+    "dispatcher_lahore": { pass: "lahore123", maxLaptops: 2, expires: "2026-08-26" },   
+    "dispatcher_karachi": { pass: "karachi456", maxLaptops: 1, expires: "2026-07-25" },  
+    "dispatchloadify": { pass: "admin789", maxLaptops: 2, expires: "2026-09-01" },     
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
 
-let currentClient = "unknown";
+let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
@@ -77,6 +77,67 @@ function showPremiumNotification(message, duration = 4500) {
     }, duration);
 }
 
+// ====== LOGIN SCREEN UI & AUTHENTICATION ======
+function renderLoginScreen() {
+    if (document.getElementById('dlLoginOverlay')) return;
+
+    let overlay = document.createElement('div');
+    overlay.id = 'dlLoginOverlay';
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #001a3a; z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    overlay.innerHTML = `
+        <div style="background: #ffffff; padding: 35px 30px; border-radius: 8px; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+            <h2 style="color: #002d62; margin-bottom: 5px; font-size: 24px;">Dispatch Link</h2>
+            <p style="color: #6c757d; font-size: 12px; margin-bottom: 25px;">Secure Dispatcher CRM Portal</p>
+            
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Username</label>
+                <input type="text" id="dlLoginUser" placeholder="Enter your username" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Password</label>
+                <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <button onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
+            <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
+            
+            <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
+                Need access? Contact Admin: <b>03037654849</b>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+window.processLogin = function() {
+    let uInput = document.getElementById('dlLoginUser').value.trim();
+    let pInput = document.getElementById('dlLoginPass').value.trim();
+    let errBox = document.getElementById('dlLoginError');
+
+    let userConfig = allowedUsers[uInput];
+    if (!userConfig || userConfig.pass !== pInput) {
+        errBox.style.display = "block";
+        errBox.innerText = "Invalid Username or Password!";
+        return;
+    }
+
+    let todayStr = new Date().toISOString().split('T')[0];
+    if (todayStr > userConfig.expires) {
+        errBox.style.display = "block";
+        errBox.innerText = "Subscription has expired! Contact Admin.";
+        return;
+    }
+
+    localStorage.setItem("dl_logged_client", uInput);
+    currentClient = uInput;
+    
+    let overlay = document.getElementById('dlLoginOverlay');
+    if (overlay) overlay.remove();
+
+    initializeAccessControl();
+};
+
 // ====== DISPATCHER IDENTITY SETUP ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
@@ -98,7 +159,7 @@ function injectNicknameProfileUI() {
     let panel = document.createElement('div');
     panel.id = 'dlNickProfilePanel';
     panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
-    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a>`;
+    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>`;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
@@ -113,36 +174,26 @@ window.changeDispatcherName = function() {
     }
 };
 
+window.logoutUser = function() {
+    localStorage.removeItem("dl_logged_client");
+    window.location.reload();
+};
+
 function initializeAccessControl() {
-    currentClient = window.scrClientID || "unknown";
-    
-    let isAccessValid = false;
-    let clientConfig = allowedUsers[currentClient];
-
-    if (clientConfig) {
-        userLimit = clientConfig.maxLaptops || 0;
-        const todayStr = new Date().toISOString().split('T')[0]; 
-        
-        if (userLimit > 0 && todayStr <= clientConfig.expires) {
-            isAccessValid = true;
-        }
+    if (!currentClient || !allowedUsers[currentClient]) {
+        renderLoginScreen();
+        return;
     }
+    
+    let clientConfig = allowedUsers[currentClient];
+    userLimit = clientConfig.maxLaptops || 0;
+    const todayStr = new Date().toISOString().split('T')[0]; 
 
-    if (!isAccessValid) {
-        let statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.innerText = "ERROR: Subscription Expired Please contact the administrator. (Whatsapp 03037654849)";
-            statusEl.style.background = "#f8d7da";
-            statusEl.style.color = "#721c24";
-            statusEl.style.borderLeft = "4px solid #d9534f";
-        }
-        let startBtn = document.getElementById('startBtn');
-        if (startBtn) {
-            startBtn.disabled = true;
-            startBtn.style.opacity = "0.5";
-        }
-        alert("Your access has been revoked or expired. Contact admin for renewal.");
-        throw new Error("Access Denied");
+    if (todayStr > clientConfig.expires) {
+        alert("Your subscription has expired.");
+        localStorage.removeItem("dl_logged_client");
+        renderLoginScreen();
+        return;
     }
 
     setupDispatcherIdentity();
@@ -158,9 +209,21 @@ function initializeAccessControl() {
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeAccessControl);
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!currentClient || !allowedUsers[currentClient]) {
+            renderLoginScreen();
+        } else {
+            initializeAccessControl();
+        }
+    });
 } else {
-    setTimeout(initializeAccessControl, 300);
+    setTimeout(() => {
+        if (!currentClient || !allowedUsers[currentClient]) {
+            renderLoginScreen();
+        } else {
+            initializeAccessControl();
+        }
+    }, 300);
 }
 
 async function checkGlobalSessions() {
@@ -414,7 +477,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(fDrawer);
     }
 
-    // Inject Calendar & Time Picker Modal Framework
     if (!document.getElementById('dlDatePickerModal')) {
         let modal = document.createElement('div');
         modal.id = 'dlDatePickerModal';
@@ -439,7 +501,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(modal);
     }
 
-    // Global Click Listener to close drawers when clicking outside
     document.addEventListener('click', function(event) {
         let hDrawer = document.getElementById('dlHistoryDrawer');
         let fDrawer = document.getElementById('dlFollowUpDrawer');
@@ -713,7 +774,6 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
     pendingFollowUpIndex = index;
     pendingFollowUpRowBtn = buttonElement;
 
-    // Set default values in modal inputs (Today's date & current time)
     let todayDateStr = new Date().toISOString().split('T')[0];
     let nowTimeStr = new Date().toTimeString().substring(0, 5);
 
@@ -722,7 +782,6 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
     if (dateInput) dateInput.value = todayDateStr;
     if (timeInput) timeInput.value = nowTimeStr;
 
-    // Open Modal
     let modal = document.getElementById('dlDatePickerModal');
     if (modal) modal.style.display = 'flex';
 };
