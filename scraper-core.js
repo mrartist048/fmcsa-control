@@ -430,7 +430,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR WITH EXACT STATE MATCHING ======
+// ====== ADVANCED FILTER BAR WITH STATE COUNTS ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -464,13 +464,17 @@ function populateStateDropdown() {
     let select = document.getElementById('stateDropdownSelect');
     if (!select) return;
     
-    let statesSet = new Set();
+    // Count leads per state accurately using strict regex matching
+    let stateCounts = {};
     if (typeof scrapedData !== 'undefined' && scrapedData.length > 0) {
         scrapedData.forEach(r => {
-            let addr = r.address || "";
-            let match = addr.match(/\b([A-Z]{2})\b(?=\s+\d{5}(-\d{4})?$)/);
-            if (match) {
-                statesSet.add(match[1]);
+            let addr = (r.address || "").toUpperCase();
+            for (let code in usStatesMap) {
+                let stateRegex = new RegExp(`\\b${code}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
+                if (stateRegex.test(addr)) {
+                    stateCounts[code] = (stateCounts[code] || 0) + 1;
+                    break; // match first valid state token
+                }
             }
         });
     }
@@ -478,7 +482,7 @@ function populateStateDropdown() {
     let currentVal = select.value;
     select.innerHTML = '<option value="">All States</option>';
     
-    let sortedCodes = Array.from(statesSet).sort((a, b) => {
+    let sortedCodes = Object.keys(stateCounts).sort((a, b) => {
         let nameA = usStatesMap[a] || a;
         let nameB = usStatesMap[b] || b;
         return nameA.localeCompare(nameB);
@@ -486,9 +490,10 @@ function populateStateDropdown() {
 
     sortedCodes.forEach(code => {
         let fullName = usStatesMap[code] || code;
+        let count = stateCounts[code];
         let opt = document.createElement('option');
         opt.value = code;
-        opt.textContent = `${fullName} (${code})`;
+        opt.textContent = `${fullName} (${code}) — [${count}]`;
         select.appendChild(opt);
     });
     select.value = currentVal;
@@ -508,7 +513,6 @@ window.applyAdvancedFilters = function() {
 
         let matchesState = true;
         if (selectedState !== "") {
-            // Strict Regex check to ensure state code is a standalone token right before the ZIP code
             let stateRegex = new RegExp(`\\b${selectedState}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
             matchesState = stateRegex.test(addressText);
         }
