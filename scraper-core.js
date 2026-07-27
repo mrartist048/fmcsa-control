@@ -1124,8 +1124,10 @@ window.startScraping = async function() {
 
                 let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
                 let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
+                let activeRemarksValue = record.remarks || "";
 
-                tableBody.innerHTML += `<tr>
+                let newRow = document.createElement('tr');
+                newRow.innerHTML = `
                     <td><b>${record.mc}</b></td>
                     <td>${record.usdot}</td>
                     <td>${record.name}</td>
@@ -1136,10 +1138,11 @@ window.startScraping = async function() {
                     ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container">
-                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)"></textarea>
+                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
                     <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
-                </tr>`;
+                `;
+                tableBody.appendChild(newRow);
 
                 populateStateDropdown();
                 applyAdvancedFilters();
