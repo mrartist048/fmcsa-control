@@ -414,6 +414,31 @@ function injectHistoryUIFramework() {
         document.body.appendChild(fDrawer);
     }
 
+    // Inject Calendar & Time Picker Modal Framework
+    if (!document.getElementById('dlDatePickerModal')) {
+        let modal = document.createElement('div');
+        modal.id = 'dlDatePickerModal';
+        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
+        modal.innerHTML = `
+            <div style="background: white; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">⏰ Schedule Follow-Up</h3>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Date:</label>
+                    <input type="date" id="dlModalDateInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Time:</label>
+                    <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
     // Global Click Listener to close drawers when clicking outside
     document.addEventListener('click', function(event) {
         let hDrawer = document.getElementById('dlHistoryDrawer');
@@ -671,8 +696,10 @@ function buildPhoneCellMarkup(phoneNum) {
     `;
 }
 
-// ====== FOLLOW-UP ENGINE WITH DATE & TIME SCHEDULING ======
-let currentFollowUpFilterMode = 'today'; // default to Today
+// ====== FOLLOW-UP ENGINE WITH CALENDAR & TIME PICKER MODAL ======
+let currentFollowUpFilterMode = 'today';
+let pendingFollowUpIndex = null;
+let pendingFollowUpRowBtn = null;
 
 window.addLeadToFollowUpList = function(index, buttonElement) {
     let record = scrapedData[index];
@@ -683,28 +710,71 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
         return alert("This carrier is already added to your Follow-Up list.");
     }
     
-    // Prompt user for follow-up date and time
+    pendingFollowUpIndex = index;
+    pendingFollowUpRowBtn = buttonElement;
+
+    // Set default values in modal inputs (Today's date & current time)
     let todayDateStr = new Date().toISOString().split('T')[0];
-    let selectedDate = prompt("Enter Follow-Up Date (YYYY-MM-DD):", todayDateStr);
-    if (!selectedDate || selectedDate.trim() === "") return;
-    
-    let selectedTime = prompt("Enter Follow-Up Time (e.g., 10:30 AM or 14:00):", "10:00 AM");
-    if (!selectedTime) selectedTime = "N/A";
+    let nowTimeStr = new Date().toTimeString().substring(0, 5);
+
+    let dateInput = document.getElementById('dlModalDateInput');
+    let timeInput = document.getElementById('dlModalTimeInput');
+    if (dateInput) dateInput.value = todayDateStr;
+    if (timeInput) timeInput.value = nowTimeStr;
+
+    // Open Modal
+    let modal = document.getElementById('dlDatePickerModal');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closeFollowUpModal = function() {
+    let modal = document.getElementById('dlDatePickerModal');
+    if (modal) modal.style.display = 'none';
+    pendingFollowUpIndex = null;
+    pendingFollowUpRowBtn = null;
+};
+
+window.confirmFollowUpSchedule = function() {
+    if (pendingFollowUpIndex === null) return;
+    let record = scrapedData[pendingFollowUpIndex];
+    if (!record) return;
+
+    let selectedDate = document.getElementById('dlModalDateInput').value;
+    let selectedTime = document.getElementById('dlModalTimeInput').value;
+
+    if (!selectedDate) {
+        alert("Please select a valid date.");
+        return;
+    }
 
     record.addedAt = new Date().toLocaleString();
-    record.followUpDate = selectedDate.trim();
-    record.followUpTime = selectedTime.trim();
+    record.followUpDate = selectedDate;
+    record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
 
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
     showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
-    let row = buttonElement.closest('tr');
-    if (row) row.style.background = "#d4edda";
+    if (pendingFollowUpRowBtn) {
+        let row = pendingFollowUpRowBtn.closest('tr');
+        if (row) row.style.background = "#d4edda";
+    }
 
+    closeFollowUpModal();
     if (document.getElementById('dlFollowUpDrawer').style.right === "0px") renderFollowUpItems();
 };
+
+function formatTime12Hour(time24) {
+    let parts = time24.split(':');
+    let hours = parseInt(parts[0]);
+    let minutes = parts[1];
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutes} ${ampm}`;
+}
 
 window.toggleFollowUpDrawer = function() {
     let drawer = document.getElementById('dlFollowUpDrawer');
@@ -804,7 +874,6 @@ function renderFollowUpItems() {
         let fuDate = item.followUpDate || "N/A";
         let fuTime = item.followUpTime || "N/A";
 
-        // Filter by Today if mode is active
         if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) {
             return;
         }
@@ -1272,7 +1341,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
 
