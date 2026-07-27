@@ -13,7 +13,7 @@
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
-    "dispatcher_lahore": { pass: "lahore123", maxLaptops: 2, expires: "2026-08-26" },   
+    "dispatcher_lahore": { pass: "lahore123", maxLaptops: 2, expires: "2026-08-26" },    
     "dispatcher_karachi": { pass: "karachi456", maxLaptops: 1, expires: "2026-07-25" },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 2, expires: "2026-09-01" },  
     "testinguser": { pass: "test123", maxLaptops: 3, expires: "2026-09-01" }, 
@@ -523,19 +523,17 @@ function injectHistoryUIFramework() {
 
     injectAdvancedFilterBar();
 
-    let tableHeader = document.querySelector('table.table thead tr, table tr');
+    let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let remTh = document.createElement('th');
         remTh.id = 'remarksHeaderCol';
         remTh.className = 'remarks-cell-container';
         remTh.innerText = "Remarks";
-        remTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
         tableHeader.appendChild(remTh);
 
         let followTh = document.createElement('th');
         followTh.id = 'followUpHeaderCol';
         followTh.innerText = "Action";
-        followTh.style.cssText = "background: #002d62; color: white; padding: 10px; font-size: 14px;";
         tableHeader.appendChild(followTh);
     }
 
@@ -1401,7 +1399,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
 
