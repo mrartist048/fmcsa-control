@@ -430,7 +430,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR WITH STATE COUNTS ======
+// ====== ADVANCED FILTER BAR WITH CLEAN ALIGNED COUNTS ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -442,7 +442,7 @@ function injectAdvancedFilterBar() {
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
-                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold;" onchange="applyAdvancedFilters()">
+                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
             </div>
@@ -464,7 +464,6 @@ function populateStateDropdown() {
     let select = document.getElementById('stateDropdownSelect');
     if (!select) return;
     
-    // Count leads per state accurately using strict regex matching
     let stateCounts = {};
     if (typeof scrapedData !== 'undefined' && scrapedData.length > 0) {
         scrapedData.forEach(r => {
@@ -473,7 +472,7 @@ function populateStateDropdown() {
                 let stateRegex = new RegExp(`\\b${code}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
                 if (stateRegex.test(addr)) {
                     stateCounts[code] = (stateCounts[code] || 0) + 1;
-                    break; // match first valid state token
+                    break;
                 }
             }
         });
@@ -488,12 +487,24 @@ function populateStateDropdown() {
         return nameA.localeCompare(nameB);
     });
 
+    // Find maximum string length for alignment padding using non-breaking spaces
+    let maxLabelLength = 0;
+    sortedCodes.forEach(code => {
+        let fullName = usStatesMap[code] || code;
+        let label = `${fullName} (${code})`;
+        if (label.length > maxLabelLength) maxLabelLength = label.length;
+    });
+
     sortedCodes.forEach(code => {
         let fullName = usStatesMap[code] || code;
         let count = stateCounts[code];
+        let label = `${fullName} (${code})`;
+        let paddingLength = Math.max(2, maxLabelLength - label.length + 4);
+        let spaces = "\u00A0".repeat(paddingLength);
+        
         let opt = document.createElement('option');
         opt.value = code;
-        opt.textContent = `${fullName} (${code}) — [${count}]`;
+        opt.textContent = `${label}${spaces}${count}`;
         select.appendChild(opt);
     });
     select.value = currentVal;
@@ -1146,7 +1157,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
 
