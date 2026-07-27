@@ -239,7 +239,7 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Accessories:\n" +
     "Load:\n" +
     "Zip Code:\n" +
-    "Summary:";
+    "Call Summary:";
 
 function injectHistoryUIFramework() {
     document.title = "Dispatch Link";
