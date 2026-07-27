@@ -430,7 +430,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ====== ADVANCED FILTER BAR WITH FIXED 0 COUNT ======
+// ====== ADVANCED FILTER BAR WITH EXACT STATE MATCHING ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -508,7 +508,9 @@ window.applyAdvancedFilters = function() {
 
         let matchesState = true;
         if (selectedState !== "") {
-            matchesState = addressText.includes(selectedState);
+            // Strict Regex check to ensure state code is a standalone token right before the ZIP code
+            let stateRegex = new RegExp(`\\b${selectedState}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
+            matchesState = stateRegex.test(addressText);
         }
 
         let matchesSearch = true;
@@ -1140,7 +1142,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
 
