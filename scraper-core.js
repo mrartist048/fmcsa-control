@@ -16,7 +16,6 @@ const allowedUsers = {
     "dispatcher_lahore": { pass: "lahore123", maxLaptops: 2, expires: "2026-08-26" },    
     "dispatcher_karachi": { pass: "karachi456", maxLaptops: 1, expires: "2026-07-25" },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" },  
-    
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
@@ -1195,7 +1194,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== PURE WORKING PROCESSING ENGINE (DIRECT FETCH) ======
+// ====== BATCH CONCURRENT PROCESSING ENGINE ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() {
     scraping = false;
@@ -1205,6 +1204,77 @@ window.stopScraping = function() {
         statusBox.style.color = "#856404";
         statusBox.style.padding = "10px 15px";
         statusBox.innerText = "Stopping...";
+    }
+}
+
+async function processSingleMC(mc) {
+    try {
+        const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
+        const response = await fetch(snapshotUrl);
+        const htmlText = await response.text();
+
+        if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
+            return null;
+        }
+
+        let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '' };
+        let el = document.createElement('html');
+        el.innerHTML = htmlText;
+        let cells = el.querySelectorAll('td, th');
+
+        for (let i = 0; i < cells.length; i++) {
+            let text = cells[i].textContent.trim();
+            if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
+                if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            }
+            if (text.startsWith("USDOT Number:")) {
+                if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+            }
+            if (text.startsWith("Entity Type:")) {
+                if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            }
+            if (text.startsWith("Operating Authority Status:")) {
+                if (cells[i+1]) {
+                    let rawStatus = cells[i+1].textContent.toUpperCase();
+                    if (rawStatus.includes("NOT AUTHORIZED")) {
+                        record.status = "NOT AUTHORIZED";
+                    } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
+                        record.status = "AUTHORIZED";
+                    } else {
+                        record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+                    }
+                }
+            }
+            if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+            if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+            if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
+                if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            }
+        }
+
+        if (record.status !== "AUTHORIZED") { return null; }
+
+        if (record.usdot !== 'N/A') {
+            try {
+                const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
+                const smsResponse = await fetch(smsUrl);
+                const smsHtml = await smsResponse.text();
+                let smsEl = document.createElement('html');
+                smsEl.innerHTML = smsHtml;
+                let smsCells = smsEl.querySelectorAll('td, th, span, label');
+                for (let j = 0; j < smsCells.length; j++) {
+                    let smsText = smsCells[j].textContent.trim();
+                    if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
+                        let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                        if (emailMatch) { record.email = emailMatch[0]; break; }
+                    }
+                }
+            } catch (smsErr) { console.log(smsErr); }
+        }
+        return record;
+    } catch (e) {
+        console.log("Error processing MC:", mc, e);
+        return null;
     }
 }
 
@@ -1227,9 +1297,9 @@ window.startScraping = async function() {
     const tableBody = document.getElementById('resultsTable');
     tableBody.innerHTML = '';
 
-    let startTime = null;
     let totalToScan = end - start + 1;
     let totalProcessed = 0;
+    let startTime = Date.now();
 
     let statusBox = document.getElementById('status');
     if (statusBox) {
@@ -1270,113 +1340,27 @@ window.startScraping = async function() {
         };
     }
 
+    // Generate array of all MCs in range
+    let mcQueue = [];
     for (let mc = start; mc <= end; mc++) {
+        mcQueue.push(mc);
+    }
+
+    // Batch Concurrent Processing Loop (Batch size of 10 for high speed)
+    const BATCH_SIZE = 10;
+    
+    for (let i = 0; i < mcQueue.length; i += BATCH_SIZE) {
         if (!scraping) break;
 
-        totalProcessed++;
-        if (startTime === null) { startTime = Date.now(); }
+        let batch = mcQueue.slice(i, i + BATCH_SIZE);
+        let promises = batch.map(mc => processSingleMC(mc));
+        let results = await Promise.all(promises);
 
-        let percentage = Math.floor((totalProcessed / totalToScan) * 100);
-        let elapsedSeconds = (Date.now() - startTime) / 1000;
-        let avgTimePerMC = elapsedSeconds / totalProcessed;
-        let remainingMCs = totalToScan - totalProcessed;
-        let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
+        for (let record of results) {
+            totalProcessed++;
+            if (!scraping) break;
 
-        let mins = Math.floor(estimatedRemainingSeconds / 60);
-        let secs = Math.floor(estimatedRemainingSeconds % 60);
-
-        let timeString = totalProcessed < 3 ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
-        let degrees = percentage * 3.6;
-
-        if (statusBox) {
-            statusBox.innerHTML = `
-                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processing MC <b>${mc}</b>...</div>
-                    <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
-                </div>
-                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
-                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
-                </div>
-            `;
-        }
-
-        try {
-            const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
-            const response = await fetch(snapshotUrl);
-            const htmlText = await response.text();
-
-            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
-                continue;
-            }
-
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '' };
-            let el = document.createElement('html');
-            el.innerHTML = htmlText;
-            let cells = el.querySelectorAll('td, th');
-
-            for (let i = 0; i < cells.length; i++) {
-                let text = cells[i].textContent.trim();
-                if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
-                    if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                }
-                if (text.startsWith("USDOT Number:")) {
-                    if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
-                }
-                if (text.startsWith("Entity Type:")) {
-                    if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                }
-                if (text.startsWith("Operating Authority Status:")) {
-                    if (cells[i+1]) {
-                        let rawStatus = cells[i+1].textContent.toUpperCase();
-                        if (rawStatus.includes("NOT AUTHORIZED")) {
-                            record.status = "NOT AUTHORIZED";
-                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
-                            record.status = "AUTHORIZED";
-                        } else {
-                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
-                        }
-                    }
-                }
-                if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
-                    if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                }
-            }
-
-            if (record.status !== "AUTHORIZED") { continue; }
-
-            if (record.usdot !== 'N/A' && scraping) {
-                if (statusBox) {
-                    statusBox.innerHTML = `
-                        <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                            <div style="font-size: 14px; font-weight: bold; color: #002d62;">Extracting Email for USDOT <b>${record.usdot}</b>...</div>
-                            <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
-                        </div>
-                        <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
-                            <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
-                        </div>
-                    `;
-                }
-
-                try {
-                    const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
-                    const smsResponse = await fetch(smsUrl);
-                    const smsHtml = await smsResponse.text();
-                    let smsEl = document.createElement('html');
-                    smsEl.innerHTML = smsHtml;
-                    let smsCells = smsEl.querySelectorAll('td, th, span, label');
-                    for (let j = 0; j < smsCells.length; j++) {
-                        let smsText = smsCells[j].textContent.trim();
-                        if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
-                            let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                            if (emailMatch) { record.email = emailMatch[0]; break; }
-                        }
-                    }
-                } catch (smsErr) { console.log(smsErr); }
-
+            if (record) {
                 scrapedData.push(record);
                 let recordIndex = scrapedData.length - 1;
                 updateRealTimeHistory(scrapedData, false);
@@ -1402,12 +1386,35 @@ window.startScraping = async function() {
                     <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
-
-                populateStateDropdown();
-                applyAdvancedFilters();
             }
-        } catch (e) { console.log(e); }
-        await new Promise(r => setTimeout(r, 2000));
+        }
+
+        // Update ETA and Progress UI
+        let percentage = Math.floor((totalProcessed / totalToScan) * 100);
+        let elapsedSeconds = (Date.now() - startTime) / 1000;
+        let avgTimePerMC = elapsedSeconds / totalProcessed;
+        let remainingMCs = totalToScan - totalProcessed;
+        let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
+
+        let mins = Math.floor(estimatedRemainingSeconds / 60);
+        let secs = Math.floor(estimatedRemainingSeconds % 60);
+        let timeString = totalProcessed < 5 ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
+        let degrees = percentage * 3.6;
+
+        if (statusBox && scraping) {
+            statusBox.innerHTML = `
+                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processed ${totalProcessed} / ${totalToScan} MCs...</div>
+                    <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
+                </div>
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                </div>
+            `;
+        }
+        populateStateDropdown();
+        applyAdvancedFilters();
     }
 
     scraping = false;
