@@ -398,6 +398,10 @@ function injectHistoryUIFramework() {
                 <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
                 <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
+                <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
+            </div>
             <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
                 <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
                 <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
@@ -667,7 +671,9 @@ function buildPhoneCellMarkup(phoneNum) {
     `;
 }
 
-// ====== FOLLOW-UP ENGINE ======
+// ====== FOLLOW-UP ENGINE WITH DATE & TIME SCHEDULING ======
+let currentFollowUpFilterMode = 'today'; // default to Today
+
 window.addLeadToFollowUpList = function(index, buttonElement) {
     let record = scrapedData[index];
     if (!record) return;
@@ -677,11 +683,22 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
         return alert("This carrier is already added to your Follow-Up list.");
     }
     
+    // Prompt user for follow-up date and time
+    let todayDateStr = new Date().toISOString().split('T')[0];
+    let selectedDate = prompt("Enter Follow-Up Date (YYYY-MM-DD):", todayDateStr);
+    if (!selectedDate || selectedDate.trim() === "") return;
+    
+    let selectedTime = prompt("Enter Follow-Up Time (e.g., 10:30 AM or 14:00):", "10:00 AM");
+    if (!selectedTime) selectedTime = "N/A";
+
     record.addedAt = new Date().toLocaleString();
+    record.followUpDate = selectedDate.trim();
+    record.followUpTime = selectedTime.trim();
+
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    showPremiumNotification(`⭐ Added MC ${record.mc} to Follow-Up Manager`, 3000);
+    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
     let row = buttonElement.closest('tr');
     if (row) row.style.background = "#d4edda";
@@ -702,13 +719,45 @@ window.toggleFollowUpDrawer = function() {
         drawer.style.right = "0px";
         let searchInput = document.getElementById('followUpSearchInput');
         if(searchInput) searchInput.value = ""; 
+        currentFollowUpFilterMode = 'today';
+        updateFollowUpFilterButtonsUI();
         renderFollowUpItems(); 
     }
 };
 
+window.filterFollowUpsByDate = function(mode) {
+    currentFollowUpFilterMode = mode;
+    updateFollowUpFilterButtonsUI();
+    renderFollowUpItems();
+};
+
+function updateFollowUpFilterButtonsUI() {
+    let btnToday = document.getElementById('fubtnToday');
+    let btnAll = document.getElementById('fubtnAll');
+    if (!btnToday || !btnAll) return;
+
+    if (currentFollowUpFilterMode === 'today') {
+        btnToday.style.background = "#17a2b8";
+        btnToday.style.color = "white";
+        btnToday.style.border = "none";
+        btnAll.style.background = "#e2eafc";
+        btnAll.style.color = "#002d62";
+        btnAll.style.border = "1px solid #b6ccfe";
+    } else {
+        btnAll.style.background = "#17a2b8";
+        btnAll.style.color = "white";
+        btnAll.style.border = "none";
+        btnToday.style.background = "#e2eafc";
+        btnToday.style.color = "#002d62";
+        btnToday.style.border = "1px solid #b6ccfe";
+    }
+}
+
 window.clearFollowUpFilters = function() {
     let searchInput = document.getElementById('followUpSearchInput');
     if(searchInput) searchInput.value = "";
+    currentFollowUpFilterMode = 'all';
+    updateFollowUpFilterButtonsUI();
     renderFollowUpItems();
 };
 
@@ -741,6 +790,7 @@ function renderFollowUpItems() {
     data = data.reverse(); 
 
     let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
+    let todayDateStr = new Date().toISOString().split('T')[0];
 
     if (data.length === 0) {
         listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
@@ -751,6 +801,14 @@ function renderFollowUpItems() {
     let matchCount = 0;
 
     data.forEach(item => {
+        let fuDate = item.followUpDate || "N/A";
+        let fuTime = item.followUpTime || "N/A";
+
+        // Filter by Today if mode is active
+        if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) {
+            return;
+        }
+
         let mcString = (item.mc || "").toString().toLowerCase();
         let nameString = (item.name || "").toLowerCase();
         let phoneString = (item.phone || "").toLowerCase();
@@ -763,7 +821,10 @@ function renderFollowUpItems() {
         matchCount++;
         itemsHTML += `
             <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
-                <div style="font-size: 11px; color: #6c757d; font-weight: bold;">Saved: ${item.addedAt}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
+                    <span>Saved: ${item.addedAt}</span>
+                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
+                </div>
                 <div style="font-size: 14px; font-weight: bold; color: #002d62; margin: 4px 0;">${item.name}</div>
                 <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
                 <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
@@ -779,7 +840,7 @@ function renderFollowUpItems() {
     });
 
     if (matchCount === 0) {
-        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found.</p>`;
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
     } else {
         listContainer.innerHTML = itemsHTML;
     }
@@ -822,10 +883,10 @@ window.syncRemarksData = function(index, textarea) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Follow-Up Date,Follow-Up Time,Remarks\n";
     recordsData.forEach(r => {
         let safeRemarks = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${safeRemarks.replace(/"/g, '""')}"\n`;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -995,7 +1056,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
             
             store.put(data);
             
-            // Dual storage update in localStorage backup
             let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
             let index = lsBackup.findIndex(r => r.id === currentHistoryId);
             if (index !== -1) {
@@ -1123,7 +1183,7 @@ window.startScraping = async function() {
                 continue;
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '' };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -1212,7 +1272,7 @@ window.startScraping = async function() {
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
 
