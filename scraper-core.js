@@ -15,7 +15,7 @@
 const allowedUsers = {
     "dispatcher_lahore": { pass: "lahore123", maxLaptops: 2, expires: "2026-08-26" },    
     "dispatcher_karachi": { pass: "karachi456", maxLaptops: 1, expires: "2026-07-25" },  
-    "dispatchloadify": { pass: "admin789", maxLaptops: 2, expires: "2026-09-01" },  
+    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" },  
     "testinguser": { pass: "test123", maxLaptops: 3, expires: "2026-09-01" }, 
 };
 
