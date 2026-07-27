@@ -1,6 +1,6 @@
 // ====== DYNAMIC FAVICON INJECTOR ======
 (function injectFavicon() {
-    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/fav.png";
+    const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png";
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
         link = document.createElement('link');
