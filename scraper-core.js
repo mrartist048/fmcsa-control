@@ -20,7 +20,7 @@ const allowedUsers = {
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
-const MASTER_ADMIN_PASS = "admin12345"; // <-- Yahan apna Master Admin Password rakh lein
+const MASTER_ADMIN_PASS = "admin12345"; // <-- Apna Master Admin Password yahan set karein
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
@@ -182,7 +182,7 @@ function injectNicknameProfileUI() {
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
-// ====== ADMIN PANEL MODAL & LOGS ANALYZER ======
+// ====== ADMIN PANEL MODAL & CLOUD LOGS ANALYZER ======
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -193,7 +193,7 @@ window.openAdminPanelPrompt = function() {
     renderAdminPanelModal();
 };
 
-function renderAdminPanelModal() {
+async function renderAdminPanelModal() {
     let existingModal = document.getElementById('dlAdminPanelModal');
     if (existingModal) existingModal.remove();
 
@@ -201,20 +201,42 @@ function renderAdminPanelModal() {
     modal.id = 'dlAdminPanelModal';
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
+    modal.innerHTML = `
+        <div style="background: white; width: 500px; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+            <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">👑 Admin Panel - Dispatcher Performance</h3>
+                <button onclick="document.getElementById('dlAdminPanelModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+            <div id="adminPanelModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d;">
+                Loading all laptops/dispatchers activity from cloud...
+            </div>
+            <div style="background: #f8f9fa; padding: 12px 20px; text-align: right; border-top: 1px solid #eee;">
+                <button onclick="document.getElementById('dlAdminPanelModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Close Panel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
     let shiftDateStr = getCurrentShiftDateKey();
-    
-    // Gather all local storage keys matching call logs for this client
     let userStatsMap = {};
-    for (let i = 0; i < localStorage.length; i++) {
-        let key = localStorage.key(i);
-        if (key && key.startsWith(`dl_call_logs_${currentClient}_`)) {
-            let nick = key.replace(`dl_call_logs_${currentClient}_`, "");
-            let logs = JSON.parse(localStorage.getItem(key)) || [];
+
+    try {
+        let res = await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`);
+        let cloudData = await res.json() || {};
+
+        Object.keys(cloudData).forEach(nick => {
+            let logsObj = cloudData[nick] || {};
+            let logs = Object.values(logsObj);
             let todayLogsCount = logs.filter(l => l.shiftDate === shiftDateStr).length;
             let totalLogsCount = logs.length;
             userStatsMap[nick] = { today: todayLogsCount, total: totalLogsCount };
-        }
+        });
+    } catch (e) {
+        console.error("Failed to load cloud call logs:", e);
     }
+
+    let bodyContainer = document.getElementById('adminPanelModalBody');
+    if (!bodyContainer) return;
 
     let tableRowsHTML = "";
     let userKeys = Object.keys(userStatsMap);
@@ -233,33 +255,21 @@ function renderAdminPanelModal() {
         });
     }
 
-    modal.innerHTML = `
-        <div style="background: white; width: 500px; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
-            <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 18px;">👑 Admin Panel - Dispatcher Performance</h3>
-                <button onclick="document.getElementById('dlAdminPanelModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
-            </div>
-            <div style="padding: 20px; overflow-y: auto; flex: 1;">
-                <p style="font-size: 12px; color: #6c757d; margin-top: 0; margin-bottom: 15px;">Active Shift Date: <b>${shiftDateStr}</b> (Night Shift Friendly)</p>
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                    <thead>
-                        <tr style="background: #f8f9fa; color: #333; text-align: left;">
-                            <th style="padding: 10px; border-bottom: 2px solid #ddd;">Dispatcher / Laptop Name</th>
-                            <th style="padding: 10px; border-bottom: 2px solid #ddd; text-align: center;">Today's Calls</th>
-                            <th style="padding: 10px; border-bottom: 2px solid #ddd; text-align: center;">All-Time Calls</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${tableRowsHTML}
-                    </tbody>
-                </table>
-            </div>
-            <div style="background: #f8f9fa; padding: 12px 20px; text-align: right; border-top: 1px solid #eee;">
-                <button onclick="document.getElementById('dlAdminPanelModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Close Panel</button>
-            </div>
-        </div>
+    bodyContainer.innerHTML = `
+        <p style="font-size: 12px; color: #6c757d; margin-top: 0; margin-bottom: 15px; text-align: left;">Active Shift Date: <b>${shiftDateStr}</b> (Night Shift Friendly)</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="background: #f8f9fa; color: #333; text-align: left;">
+                    <th style="padding: 10px; border-bottom: 2px solid #ddd;">Dispatcher / Laptop Name</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #ddd; text-align: center;">Today's Calls</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #ddd; text-align: center;">All-Time Calls</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRowsHTML}
+            </tbody>
+        </table>
     `;
-    document.body.appendChild(modal);
 }
 
 window.changeDispatcherName = function() {
@@ -887,7 +897,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL & HOVER COPY ENGINE WITH SHIFT-AWARE LOGGING ======
+// ====== PHONE CALL & HOVER COPY ENGINE WITH CLOUD SYNCED LOGGING ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -908,13 +918,21 @@ function recordCallActivity(phoneNum) {
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
-    callLogs.push({
+    let logEntry = {
         phone: phoneNum,
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
         date: new Date().toLocaleString()
-    });
+    };
+    
+    callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
+
+    // Push call activity to Firebase cloud instantly for Multi-Laptop Admin View
+    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${dispatcherNickname}.json`, {
+        method: 'POST',
+        body: JSON.stringify(logEntry)
+    }).catch(e => console.error("Cloud call log sync failed:", e));
 
     let counterSpan = document.getElementById('dlTodayCallCounter');
     if (counterSpan) {
@@ -1830,7 +1848,7 @@ window.startScraping = async function() {
         statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
+        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.wai</strong>`;
     }
 
     if(scrapedData.length > 0) {
