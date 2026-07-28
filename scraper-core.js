@@ -241,7 +241,7 @@ async function renderAdminPanelModal() {
     let tableRowsHTML = "";
     let userKeys = Object.keys(userStatsMap);
     if (userKeys.length === 0) {
-        tableRowsHTML = `<tr><td colspan="3" style="text-align:center; color:#6c757d; padding:20px;">No call activity recorded yet for active users.</td></tr>`;
+        tableRowsHTML = `<tr><td colspan="3" style="text-align:center; color:#6c757d; padding:20px;">No call activity recorded yet for active users under account: <b>${currentClient}</b></td></tr>`;
     } else {
         userKeys.forEach(nick => {
             let stats = userStatsMap[nick];
@@ -256,7 +256,7 @@ async function renderAdminPanelModal() {
     }
 
     bodyContainer.innerHTML = `
-        <p style="font-size: 12px; color: #6c757d; margin-top: 0; margin-bottom: 15px; text-align: left;">Active Shift Date: <b>${shiftDateStr}</b> (Night Shift Friendly)</p>
+        <p style="font-size: 12px; color: #6c757d; margin-top: 0; margin-bottom: 15px; text-align: left;">Account: <b>${currentClient}</b> | Shift Date: <b>${shiftDateStr}</b></p>
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
             <thead>
                 <tr style="background: #f8f9fa; color: #333; text-align: left;">
@@ -1848,7 +1848,7 @@ window.startScraping = async function() {
         statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.wai</strong>`;
+        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
     }
 
     if(scrapedData.length > 0) {
