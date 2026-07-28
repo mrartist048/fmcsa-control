@@ -157,7 +157,7 @@ function setupDispatcherIdentity() {
 function getTodayCallCount() {
     let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
     let todayStr = new Date().toISOString().split('T')[0];
-    return callLogs.filter(log => log.date.startsWith(todayStr)).length;
+    return callLogs.filter(log => log.date.includes(todayStr) || log.date.startsWith(todayStr)).length;
 }
 
 function injectNicknameProfileUI() {
@@ -181,6 +181,9 @@ window.changeDispatcherName = function() {
         let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
         
+        let counterSpan = document.getElementById('dlTodayCallCounter');
+        if (counterSpan) counterSpan.innerText = getTodayCallCount();
+
         updateActiveSessionNickname();
     }
 };
@@ -798,34 +801,42 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
+    
+    // Also record call when copy icon is used
+    recordCallActivity(phoneNum);
+
     navigator.clipboard.writeText(phoneNum).then(() => {
         let badge = document.createElement('span');
         badge.className = 'phone-copy-badge';
-        badge.innerText = "Copied!";
+        badge.innerText = "Copied & Logged!";
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
     });
 };
 
-window.handlePhoneInteraction = function(cellElement, phoneNum) {
-    if (!phoneNum || phoneNum === 'N/A') return;
-
-    // 1. Record Call to Local Storage Log for Team Tracking
-    let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+function recordCallActivity(phoneNum) {
+    if (!currentClient || !dispatcherNickname) return;
+    let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
+    let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
     callLogs.push({
         phone: phoneNum,
         dispatcher: dispatcherNickname,
-        date: new Date().toLocaleString()
+        date: new Date().toISOString()
     });
-    localStorage.setItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`, JSON.stringify(callLogs));
+    localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Update today's call counter badge in UI instantly
     let counterSpan = document.getElementById('dlTodayCallCounter');
     if (counterSpan) {
         counterSpan.innerText = getTodayCallCount();
     }
+}
 
-    // 2. Copy to clipboard automatically on click
+window.handlePhoneInteraction = function(cellElement, phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return;
+
+    recordCallActivity(phoneNum);
+
     navigator.clipboard.writeText(phoneNum).then(() => {
         let parentTd = cellElement.closest('.phone-clickable-container');
         if (parentTd) {
@@ -837,12 +848,10 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
         }
     });
 
-    // 3. Remove active highlight from all other phone cells
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
         el.classList.remove('active-called-cell');
     });
 
-    // 4. Highlight currently clicked active phone cell
     cellElement.classList.add('active-called-cell');
 };
 
@@ -850,7 +859,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}')" class="phone-clickable-cell" title="Click to Call & Log">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
