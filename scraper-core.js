@@ -139,7 +139,7 @@ window.processLogin = function() {
     initializeAccessControl();
 };
 
-// ====== DISPATCHER IDENTITY SETUP ======
+// ====== DISPATCHER IDENTITY SETUP & CALL STATS COUNTER ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
@@ -154,13 +154,21 @@ function setupDispatcherIdentity() {
     injectNicknameProfileUI();
 }
 
+function getTodayCallCount() {
+    let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+    let todayStr = new Date().toISOString().split('T')[0];
+    return callLogs.filter(log => log.date.startsWith(todayStr)).length;
+}
+
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
     let panel = document.createElement('div');
     panel.id = 'dlNickProfilePanel';
     panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
-    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>`;
+    
+    let todayCalls = getTodayCallCount();
+    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> | 📞 Today's Calls: <span id="dlTodayCallCounter" style="color:#d9534f;">${todayCalls}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>`;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
@@ -173,7 +181,6 @@ window.changeDispatcherName = function() {
         let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
         
-        // Update active session nickname in Firebase immediately
         updateActiveSessionNickname();
     }
 };
@@ -781,13 +788,13 @@ function buildEmailCellMarkup(emailAddress, companyName) {
         <td style="position: relative; vertical-align: middle;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                 <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${emailAddress}</span>
-                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📩 Pitch</a>
+                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📤 Send</a>
             </div>
         </td>
     `;
 }
 
-// ====== PHONE CALL & HOVER COPY ENGINE WITH STATE HIGHLIGHTING ======
+// ====== PHONE CALL & HOVER COPY ENGINE WITH CALL LOGGING ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -803,24 +810,39 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
 window.handlePhoneInteraction = function(cellElement, phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
 
-    // 1. Copy to clipboard automatically on click
+    // 1. Record Call to Local Storage Log for Team Tracking
+    let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+    callLogs.push({
+        phone: phoneNum,
+        dispatcher: dispatcherNickname,
+        date: new Date().toLocaleString()
+    });
+    localStorage.setItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`, JSON.stringify(callLogs));
+
+    // Update today's call counter badge in UI instantly
+    let counterSpan = document.getElementById('dlTodayCallCounter');
+    if (counterSpan) {
+        counterSpan.innerText = getTodayCallCount();
+    }
+
+    // 2. Copy to clipboard automatically on click
     navigator.clipboard.writeText(phoneNum).then(() => {
         let parentTd = cellElement.closest('.phone-clickable-container');
         if (parentTd) {
             let badge = document.createElement('span');
             badge.className = 'phone-copy-badge';
-            badge.innerText = "Called & Copied!";
+            badge.innerText = "Called & Logged!";
             parentTd.appendChild(badge);
             setTimeout(() => badge.remove(), 1500);
         }
     });
 
-    // 2. Remove active highlight from all other phone cells
+    // 3. Remove active highlight from all other phone cells
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
         el.classList.remove('active-called-cell');
     });
 
-    // 3. Highlight currently clicked active phone cell
+    // 4. Highlight currently clicked active phone cell
     cellElement.classList.add('active-called-cell');
 };
 
@@ -828,7 +850,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}')" class="phone-clickable-cell" title="Click to Call & Copy">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}')" class="phone-clickable-cell" title="Click to Call & Log">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
@@ -1017,7 +1039,6 @@ window.openTeamShareModal = async function(recordsToShare) {
 
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
-            // Filter active within last 20 seconds and exclude self
             if (s && s.nickname && s.timestamp && (now - s.timestamp < 25000)) {
                 if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
                     activeMembers.push(s.nickname);
@@ -1083,7 +1104,6 @@ window.confirmTeamShareAction = async function() {
             });
             showPremiumNotification(`✅ Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
             
-            // Uncheck checkboxes if bulk sharing
             document.querySelectorAll('.followup-select-checkbox:checked').forEach(cb => cb.checked = false);
         } else {
             alert(`Selected lead(s) are already present in ${targetName}'s shared inbox.`);
@@ -1200,7 +1220,7 @@ function renderFollowUpItems() {
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
-                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📩 Pitch</button>
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
                     <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
                 </div>
             </div>
