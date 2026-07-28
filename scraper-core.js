@@ -1015,7 +1015,94 @@ function renderFollowUpItems() {
     } else {
         listContainer.innerHTML = itemsHTML;
     }
+
+    // Inject checkboxes and WhatsApp share options into the rendered list items
+    let drawerContent = listContainer.parentNode;
+    if (!document.getElementById('dlBulkFollowUpActionBar')) {
+        let actionBar = document.createElement('div');
+        actionBar.id = 'dlBulkFollowUpActionBar';
+        actionBar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; align-items: center; background: #e2eafc; padding: 6px; border-radius: 4px; font-size: 11px;";
+        actionBar.innerHTML = `
+            <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
+                <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
+            </label>
+            <button onclick="shareSelectedFollowUpsWhatsApp()" style="background: #25D366; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected via WhatsApp">💬 Share Selected</button>
+        `;
+        listContainer.parentNode.insertBefore(actionBar, listContainer);
+    }
+
+    let itemDivs = listContainer.querySelectorAll('div[style*="border-left"]');
+    itemDivs.forEach((div, idx) => {
+        if (!div.querySelector('.followup-select-checkbox')) {
+            let record = data[idx];
+            if (!record) return;
+
+            let topHeader = div.querySelector('div');
+            if (topHeader) {
+                let checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'followup-select-checkbox';
+                checkbox.value = record.mc;
+                checkbox.style.cssText = "margin-right: 6px; cursor: pointer;";
+                topHeader.insertBefore(checkbox, topHeader.firstChild);
+            }
+
+            let btnContainer = div.querySelector('div[style*="justify-content: flex-end"]');
+            if (btnContainer && !btnContainer.querySelector('.single-wa-share-btn')) {
+                let waBtn = document.createElement('button');
+                waBtn.className = 'single-wa-share-btn';
+                waBtn.innerHTML = "💬 Share";
+                waBtn.style.cssText = "background: #25D366; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
+                waBtn.onclick = () => shareSingleFollowUpWhatsApp(record);
+                btnContainer.insertBefore(waBtn, btnContainer.firstChild);
+            }
+        }
+    });
 }
+
+window.toggleSelectAllFollowUps = function(masterCheckbox) {
+    let checkboxes = document.querySelectorAll('.followup-select-checkbox');
+    checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+};
+
+window.shareSingleFollowUpWhatsApp = function(record) {
+    let remarksText = record.remarks ? record.remarks.replace(/\n/g, '%0A') : 'No remarks';
+    let text = `📋 *Follow-Up Lead Details*%0A` +
+               `👤 *Company:* ${record.name}%0A` +
+               `🚚 *MC Number:* ${record.mc}%0A` +
+               `📞 *Phone:* ${record.phone || 'N/A'}%0A` +
+               `✉️ *Email:* ${record.email || 'N/A'}%0A` +
+               `📍 *Address:* ${record.address || 'N/A'}%0A` +
+               `⏰ *Schedule:* ${record.followUpDate || 'N/A'} @ ${record.followUpTime || 'N/A'}%0A` +
+               `📝 *Remarks:*%0A${remarksText}%0A%0A` +
+               `_Shared by: ${dispatcherNickname} via Dispatch Link_`;
+
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+};
+
+window.shareSelectedFollowUpsWhatsApp = function() {
+    let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        return alert("Please select at least one follow-up record to share.");
+    }
+
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
+
+    let bulkText = `🚀 *Batch Follow-Up Leads (${selectedRecords.length})* %0A%0A`;
+    selectedRecords.forEach((record, index) => {
+        let remarksText = record.remarks ? record.remarks.replace(/\n/g, '%0A') : 'No remarks';
+        bulkText += `*${index + 1}. ${record.name}*%0A` +
+                    `🚚 MC: ${record.mc} | 📞 Phone: ${record.phone || 'N/A'}%0A` +
+                    `✉️ Email: ${record.email || 'N/A'}%0A` +
+                    `⏰ Schedule: ${record.followUpDate || 'N/A'} @ ${record.followUpTime || 'N/A'}%0A` +
+                    `📝 Remarks: ${remarksText}%0A-----------------------------------%0A`;
+    });
+    bulkText += `_Shared by: ${dispatcherNickname} via Dispatch Link_`;
+
+    window.open(`https://api.whatsapp.com/send?text=${bulkText}`, '_blank');
+};
 
 // Remarks Handlers
 window.remarksFocus = function(index, textarea) {
