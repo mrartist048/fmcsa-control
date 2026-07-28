@@ -172,10 +172,14 @@ window.changeDispatcherName = function() {
         localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
         let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
+        
+        // Update active session nickname in Firebase immediately
+        updateActiveSessionNickname();
     }
 };
 
 window.logoutUser = function() {
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}.json?_method=DELETE`);
     localStorage.removeItem("dl_logged_client");
     window.location.reload();
 };
@@ -227,6 +231,18 @@ if (document.readyState === 'loading') {
     }, 300);
 }
 
+async function updateActiveSessionNickname() {
+    if (!window.sessionDbKey || !currentClient) return;
+    try {
+        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}/nickname.json`, {
+            method: 'PUT',
+            body: JSON.stringify(dispatcherNickname)
+        });
+    } catch (e) {
+        console.error("Failed to update session nickname:", e);
+    }
+}
+
 async function checkGlobalSessions() {
     if (userLimit === 0 || currentClient === "unknown") return;
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
@@ -236,7 +252,7 @@ async function checkGlobalSessions() {
         const res = await fetch(url);
         const data = await res.json() || {};
         
-        let activeTabs = Object.keys(data).map(key => ({ dbKey: key, id: data[key].id, timestamp: data[key].timestamp }));
+        let activeTabs = Object.keys(data).map(key => ({ dbKey: key, id: data[key].id, nickname: data[key].nickname || "Unknown", timestamp: data[key].timestamp }));
         
         for (let tab of activeTabs) {
             if ((now - tab.timestamp) >= 20000 && tab.id !== window.name) {
@@ -246,7 +262,7 @@ async function checkGlobalSessions() {
         
         const cleanRes = await fetch(url);
         const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, timestamp: cleanData[key].timestamp }));
+        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, id: cleanData[key].id, nickname: cleanData[key].nickname || "Unknown", timestamp: cleanData[key].timestamp }));
         
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
@@ -262,15 +278,20 @@ async function checkGlobalSessions() {
         }
         
         if (currentTabRecord) {
-            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${currentTabRecord.dbKey}/timestamp.json`, {
-                method: 'PUT',
-                body: JSON.stringify(now)
+            window.sessionDbKey = currentTabRecord.dbKey;
+            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${currentTabRecord.dbKey}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ timestamp: now, nickname: dispatcherNickname })
             });
         } else {
-            await fetch(url, {
+            let postRes = await fetch(url, {
                 method: 'POST',
-                body: JSON.stringify({ id: window.name, timestamp: now })
+                body: JSON.stringify({ id: window.name, nickname: dispatcherNickname, timestamp: now })
             });
+            let postData = await postRes.json();
+            if (postData && postData.name) {
+                window.sessionDbKey = postData.name;
+            }
         }
     } catch (e) {
         console.error("Session sync failed:", e);
@@ -278,8 +299,8 @@ async function checkGlobalSessions() {
 }
 
 window.addEventListener('beforeunload', function () {
-    if (currentClient === "unknown") return;
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}.json?_method=DELETE`);
+    if (currentClient === "unknown" || !window.sessionDbKey) return;
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}.json?_method=DELETE`);
 });
 
 // ====== DUAL STORAGE HISTORY & RESPONSIVE UI FRAMEWORK ======
@@ -506,6 +527,24 @@ function injectHistoryUIFramework() {
             </div>
         `;
         document.body.appendChild(modal);
+    }
+
+    if (!document.getElementById('dlTeamSelectModal')) {
+        let tModal = document.createElement('div');
+        tModal.id = 'dlTeamSelectModal';
+        tModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
+        tModal.innerHTML = `
+            <div style="background: white; padding: 25px; border-radius: 8px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">👥 Share with Active Team Member</h3>
+                <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select an active online laptop/user from your account group:</p>
+                <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;"></div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button onclick="closeTeamSelectModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmTeamShareAction()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Share Now</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(tModal);
     }
 
     document.addEventListener('click', function(event) {
@@ -852,7 +891,7 @@ window.confirmFollowUpSchedule = function() {
     record.addedAt = new Date().toLocaleString();
     record.followUpDate = selectedDate;
     record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
-    record.sharedBy = dispatcherNickname; // Tag the owner who scheduled/shared this lead
+    record.sharedBy = dispatcherNickname;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     followUpStore.push(record);
@@ -955,53 +994,73 @@ window.downloadFollowUpsCSV = function() {
     triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
 };
 
-// ====== IN-TOOL TEAM SHARING SYSTEM VIA FIREBASE REALTIME DB ======
-window.shareSingleFollowUpToTeam = async function(record) {
-    let teamMemberName = prompt(`Enter team member's nickname to share MC ${record.mc}:`);
-    if (!teamMemberName || teamMemberName.trim() === "") return;
-    
-    let targetName = teamMemberName.trim();
-    record.sharedBy = dispatcherNickname; // Explicitly tag who sent it
+// ====== IN-TOOL ACTIVE LAPTOP TEAM SHARING ENGINE ======
+let pendingShareRecords = [];
+
+window.openTeamShareModal = async function(recordsToShare) {
+    if (!recordsToShare || recordsToShare.length === 0) return;
+    pendingShareRecords = recordsToShare;
+
+    let radioListDiv = document.getElementById('dlTeamMembersRadioList');
+    if (!radioListDiv) return;
+    radioListDiv.innerHTML = `<div style="text-align: center; color: #6c757d; font-size: 12px; padding: 15px;">Loading active online laptops...</div>`;
+
+    let tModal = document.getElementById('dlTeamSelectModal');
+    if (tModal) tModal.style.display = 'flex';
 
     try {
-        let shareUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${targetName}.json`;
-        let res = await fetch(shareUrl);
-        let existingList = await res.json() || [];
-        if (!Array.isArray(existingList)) existingList = [];
+        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
+        let sessionsData = await res.json() || {};
+        
+        let activeMembers = [];
+        let now = Date.now();
 
-        // Check if already shared to this user
-        if (!existingList.some(r => r.mc === record.mc)) {
-            existingList.push(record);
-            await fetch(shareUrl, {
-                method: 'PUT',
-                body: JSON.stringify(existingList)
-            });
-            showPremiumNotification(`✅ Successfully shared MC ${record.mc} with ${targetName}!`, 4000);
-        } else {
-            alert(`This lead has already been shared with ${targetName}.`);
+        Object.keys(sessionsData).forEach(key => {
+            let s = sessionsData[key];
+            // Filter active within last 20 seconds and exclude self
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < 25000)) {
+                if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
+                    activeMembers.push(s.nickname);
+                }
+            }
+        });
+
+        if (activeMembers.length === 0) {
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other active team members online right now.</div>`;
+            return;
         }
+
+        let html = "";
+        activeMembers.forEach((name, idx) => {
+            let checkedAttr = idx === 0 ? "checked" : "";
+            html += `
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
+                    <input type="radio" name="teamMemberRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
+                    <span>💻 <b>${name}</b> (Online)</span>
+                </label>
+            `;
+        });
+        radioListDiv.innerHTML = html;
     } catch (e) {
-        console.error("Team share failed:", e);
-        alert("Failed to share lead with team. Check connection.");
+        console.error("Failed to fetch active sessions:", e);
+        radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px;">Error loading active laptops.</div>`;
     }
 };
 
-window.shareSelectedFollowUpsToTeam = async function() {
-    let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        return alert("Please select at least one follow-up record to share with your team.");
+window.closeTeamSelectModal = function() {
+    let tModal = document.getElementById('dlTeamSelectModal');
+    if (tModal) tModal.style.display = 'none';
+    pendingShareRecords = [];
+};
+
+window.confirmTeamShareAction = async function() {
+    let selectedRadio = document.querySelector('input[name="teamMemberRadio"]:checked');
+    if (!selectedRadio) {
+        return alert("Please select a team member from the list.");
     }
 
-    let teamMemberName = prompt(`Enter team member's nickname to share these ${selectedCheckboxes.length} leads:`);
-    if (!teamMemberName || teamMemberName.trim() === "") return;
-
-    let targetName = teamMemberName.trim();
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
-    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
-
-    // Tag all selected records with sender name
-    selectedRecords.forEach(r => r.sharedBy = dispatcherNickname);
+    let targetName = selectedRadio.value;
+    pendingShareRecords.forEach(r => r.sharedBy = dispatcherNickname);
 
     try {
         let shareUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${targetName}.json`;
@@ -1010,7 +1069,7 @@ window.shareSelectedFollowUpsToTeam = async function() {
         if (!Array.isArray(existingList)) existingList = [];
 
         let addedCount = 0;
-        selectedRecords.forEach(rec => {
+        pendingShareRecords.forEach(rec => {
             if (!existingList.some(r => r.mc === rec.mc)) {
                 existingList.push(rec);
                 addedCount++;
@@ -1022,16 +1081,35 @@ window.shareSelectedFollowUpsToTeam = async function() {
                 method: 'PUT',
                 body: JSON.stringify(existingList)
             });
-            showPremiumNotification(`✅ Successfully shared ${addedCount} leads with ${targetName}!`, 4000);
-            // Uncheck checkboxes after successful share
-            selectedCheckboxes.forEach(cb => cb.checked = false);
+            showPremiumNotification(`✅ Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
+            
+            // Uncheck checkboxes if bulk sharing
+            document.querySelectorAll('.followup-select-checkbox:checked').forEach(cb => cb.checked = false);
         } else {
-            alert("Selected leads are already present in that team member's shared inbox.");
+            alert(`Selected lead(s) are already present in ${targetName}'s shared inbox.`);
         }
+        closeTeamSelectModal();
     } catch (e) {
-        console.error("Batch team share failed:", e);
-        alert("Failed to share leads with team. Check connection.");
+        console.error("Team share action failed:", e);
+        alert("Failed to share leads with team member. Check connection.");
     }
+};
+
+window.shareSingleFollowUpToTeam = function(record) {
+    openTeamShareModal([record]);
+};
+
+window.shareSelectedFollowUpsToTeam = function() {
+    let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        return alert("Please select at least one follow-up record to share with your team.");
+    }
+
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
+
+    openTeamShareModal(selectedRecords);
 };
 
 // Periodic checker for incoming shared leads from team members
@@ -1059,7 +1137,6 @@ async function pollIncomingSharedLeads() {
             if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
                 renderFollowUpItems();
             }
-            // Clear the remote inbox once ingested locally
             await fetch(inboxUrl, { method: 'DELETE' });
         }
     } catch (e) {
@@ -1067,7 +1144,6 @@ async function pollIncomingSharedLeads() {
     }
 }
 
-// Start polling for incoming shared leads every 10 seconds
 setInterval(pollIncomingSharedLeads, 10000);
 
 function renderFollowUpItems() {
@@ -1137,7 +1213,6 @@ function renderFollowUpItems() {
         listContainer.innerHTML = itemsHTML;
     }
 
-    // Inject checkboxes and In-Tool Team Share buttons into the rendered list items
     if (!document.getElementById('dlBulkFollowUpActionBar')) {
         let actionBar = document.createElement('div');
         actionBar.id = 'dlBulkFollowUpActionBar';
