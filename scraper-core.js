@@ -852,6 +852,7 @@ window.confirmFollowUpSchedule = function() {
     record.addedAt = new Date().toLocaleString();
     record.followUpDate = selectedDate;
     record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+    record.sharedBy = dispatcherNickname; // Tag the owner who scheduled/shared this lead
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     followUpStore.push(record);
@@ -954,6 +955,121 @@ window.downloadFollowUpsCSV = function() {
     triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
 };
 
+// ====== IN-TOOL TEAM SHARING SYSTEM VIA FIREBASE REALTIME DB ======
+window.shareSingleFollowUpToTeam = async function(record) {
+    let teamMemberName = prompt(`Enter team member's nickname to share MC ${record.mc}:`);
+    if (!teamMemberName || teamMemberName.trim() === "") return;
+    
+    let targetName = teamMemberName.trim();
+    record.sharedBy = dispatcherNickname; // Explicitly tag who sent it
+
+    try {
+        let shareUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${targetName}.json`;
+        let res = await fetch(shareUrl);
+        let existingList = await res.json() || [];
+        if (!Array.isArray(existingList)) existingList = [];
+
+        // Check if already shared to this user
+        if (!existingList.some(r => r.mc === record.mc)) {
+            existingList.push(record);
+            await fetch(shareUrl, {
+                method: 'PUT',
+                body: JSON.stringify(existingList)
+            });
+            showPremiumNotification(`✅ Successfully shared MC ${record.mc} with ${targetName}!`, 4000);
+        } else {
+            alert(`This lead has already been shared with ${targetName}.`);
+        }
+    } catch (e) {
+        console.error("Team share failed:", e);
+        alert("Failed to share lead with team. Check connection.");
+    }
+};
+
+window.shareSelectedFollowUpsToTeam = async function() {
+    let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        return alert("Please select at least one follow-up record to share with your team.");
+    }
+
+    let teamMemberName = prompt(`Enter team member's nickname to share these ${selectedCheckboxes.length} leads:`);
+    if (!teamMemberName || teamMemberName.trim() === "") return;
+
+    let targetName = teamMemberName.trim();
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
+
+    // Tag all selected records with sender name
+    selectedRecords.forEach(r => r.sharedBy = dispatcherNickname);
+
+    try {
+        let shareUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${targetName}.json`;
+        let res = await fetch(shareUrl);
+        let existingList = await res.json() || [];
+        if (!Array.isArray(existingList)) existingList = [];
+
+        let addedCount = 0;
+        selectedRecords.forEach(rec => {
+            if (!existingList.some(r => r.mc === rec.mc)) {
+                existingList.push(rec);
+                addedCount++;
+            }
+        });
+
+        if (addedCount > 0) {
+            await fetch(shareUrl, {
+                method: 'PUT',
+                body: JSON.stringify(existingList)
+            });
+            showPremiumNotification(`✅ Successfully shared ${addedCount} leads with ${targetName}!`, 4000);
+            // Uncheck checkboxes after successful share
+            selectedCheckboxes.forEach(cb => cb.checked = false);
+        } else {
+            alert("Selected leads are already present in that team member's shared inbox.");
+        }
+    } catch (e) {
+        console.error("Batch team share failed:", e);
+        alert("Failed to share leads with team. Check connection.");
+    }
+};
+
+// Periodic checker for incoming shared leads from team members
+async function pollIncomingSharedLeads() {
+    if (!currentClient || !dispatcherNickname) return;
+    try {
+        let inboxUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${dispatcherNickname}.json`;
+        let res = await fetch(inboxUrl);
+        let sharedLeads = await res.json() || [];
+        if (!Array.isArray(sharedLeads) || sharedLeads.length === 0) return;
+
+        let localFollowUps = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+        let newLeadsAdded = false;
+
+        sharedLeads.forEach(lead => {
+            if (!localFollowUps.some(r => r.mc === lead.mc)) {
+                localFollowUps.push(lead);
+                newLeadsAdded = true;
+            }
+        });
+
+        if (newLeadsAdded) {
+            localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(localFollowUps));
+            showPremiumNotification(`📥 You received new shared follow-up leads from your team!`, 5000);
+            if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
+                renderFollowUpItems();
+            }
+            // Clear the remote inbox once ingested locally
+            await fetch(inboxUrl, { method: 'DELETE' });
+        }
+    } catch (e) {
+        console.error("Polling shared leads failed:", e);
+    }
+}
+
+// Start polling for incoming shared leads every 10 seconds
+setInterval(pollIncomingSharedLeads, 10000);
+
 function renderFollowUpItems() {
     const listContainer = document.getElementById('drawerFollowUpList');
     if (!listContainer) return;
@@ -990,13 +1106,18 @@ function renderFollowUpItems() {
         }
 
         matchCount++;
+        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
+
         itemsHTML += `
             <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
                     <span>Saved: ${item.addedAt}</span>
                     <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
                 </div>
-                <div style="font-size: 14px; font-weight: bold; color: #002d62; margin: 4px 0;">${item.name}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
+                    ${senderTag}
+                </div>
                 <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
                 <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
                 <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
@@ -1016,8 +1137,7 @@ function renderFollowUpItems() {
         listContainer.innerHTML = itemsHTML;
     }
 
-    // Inject checkboxes and WhatsApp share options into the rendered list items
-    let drawerContent = listContainer.parentNode;
+    // Inject checkboxes and In-Tool Team Share buttons into the rendered list items
     if (!document.getElementById('dlBulkFollowUpActionBar')) {
         let actionBar = document.createElement('div');
         actionBar.id = 'dlBulkFollowUpActionBar';
@@ -1026,7 +1146,7 @@ function renderFollowUpItems() {
             <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
                 <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
             </label>
-            <button onclick="shareSelectedFollowUpsWhatsApp()" style="background: #25D366; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected via WhatsApp">💬 Share Selected</button>
+            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
         `;
         listContainer.parentNode.insertBefore(actionBar, listContainer);
     }
@@ -1048,13 +1168,13 @@ function renderFollowUpItems() {
             }
 
             let btnContainer = div.querySelector('div[style*="justify-content: flex-end"]');
-            if (btnContainer && !btnContainer.querySelector('.single-wa-share-btn')) {
-                let waBtn = document.createElement('button');
-                waBtn.className = 'single-wa-share-btn';
-                waBtn.innerHTML = "💬 Share";
-                waBtn.style.cssText = "background: #25D366; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
-                waBtn.onclick = () => shareSingleFollowUpWhatsApp(record);
-                btnContainer.insertBefore(waBtn, btnContainer.firstChild);
+            if (btnContainer && !btnContainer.querySelector('.single-team-share-btn')) {
+                let teamBtn = document.createElement('button');
+                teamBtn.className = 'single-team-share-btn';
+                teamBtn.innerHTML = "👥 Share";
+                teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
+                teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
+                btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
             }
         }
     });
@@ -1063,45 +1183,6 @@ function renderFollowUpItems() {
 window.toggleSelectAllFollowUps = function(masterCheckbox) {
     let checkboxes = document.querySelectorAll('.followup-select-checkbox');
     checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
-};
-
-window.shareSingleFollowUpWhatsApp = function(record) {
-    let remarksText = record.remarks ? record.remarks.replace(/\n/g, '%0A') : 'No remarks';
-    let text = `📋 *Follow-Up Lead Details*%0A` +
-               `👤 *Company:* ${record.name}%0A` +
-               `🚚 *MC Number:* ${record.mc}%0A` +
-               `📞 *Phone:* ${record.phone || 'N/A'}%0A` +
-               `✉️ *Email:* ${record.email || 'N/A'}%0A` +
-               `📍 *Address:* ${record.address || 'N/A'}%0A` +
-               `⏰ *Schedule:* ${record.followUpDate || 'N/A'} @ ${record.followUpTime || 'N/A'}%0A` +
-               `📝 *Remarks:*%0A${remarksText}%0A%0A` +
-               `_Shared by: ${dispatcherNickname} via Dispatch Link_`;
-
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
-};
-
-window.shareSelectedFollowUpsWhatsApp = function() {
-    let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        return alert("Please select at least one follow-up record to share.");
-    }
-
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
-    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
-
-    let bulkText = `🚀 *Batch Follow-Up Leads (${selectedRecords.length})* %0A%0A`;
-    selectedRecords.forEach((record, index) => {
-        let remarksText = record.remarks ? record.remarks.replace(/\n/g, '%0A') : 'No remarks';
-        bulkText += `*${index + 1}. ${record.name}*%0A` +
-                    `🚚 MC: ${record.mc} | 📞 Phone: ${record.phone || 'N/A'}%0A` +
-                    `✉️ Email: ${record.email || 'N/A'}%0A` +
-                    `⏰ Schedule: ${record.followUpDate || 'N/A'} @ ${record.followUpTime || 'N/A'}%0A` +
-                    `📝 Remarks: ${remarksText}%0A-----------------------------------%0A`;
-    });
-    bulkText += `_Shared by: ${dispatcherNickname} via Dispatch Link_`;
-
-    window.open(`https://api.whatsapp.com/send?text=${bulkText}`, '_blank');
 };
 
 // Remarks Handlers
@@ -1141,10 +1222,10 @@ window.syncRemarksData = function(index, textarea) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Follow-Up Date,Follow-Up Time,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
     recordsData.forEach(r => {
         let safeRemarks = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${safeRemarks.replace(/"/g, '""')}"\n`;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -1349,7 +1430,7 @@ async function processSingleMC(mc) {
             return null;
         }
 
-        let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '' };
+        let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
         let el = document.createElement('html');
         el.innerHTML = htmlText;
         let cells = el.querySelectorAll('td, th');
