@@ -13,13 +13,14 @@
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
-    "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-26" },    
+    "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 1, expires: "2026-07-29" },    
     "Transitcoretesting": { pass: "Transitcore", maxLaptops: 1, expires: "2026-07-26" },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
+const MASTER_ADMIN_PASS = "admin12345"; // <-- Yahan apna Master Admin Password rakh lein
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
@@ -154,7 +155,6 @@ function setupDispatcherIdentity() {
     injectNicknameProfileUI();
 }
 
-// Smart Shift Date: Agar raat ke 12 se subah 6 baje ke darmiyan hain, toh count pichli shift (date) mein hi count hoga
 function getCurrentShiftDateKey() {
     let now = new Date();
     let hour = now.getHours();
@@ -178,8 +178,88 @@ function injectNicknameProfileUI() {
     panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
     
     let todayCalls = getTodayCallCount();
-    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> | 📞 Today's Calls: <span id="dlTodayCallCounter" style="color:#d9534f;">${todayCalls}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>`;
+    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> | 📞 Today's Calls: <span id="dlTodayCallCounter" style="color:#d9534f;">${todayCalls}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> <a href="#" onclick="openAdminPanelPrompt(); return false;" style="margin-left:10px; color:#ffc107; text-decoration:none; background:#002d62; padding:2px 6px; border-radius:3px;">[👑 Admin Panel]</a> <a href="#" onclick="logoutUser(); return false;" style="margin-left:8px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>`;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
+}
+
+// ====== ADMIN PANEL MODAL & LOGS ANALYZER ======
+window.openAdminPanelPrompt = function() {
+    let passInput = prompt("Enter Master Admin Password:");
+    if (passInput === null) return;
+    if (passInput !== MASTER_ADMIN_PASS) {
+        alert("Incorrect Admin Password!");
+        return;
+    }
+    renderAdminPanelModal();
+};
+
+function renderAdminPanelModal() {
+    let existingModal = document.getElementById('dlAdminPanelModal');
+    if (existingModal) existingModal.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'dlAdminPanelModal';
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    
+    let shiftDateStr = getCurrentShiftDateKey();
+    
+    // Gather all local storage keys matching call logs for this client
+    let userStatsMap = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if (key && key.startsWith(`dl_call_logs_${currentClient}_`)) {
+            let nick = key.replace(`dl_call_logs_${currentClient}_`, "");
+            let logs = JSON.parse(localStorage.getItem(key)) || [];
+            let todayLogsCount = logs.filter(l => l.shiftDate === shiftDateStr).length;
+            let totalLogsCount = logs.length;
+            userStatsMap[nick] = { today: todayLogsCount, total: totalLogsCount };
+        }
+    }
+
+    let tableRowsHTML = "";
+    let userKeys = Object.keys(userStatsMap);
+    if (userKeys.length === 0) {
+        tableRowsHTML = `<tr><td colspan="3" style="text-align:center; color:#6c757d; padding:20px;">No call activity recorded yet for active users.</td></tr>`;
+    } else {
+        userKeys.forEach(nick => {
+            let stats = userStatsMap[nick];
+            tableRowsHTML += `
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #002d62;">👤 ${nick}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; color: #d9534f; font-weight: bold;">${stats.today}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; color: #28a745; font-weight: bold;">${stats.total}</td>
+                </tr>
+            `;
+        });
+    }
+
+    modal.innerHTML = `
+        <div style="background: white; width: 500px; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+            <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">👑 Admin Panel - Dispatcher Performance</h3>
+                <button onclick="document.getElementById('dlAdminPanelModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+            <div style="padding: 20px; overflow-y: auto; flex: 1;">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 0; margin-bottom: 15px;">Active Shift Date: <b>${shiftDateStr}</b> (Night Shift Friendly)</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #f8f9fa; color: #333; text-align: left;">
+                            <th style="padding: 10px; border-bottom: 2px solid #ddd;">Dispatcher / Laptop Name</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #ddd; text-align: center;">Today's Calls</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #ddd; text-align: center;">All-Time Calls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHTML}
+                    </tbody>
+                </table>
+            </div>
+            <div style="background: #f8f9fa; padding: 12px 20px; text-align: right; border-top: 1px solid #eee;">
+                <button onclick="document.getElementById('dlAdminPanelModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Close Panel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
 }
 
 window.changeDispatcherName = function() {
@@ -1151,7 +1231,6 @@ window.shareSelectedFollowUpsToTeam = function() {
     openTeamShareModal(selectedRecords);
 };
 
-// Periodic checker for incoming shared leads from team members
 async function pollIncomingSharedLeads() {
     if (!currentClient || !dispatcherNickname) return;
     try {
@@ -1299,7 +1378,6 @@ window.toggleSelectAllFollowUps = function(masterCheckbox) {
     checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
 };
 
-// Remarks Handlers
 window.remarksFocus = function(index, textarea) {
     if (!textarea.value || textarea.value.trim() === "") {
         textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -1521,7 +1599,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== BATCH CONCURRENT PROCESSING ENGINE WITH SAFE DELAY ======
 let scraping = false; let scrapedData = [];
 window.stopScraping = function() {
     scraping = false;
