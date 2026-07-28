@@ -14,7 +14,7 @@
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 1, expires: "2026-07-29" },    
-    "Transitcoretesting": { pass: "Transitcore", maxLaptops: 1, expires: "2026-07-28" },  
+    "Transitcoretesting": { pass: "Transitcore", maxLaptops: 0, expires: "2026-07-28" },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
 };
