@@ -139,7 +139,7 @@ window.processLogin = function() {
     initializeAccessControl();
 };
 
-// ====== DISPATCHER IDENTITY SETUP & CALL STATS COUNTER ======
+// ====== DISPATCHER IDENTITY SETUP & SHIFT-AWARE CALL COUNTER ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
@@ -154,10 +154,20 @@ function setupDispatcherIdentity() {
     injectNicknameProfileUI();
 }
 
+// Smart Shift Date: Agar raat ke 12 se subah 6 baje ke darmiyan hain, toh count pichli shift (date) mein hi count hoga
+function getCurrentShiftDateKey() {
+    let now = new Date();
+    let hour = now.getHours();
+    if (hour < 6) {
+        now.setDate(now.getDate() - 1);
+    }
+    return now.toISOString().split('T')[0];
+}
+
 function getTodayCallCount() {
     let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
-    let todayStr = new Date().toISOString().split('T')[0];
-    return callLogs.filter(log => log.date.includes(todayStr) || log.date.startsWith(todayStr)).length;
+    let shiftDateStr = getCurrentShiftDateKey();
+    return callLogs.filter(log => log.shiftDate === shiftDateStr).length;
 }
 
 function injectNicknameProfileUI() {
@@ -797,12 +807,11 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL & HOVER COPY ENGINE WITH CALL LOGGING ======
+// ====== PHONE CALL & HOVER COPY ENGINE WITH SHIFT-AWARE LOGGING ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
     
-    // Also record call when copy icon is used
     recordCallActivity(phoneNum);
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -822,7 +831,8 @@ function recordCallActivity(phoneNum) {
     callLogs.push({
         phone: phoneNum,
         dispatcher: dispatcherNickname,
-        date: new Date().toISOString()
+        shiftDate: getCurrentShiftDateKey(),
+        date: new Date().toLocaleString()
     });
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
