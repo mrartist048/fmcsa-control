@@ -383,13 +383,19 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Uniform Dark-Themed Clickable Phone Cell with Rounded Corners */
+            /* Phone Cell Styling with Hover Copy Icon & Active Call State */
+            .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
             .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
             .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
+            .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
+            .phone-clickable-cell.active-called-cell .clickable-phone-text { color: #0c5460 !important; font-weight: 900 !important; }
             .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
             .phone-icon-span { font-size: 14px; line-height: 1; }
             .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
+            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; }
+            .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
+            .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -742,16 +748,54 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
+// ====== PHONE CALL & HOVER COPY ENGINE WITH STATE HIGHLIGHTING ======
+window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
+    event.stopPropagation();
+    if (!phoneNum || phoneNum === 'N/A') return;
+    navigator.clipboard.writeText(phoneNum).then(() => {
+        let badge = document.createElement('span');
+        badge.className = 'phone-copy-badge';
+        badge.innerText = "Copied!";
+        containerElement.appendChild(badge);
+        setTimeout(() => badge.remove(), 1200);
+    });
+};
+
+window.handlePhoneInteraction = function(cellElement, phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return;
+
+    // 1. Copy to clipboard automatically on click
+    navigator.clipboard.writeText(phoneNum).then(() => {
+        let parentTd = cellElement.closest('.phone-clickable-container');
+        if (parentTd) {
+            let badge = document.createElement('span');
+            badge.className = 'phone-copy-badge';
+            badge.innerText = "Called & Copied!";
+            parentTd.appendChild(badge);
+            setTimeout(() => badge.remove(), 1500);
+        }
+    });
+
+    // 2. Remove active highlight from all other phone cells
+    document.querySelectorAll('.phone-clickable-cell').forEach(el => {
+        el.classList.remove('active-called-cell');
+    });
+
+    // 3. Highlight currently clicked active phone cell
+    cellElement.classList.add('active-called-cell');
+};
+
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
-        <td style="padding: 4px !important;">
-            <a href="tel:${phoneNum}" class="phone-clickable-cell" title="Click to Call / Copy">
+        <td class="phone-clickable-container">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}')" class="phone-clickable-cell" title="Click to Call & Copy">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
                 </div>
             </a>
+            <span class="phone-hover-copy-icon" onclick="copyPhoneToClipboardDirect(event, this.parentNode, '${phoneNum}')" title="Copy Number">📋</span>
         </td>
     `;
 }
@@ -1346,7 +1390,6 @@ window.startScraping = async function() {
         mcQueue.push(mc);
     }
 
-    // Safe Batch Size (3 items per batch with delay to prevent server blocking)
     const BATCH_SIZE = 3;
     
     for (let i = 0; i < mcQueue.length; i += BATCH_SIZE) {
@@ -1415,7 +1458,6 @@ window.startScraping = async function() {
         populateStateDropdown();
         applyAdvancedFilters();
 
-        // Small delay between batches to keep FMCSA server stable
         await new Promise(r => setTimeout(r, 600));
     }
 
