@@ -20,7 +20,7 @@ const allowedUsers = {
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
-const MASTER_ADMIN_PASS = "admin890"; // <-- Yahan apna Admin Password set karein
+const MASTER_ADMIN_PASS = "admin12345"; // <-- Yahan apna Admin Password set karein
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
@@ -820,7 +820,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL, POPUP DISPOSITION & ADMIN PANEL ENGINE ======
+// ====== PHONE CALL, POPUP DISPOSITION & ADVANCED ADMIN PANEL ENGINE ======
 let activeCallPhone = null;
 
 function showDispositionPopup(phoneNum) {
@@ -934,7 +934,7 @@ window.openCallingDetailModal = function() {
     document.body.appendChild(modal);
 }
 
-// 👑 Admin Panel Password Prompt & Report Viewer
+// 👑 Advanced Admin Panel with Leaderboard & Performance Metrics
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -942,10 +942,10 @@ window.openAdminPanelPrompt = function() {
         alert("Incorrect Admin Password!");
         return;
     }
-    renderAdminReportsModal();
+    renderAdvancedAdminModal();
 };
 
-async function renderAdminReportsModal() {
+async function renderAdvancedAdminModal() {
     let existing = document.getElementById('dlAdminReportsModal');
     if (existing) existing.remove();
 
@@ -954,15 +954,16 @@ async function renderAdminReportsModal() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 500px; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: white; width: 550px; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 18px;">👑 Admin Panel - Submitted Shift Reports</h3>
+                <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Leaderboard</h3>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d;">
-                Loading reports from cloud...
+                Loading team performance metrics...
             </div>
-            <div style="background: #f8f9fa; padding: 12px 20px; text-align: right; border-top: 1px solid #eee;">
+            <div style="background: #f8f9fa; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
+                <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">📥 Export CSV Report</button>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Close Panel</button>
             </div>
         </div>
@@ -974,29 +975,77 @@ async function renderAdminReportsModal() {
         let res = await fetch(reportsUrl);
         let reportsData = await res.json() || [];
 
+        window.cachedAdminReports = Array.isArray(reportsData) ? reportsData : [];
         let bodyContainer = document.getElementById('adminReportsModalBody');
         if (!bodyContainer) return;
 
-        if (!Array.isArray(reportsData) || reportsData.length === 0) {
+        if (window.cachedAdminReports.length === 0) {
             bodyContainer.innerHTML = `<p style="text-align: center; color: #6c757d; padding: 30px;">No shift reports received yet.</p>`;
             return;
         }
 
-        let html = "";
-        reportsData.reverse().forEach(rep => {
-            let vms = rep.logs.filter(l => l.status === 'Voicemail').length;
-            let hps = rep.logs.filter(l => l.status === 'Hung Up').length;
-            let ints = rep.logs.filter(l => l.status === 'Interested').length;
-            let fus = rep.logs.filter(l => l.status === 'Follow up').length;
-            let sales = rep.logs.filter(l => l.status === 'Sale').length;
+        // Aggregate Performance Leaderboard
+        let perfMap = {};
+        window.cachedAdminReports.forEach(rep => {
+            let name = rep.sender || "Unknown";
+            if (!perfMap[name]) {
+                perfMap[name] = { totalCalls: 0, sales: 0, interested: 0, followUps: 0, shiftsCount: 0 };
+            }
+            perfMap[name].totalCalls += rep.totalCalls || 0;
+            perfMap[name].shiftsCount += 1;
+            
+            if (rep.logs && Array.isArray(rep.logs)) {
+                rep.logs.forEach(l => {
+                    if (l.status === 'Sale') perfMap[name].sales++;
+                    else if (l.status === 'Interested') perfMap[name].interested++;
+                    else if (l.status === 'Follow up') perfMap[name].followUps++;
+                });
+            }
+        });
 
-            html += `
-                <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 12px; border-radius: 4px; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 6px;">
-                        <span>👤 Sale Agent: ${rep.sender}</span>
-                        <span style="color: #6c757d;">📅 Shift Date: ${rep.date}</span>
+        // Sort by Total Calls descending (Leaderboard)
+        let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
+
+        let leaderHtml = `
+            <h4 style="color: #002d62; text-align: left; margin-top: 0; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">🏆 Team Leaderboard (Performance Ranking)</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px;">
+        `;
+
+        sortedLeaderboard.forEach((name, idx) => {
+            let stats = perfMap[name];
+            let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `<b>#${idx+1}</b>`;
+            leaderHtml += `
+                <div style="background: #f4f7fe; border: 1px solid #b6ccfe; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left;">
+                    <div>
+                        <span style="font-size: 16px; margin-right: 6px;">${medal}</span>
+                        <b style="color: #002d62; font-size: 14px;">${name}</b>
+                        <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts Logged: ${stats.shiftsCount}</div>
                     </div>
-                    <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Sent At: ${rep.timestamp}</div>
+                    <div style="display: flex; gap: 10px; font-size: 12px;">
+                        <span style="background: #002d62; color: white; padding: 3px 8px; border-radius: 4px;">Calls: <b>${stats.totalCalls}</b></span>
+                        <span style="background: #4caf50; color: white; padding: 3px 8px; border-radius: 4px;">Sales: <b>${stats.sales}</b></span>
+                    </div>
+                </div>
+            `;
+        });
+        leaderHtml += `</div>`;
+
+        let reportsHtml = `<h4 style="color: #002d62; text-align: left; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">📋 Detailed Shift Submissions</h4>`;
+        
+        window.cachedAdminReports.slice().reverse().forEach(rep => {
+            let vms = rep.logs ? rep.logs.filter(l => l.status === 'Voicemail').length : 0;
+            let hps = rep.logs ? rep.logs.filter(l => l.status === 'Hung Up').length : 0;
+            let ints = rep.logs ? rep.logs.filter(l => l.status === 'Interested').length : 0;
+            let fus = rep.logs ? rep.logs.filter(l => l.status === 'Follow up').length : 0;
+            let sales = rep.logs ? rep.logs.filter(l => l.status === 'Sale').length : 0;
+
+            reportsHtml += `
+                <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 4px;">
+                        <span>👤 Dispatcher: ${rep.sender}</span>
+                        <span style="color: #6c757d;">📅 Shift: ${rep.date}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
                         <div>📞 Total: <b>${rep.totalCalls}</b></div>
                         <div>🟣 VM: <b>${vms}</b></div>
@@ -1008,13 +1057,37 @@ async function renderAdminReportsModal() {
                 </div>
             `;
         });
-        bodyContainer.innerHTML = html;
+
+        bodyContainer.innerHTML = leaderHtml + reportsHtml;
     } catch (e) {
         console.error("Failed to load admin shift reports:", e);
         let bodyContainer = document.getElementById('adminReportsModalBody');
         if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load reports from database.</p>`;
     }
 }
+
+window.downloadAdminReportCSV = function() {
+    let reports = window.cachedAdminReports || [];
+    if (reports.length === 0) return alert("No reports available to export.");
+
+    let csv = "Dispatcher Name,Shift Date,Submitted Timestamp,Total Calls,Voicemail,Hung Up,Interested,Follow Up,Sale\n";
+    reports.forEach(r => {
+        let logs = r.logs || [];
+        let vms = logs.filter(l => l.status === 'Voicemail').length;
+        let hps = logs.filter(l => l.status === 'Hung Up').length;
+        let ints = logs.filter(l => l.status === 'Interested').length;
+        let fus = logs.filter(l => l.status === 'Follow up').length;
+        let sales = logs.filter(l => l.status === 'Sale').length;
+
+        csv += `"${r.sender}","${r.date}","${r.timestamp}",${r.totalCalls},${vms},${hps},${ints},${fus},${sales}\n`;
+    });
+
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Team_Performance_Report_${getCurrentShiftDateKey()}.csv`;
+    link.click();
+};
 
 window.openShiftShareModal = async function() {
     let modalBody = document.querySelector('#dlCallingDetailModal > div');
