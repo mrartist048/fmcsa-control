@@ -139,7 +139,7 @@ window.processLogin = function() {
     initializeAccessControl();
 };
 
-// ====== DISPATCHER IDENTITY SETUP & SHIFT-AWARE CALL COUNTER ======
+// ====== DISPATCHER IDENTITY SETUP & SMART SHIFT DATE ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
@@ -154,14 +154,20 @@ function setupDispatcherIdentity() {
     injectNicknameProfileUI();
 }
 
-// Smart Shift Date: Agar raat ke 12 se subah 6 baje ke darmiyan hain, toh count pichli shift (date) mein hi count hoga
+// 12 baje wala masla fix: Ab shift subah 10 baje tak purani date hi dikhayegi (Local time use karegi)
 function getCurrentShiftDateKey() {
     let now = new Date();
     let hour = now.getHours();
-    if (hour < 6) {
+    
+    if (hour < 10) { // Subah 10 baje se pehle sab kuch kal ki shift mein count hoga
         now.setDate(now.getDate() - 1);
     }
-    return now.toISOString().split('T')[0];
+    
+    let year = now.getFullYear();
+    let month = String(now.getMonth() + 1).padStart(2, '0');
+    let day = String(now.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
 }
 
 function getTodayCallCount() {
@@ -170,15 +176,24 @@ function getTodayCallCount() {
     return callLogs.filter(log => log.shiftDate === shiftDateStr).length;
 }
 
+// UI Updated: Left side par User Name aur Right side par Calling Detail Button
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
     let panel = document.createElement('div');
     panel.id = 'dlNickProfilePanel';
-    panel.style.cssText = "font-family: sans-serif; font-size: 12px; color: #002d62; margin-bottom: 10px; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;";
+    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 12px; font-family: sans-serif;";
     
-    let todayCalls = getTodayCallCount();
-    panel.innerHTML = `👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> | 📞 Today's Calls: <span id="dlTodayCallCounter" style="color:#d9534f;">${todayCalls}</span> <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>`;
+    panel.innerHTML = `
+        <div style="font-size: 12px; color: #002d62; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;">
+            👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> 
+            <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> 
+            <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>
+        </div>
+        <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+            📊 Calling Detail
+        </button>
+    `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
@@ -190,10 +205,6 @@ window.changeDispatcherName = function() {
         localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
         let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
-        
-        let counterSpan = document.getElementById('dlTodayCallCounter');
-        if (counterSpan) counterSpan.innerText = getTodayCallCount();
-
         updateActiveSessionNickname();
     }
 };
@@ -424,7 +435,7 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Phone Cell Styling with Hover Copy Icon & Active Call State */
+            /* Phone Cell Styling */
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
             .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
@@ -437,6 +448,10 @@ function injectHistoryUIFramework() {
             .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; }
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
+            
+            /* Modern Disposition Popup Buttons */
+            .disp-btn { width: 100%; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; transition: transform 0.1s, opacity 0.2s; margin-bottom: 8px; }
+            .disp-btn:hover { opacity: 0.9; transform: scale(1.02); }
         `;
         document.head.appendChild(styleTag);
     }
@@ -807,61 +822,150 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL & HOVER COPY ENGINE WITH SHIFT-AWARE LOGGING ======
-window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
-    event.stopPropagation();
-    if (!phoneNum || phoneNum === 'N/A') return;
+// ====== PHONE CALL, POPUP DISPOSITION & CALLING DETAIL ENGINE ======
+let activeCallPhone = null;
+
+// The Colorful Disposition Popup that shows immediately after clicking the phone
+function showDispositionPopup(phoneNum) {
+    let existing = document.getElementById('dlDispositionPopup');
+    if (existing) existing.remove();
+
+    let popup = document.createElement('div');
+    popup.id = 'dlDispositionPopup';
+    popup.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
-    recordCallActivity(phoneNum);
+    popup.innerHTML = `
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+            <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px;">Call Status</h3>
+            <p style="font-size: 13px; color: #6c757d; margin-bottom: 20px;">What was the outcome for <b>${phoneNum}</b>?</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <button onclick="saveCallStatus('Voicemail')" class="disp-btn" style="background: #9c27b0; color: white;">🟣 Voicemail</button>
+                <button onclick="saveCallStatus('Hung Up')" class="disp-btn" style="background: #f44336; color: white;">🔴 Hung Up</button>
+                <button onclick="saveCallStatus('Interested')" class="disp-btn" style="background: #ffeb3b; color: #333;">🟡 Interested</button>
+                <button onclick="saveCallStatus('Follow up')" class="disp-btn" style="background: #2196f3; color: white;">🔵 Follow up</button>
+                <button onclick="saveCallStatus('Sale')" class="disp-btn" style="background: #4caf50; color: white;">🟢 Sale</button>
+            </div>
+            <button onclick="closeDispositionPopup()" style="margin-top: 15px; background: transparent; border: none; color: #6c757d; text-decoration: underline; cursor: pointer; font-size: 12px;">Skip / Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
 
-    navigator.clipboard.writeText(phoneNum).then(() => {
-        let badge = document.createElement('span');
-        badge.className = 'phone-copy-badge';
-        badge.innerText = "Copied & Logged!";
-        containerElement.appendChild(badge);
-        setTimeout(() => badge.remove(), 1200);
-    });
-};
+window.closeDispositionPopup = function() {
+    let p = document.getElementById('dlDispositionPopup');
+    if (p) p.remove();
+}
 
-function recordCallActivity(phoneNum) {
-    if (!currentClient || !dispatcherNickname) return;
+window.saveCallStatus = function(status) {
+    if (!activeCallPhone) return;
+    
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
     callLogs.push({
-        phone: phoneNum,
+        phone: activeCallPhone,
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
-        date: new Date().toLocaleString()
+        date: new Date().toLocaleString(),
+        status: status // Save specific status
     });
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    let counterSpan = document.getElementById('dlTodayCallCounter');
-    if (counterSpan) {
-        counterSpan.innerText = getTodayCallCount();
-    }
+    showPremiumNotification(`✅ Call Logged: ${status}`, 2500);
+    closeDispositionPopup();
 }
+
+// 📊 Calling Detail Modal (Replaces the basic counter)
+window.openCallingDetailModal = function() {
+    let existing = document.getElementById('dlCallingDetailModal');
+    if (existing) existing.remove();
+
+    let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+    let shiftDateStr = getCurrentShiftDateKey();
+    
+    let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
+    
+    let counts = { Total: todayLogs.length, Voicemail: 0, HungUp: 0, Interested: 0, FollowUp: 0, Sale: 0, Unknown: 0 };
+
+    todayLogs.forEach(log => {
+        if (log.status === 'Voicemail') counts.Voicemail++;
+        else if (log.status === 'Hung Up') counts.HungUp++;
+        else if (log.status === 'Interested') counts.Interested++;
+        else if (log.status === 'Follow up') counts.FollowUp++;
+        else if (log.status === 'Sale') counts.Sale++;
+        else counts.Unknown++; // Any calls logged before this update
+    });
+
+    let modal = document.createElement('div');
+    modal.id = 'dlCallingDetailModal';
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    
+    modal.innerHTML = `
+        <div style="background: white; width: 350px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+            <div style="background: #ff9800; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
+                <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #002d62; font-size: 16px;">${counts.Total}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
+                    <span>🟣 Voicemail:</span> <strong>${counts.Voicemail}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
+                    <span>🔴 Hung Up:</span> <strong>${counts.HungUp}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
+                    <span>🟡 Interested:</span> <strong>${counts.Interested}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
+                    <span>🔵 Follow up:</span> <strong>${counts.FollowUp}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
+                    <span>🟢 Sale:</span> <strong style="color: #4caf50;">${counts.Sale}</strong>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">Close Panel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
+    event.stopPropagation();
+    if (!phoneNum || phoneNum === 'N/A') return;
+    
+    activeCallPhone = phoneNum;
+    navigator.clipboard.writeText(phoneNum).then(() => {
+        let badge = document.createElement('span');
+        badge.className = 'phone-copy-badge';
+        badge.innerText = "Copied!";
+        containerElement.appendChild(badge);
+        setTimeout(() => badge.remove(), 1200);
+        
+        // Show popup instantly on copy
+        showDispositionPopup(phoneNum);
+    });
+};
 
 window.handlePhoneInteraction = function(cellElement, phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
 
-    recordCallActivity(phoneNum);
-
+    activeCallPhone = phoneNum;
+    
+    // Copy for Dialer
     navigator.clipboard.writeText(phoneNum).then(() => {
-        let parentTd = cellElement.closest('.phone-clickable-container');
-        if (parentTd) {
-            let badge = document.createElement('span');
-            badge.className = 'phone-copy-badge';
-            badge.innerText = "Called & Logged!";
-            parentTd.appendChild(badge);
-            setTimeout(() => badge.remove(), 1500);
-        }
+        // Automatically show the popup on screen so it's ready when they return from dialer
+        showDispositionPopup(phoneNum);
     });
 
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
         el.classList.remove('active-called-cell');
     });
-
     cellElement.classList.add('active-called-cell');
 };
 
@@ -1778,5 +1882,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
