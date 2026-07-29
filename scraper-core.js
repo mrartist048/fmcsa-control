@@ -20,7 +20,7 @@ const allowedUsers = {
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
-const MASTER_ADMIN_PASS = "admin12345"; // <-- Yahan apna Admin Password set karein
+const MASTER_ADMIN_PASS = "admin890"; // <-- Yahan apna Admin Password set karein
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
