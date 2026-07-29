@@ -20,6 +20,7 @@ const allowedUsers = {
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
+const MASTER_ADMIN_PASS = "admin12345"; // <-- Yahan apna Admin Password set karein
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
@@ -169,12 +170,6 @@ function getCurrentShiftDateKey() {
     return `${year}-${month}-${day}`;
 }
 
-function getTodayCallCount() {
-    let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
-    let shiftDateStr = getCurrentShiftDateKey();
-    return callLogs.filter(log => log.shiftDate === shiftDateStr).length;
-}
-
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
@@ -188,9 +183,14 @@ function injectNicknameProfileUI() {
             <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> 
             <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>
         </div>
-        <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
-            📊 Calling Detail
-        </button>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+                📊 Calling Detail
+            </button>
+            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+                👑 Admin Panel
+            </button>
+        </div>
     `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
@@ -820,7 +820,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL, POPUP DISPOSITION & CALLING DETAIL ENGINE ======
+// ====== PHONE CALL, POPUP DISPOSITION & ADMIN PANEL ENGINE ======
 let activeCallPhone = null;
 
 function showDispositionPopup(phoneNum) {
@@ -875,7 +875,6 @@ window.saveCallStatus = function(status) {
     closeDispositionPopup();
 }
 
-// 📊 Calling Detail Modal with Team Shift Sharing Feature
 window.openCallingDetailModal = function() {
     let existing = document.getElementById('dlCallingDetailModal');
     if (existing) existing.remove();
@@ -935,7 +934,88 @@ window.openCallingDetailModal = function() {
     document.body.appendChild(modal);
 }
 
-// Modal to select manager/team member to send shift report
+// 👑 Admin Panel Password Prompt & Report Viewer
+window.openAdminPanelPrompt = function() {
+    let passInput = prompt("Enter Master Admin Password:");
+    if (passInput === null) return;
+    if (passInput !== MASTER_ADMIN_PASS) {
+        alert("Incorrect Admin Password!");
+        return;
+    }
+    renderAdminReportsModal();
+};
+
+async function renderAdminReportsModal() {
+    let existing = document.getElementById('dlAdminReportsModal');
+    if (existing) existing.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'dlAdminReportsModal';
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    
+    modal.innerHTML = `
+        <div style="background: white; width: 500px; max-height: 80vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+            <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">👑 Admin Panel - Submitted Shift Reports</h3>
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+            <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d;">
+                Loading reports from cloud...
+            </div>
+            <div style="background: #f8f9fa; padding: 12px 20px; text-align: right; border-top: 1px solid #eee;">
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Close Panel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    try {
+        let reportsUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`;
+        let res = await fetch(reportsUrl);
+        let reportsData = await res.json() || [];
+
+        let bodyContainer = document.getElementById('adminReportsModalBody');
+        if (!bodyContainer) return;
+
+        if (!Array.isArray(reportsData) || reportsData.length === 0) {
+            bodyContainer.innerHTML = `<p style="text-align: center; color: #6c757d; padding: 30px;">No shift reports received yet.</p>`;
+            return;
+        }
+
+        let html = "";
+        reportsData.reverse().forEach(rep => {
+            let vms = rep.logs.filter(l => l.status === 'Voicemail').length;
+            let hps = rep.logs.filter(l => l.status === 'Hung Up').length;
+            let ints = rep.logs.filter(l => l.status === 'Interested').length;
+            let fus = rep.logs.filter(l => l.status === 'Follow up').length;
+            let sales = rep.logs.filter(l => l.status === 'Sale').length;
+
+            html += `
+                <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 12px; border-radius: 4px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 6px;">
+                        <span>👤 Dispatcher: ${rep.sender}</span>
+                        <span style="color: #6c757d;">📅 Shift Date: ${rep.date}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Sent At: ${rep.timestamp}</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                        <div>📞 Total: <b>${rep.totalCalls}</b></div>
+                        <div>🟣 VM: <b>${vms}</b></div>
+                        <div>🔴 HU: <b>${hps}</b></div>
+                        <div>🟡 Int: <b>${ints}</b></div>
+                        <div>🔵 FU: <b>${fus}</b></div>
+                        <div style="color: #4caf50;">🟢 Sale: <b>${sales}</b></div>
+                    </div>
+                </div>
+            `;
+        });
+        bodyContainer.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to load admin shift reports:", e);
+        let bodyContainer = document.getElementById('adminReportsModalBody');
+        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load reports from database.</p>`;
+    }
+}
+
 window.openShiftShareModal = async function() {
     let modalBody = document.querySelector('#dlCallingDetailModal > div');
     if (!modalBody) return;
@@ -1032,28 +1112,6 @@ window.confirmSendShiftReport = async function() {
         alert("Failed to send report. Check internet connection.");
     }
 };
-
-// Periodic checker for incoming shift reports (for Managers/Team Leads)
-async function pollIncomingShiftReports() {
-    if (!currentClient || !dispatcherNickname) return;
-    try {
-        let reportInboxUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`;
-        let res = await fetch(reportInboxUrl);
-        let reports = await res.json() || [];
-        if (!Array.isArray(reports) || reports.length === 0) return;
-
-        reports.forEach(rep => {
-            showPremiumNotification(`📥 Shift Report received from ${rep.sender}! Total Calls: ${rep.totalCalls}`, 6000);
-        });
-
-        // Clear inbox after notification
-        await fetch(reportInboxUrl, { method: 'DELETE' });
-    } catch (e) {
-        console.error("Polling shift reports failed:", e);
-    }
-}
-
-setInterval(pollIncomingShiftReports, 12000);
 
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
