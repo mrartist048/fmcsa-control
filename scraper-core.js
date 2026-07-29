@@ -20,7 +20,7 @@ const allowedUsers = {
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
-const MASTER_ADMIN_PASS = "admin890"; // <-- Yahan apna Admin Password set karein
+const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
@@ -1896,8 +1896,10 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== BATCH CONCURRENT PROCESSING ENGINE WITH ROBUST ERROR HANDLING & AUTO-RETRY ======
-let scraping = false; let scrapedData = [];
+// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH EXPLICIT ERROR REPORTING ======
+let scraping = false; 
+let scrapedData = [];
+
 window.stopScraping = function() {
     scraping = false;
     let statusBox = document.getElementById('status');
@@ -1905,96 +1907,90 @@ window.stopScraping = function() {
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
         statusBox.style.padding = "10px 15px";
-        statusBox.innerText = "Paused / Stopped safely. You can resume anytime.";
+        statusBox.innerHTML = "<strong>⏸️ Processing Paused Safely. Click Start to resume/run again.</strong>";
     }
 }
 
-async function processSingleMCWithRetry(mc, retries = 2) {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
-            const response = await fetch(snapshotUrl);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP Error Status: ${response.status}`);
-            }
-
-            const htmlText = await response.text();
-
-            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
-                return null; // Valid non-existent record response
-            }
-
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
-            let el = document.createElement('html');
-            el.innerHTML = htmlText;
-            let cells = el.querySelectorAll('td, th');
-
-            for (let i = 0; i < cells.length; i++) {
-                let text = cells[i].textContent.trim();
-                if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
-                    if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                }
-                if (text.startsWith("USDOT Number:")) {
-                    if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
-                }
-                if (text.startsWith("Entity Type:")) {
-                    if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                }
-                if (text.startsWith("Operating Authority Status:")) {
-                    if (cells[i+1]) {
-                        let rawStatus = cells[i+1].textContent.toUpperCase();
-                        if (rawStatus.includes("NOT AUTHORIZED")) {
-                            record.status = "NOT AUTHORIZED";
-                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
-                            record.status = "AUTHORIZED";
-                        } else {
-                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
-                        }
-                    }
-                }
-                if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
-                    if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                }
-            }
-
-            if (record.status !== "AUTHORIZED") { return null; }
-
-            if (record.usdot !== 'N/A') {
-                try {
-                    const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
-                    const smsResponse = await fetch(smsUrl);
-                    if (smsResponse.ok) {
-                        const smsHtml = await smsResponse.text();
-                        let smsEl = document.createElement('html');
-                        smsEl.innerHTML = smsHtml;
-                        let smsCells = smsEl.querySelectorAll('td, th, span, label');
-                        for (let j = 0; j < smsCells.length; j++) {
-                            let smsText = smsCells[j].textContent.trim();
-                            if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
-                                let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                                if (emailMatch) { record.email = emailMatch[0]; break; }
-                            }
-                        }
-                    }
-                } catch (smsErr) { 
-                    console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
-                }
-            }
-            return record;
-
-        } catch (err) {
-            console.warn(`Attempt ${attempt} failed for MC ${mc}:`, err.message);
-            if (attempt === retries) {
-                console.error(`Failed permanently for MC ${mc} after ${retries} attempts due to:`, err.message);
-                return { error: true, mc: mc, message: err.message };
-            }
-            await new Promise(r => setTimeout(r, 1000 * attempt)); // Exponential backoff delay
+async function processSingleMCWithDetailedError(mc) {
+    try {
+        const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
+        const response = await fetch(snapshotUrl);
+        
+        if (!response.ok) {
+            return { status: "error", message: `HTTP Status ${response.status} on MC ${mc}` };
         }
+
+        const htmlText = await response.text();
+
+        if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
+            return { status: "not_found" };
+        }
+
+        let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+        let el = document.createElement('html');
+        el.innerHTML = htmlText;
+        let cells = el.querySelectorAll('td, th');
+
+        for (let i = 0; i < cells.length; i++) {
+            let text = cells[i].textContent.trim();
+            if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
+                if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            }
+            if (text.startsWith("USDOT Number:")) {
+                if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+            }
+            if (text.startsWith("Entity Type:")) {
+                if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            }
+            if (text.startsWith("Operating Authority Status:")) {
+                if (cells[i+1]) {
+                    let rawStatus = cells[i+1].textContent.toUpperCase();
+                    if (rawStatus.includes("NOT AUTHORIZED")) {
+                        record.status = "NOT AUTHORIZED";
+                    } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
+                        record.status = "AUTHORIZED";
+                    } else {
+                        record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+                    }
+                }
+            }
+            if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+            if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+            if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
+                if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            }
+        }
+
+        if (record.status !== "AUTHORIZED") { 
+            return { status: "filtered_out" }; 
+        }
+
+        if (record.usdot !== 'N/A') {
+            try {
+                const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
+                const smsResponse = await fetch(smsUrl);
+                if (smsResponse.ok) {
+                    const smsHtml = await smsResponse.text();
+                    let smsEl = document.createElement('html');
+                    smsEl.innerHTML = smsHtml;
+                    let smsCells = smsEl.querySelectorAll('td, th, span, label');
+                    for (let j = 0; j < smsCells.length; j++) {
+                        let smsText = smsCells[j].textContent.trim();
+                        if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
+                            let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                            if (emailMatch) { record.email = emailMatch[0]; break; }
+                        }
+                    }
+                }
+            } catch (smsErr) { 
+                console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
+            }
+        }
+        return { status: "success", data: record };
+
+    } catch (err) {
+        return { status: "error", message: `Connection Failed for MC ${mc}: ${err.message}` };
     }
-    return null;
 }
 
 window.startScraping = async function() {
@@ -2006,7 +2002,8 @@ window.startScraping = async function() {
         return;
     }
 
-    scraping = true; scrapedData = [];
+    scraping = true; 
+    scrapedData = [];
     document.getElementById('startBtn').style.display = 'none';
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
     if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
@@ -2018,7 +2015,7 @@ window.startScraping = async function() {
 
     let totalToScan = end - start + 1;
     let totalProcessed = 0;
-    let errorCount = 0;
+    let errorDetailsList = [];
     let startTime = Date.now();
 
     let statusBox = document.getElementById('status');
@@ -2060,57 +2057,43 @@ window.startScraping = async function() {
         };
     }
 
-    let mcQueue = [];
+    // Process sequentially (one-by-one with controlled delay to prevent server blocking/skipping)
     for (let mc = start; mc <= end; mc++) {
-        mcQueue.push(mc);
-    }
-
-    const BATCH_SIZE = 3;
-    
-    for (let i = 0; i < mcQueue.length; i += BATCH_SIZE) {
         if (!scraping) break;
 
-        let batch = mcQueue.slice(i, i + BATCH_SIZE);
-        let promises = batch.map(mc => processSingleMCWithRetry(mc));
-        let results = await Promise.all(promises);
+        let result = await processSingleMCWithDetailedError(mc);
+        totalProcessed++;
 
-        for (let record of results) {
-            totalProcessed++;
-            if (!scraping) break;
+        if (result.status === "error") {
+            errorDetailsList.push(result.message);
+            console.error(result.message);
+        } else if (result.status === "success" && result.data) {
+            let record = result.data;
+            scrapedData.push(record);
+            let recordIndex = scrapedData.length - 1;
+            updateRealTimeHistory(scrapedData, false);
 
-            if (record && record.error) {
-                errorCount++;
-                console.error(`Network or fetch error encountered on MC ${record.mc}: ${record.message}`);
-                continue;
-            }
+            let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+            let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
+            let activeRemarksValue = record.remarks || "";
 
-            if (record) {
-                scrapedData.push(record);
-                let recordIndex = scrapedData.length - 1;
-                updateRealTimeHistory(scrapedData, false);
-
-                let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
-                let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
-                let activeRemarksValue = record.remarks || "";
-
-                let newRow = document.createElement('tr');
-                newRow.innerHTML = `
-                    <td><b>${record.mc}</b></td>
-                    <td>${record.usdot}</td>
-                    <td>${record.name}</td>
-                    <td>${record.entityType}</td>
-                    <td><span class="badge badge-active">${record.status}</span></td>
-                    ${phoneCellMarkup}
-                    <td>${record.address}</td>
-                    ${emailCellMarkup}
-                    <td>${record.powerUnits}</td>
-                    <td class="remarks-cell-container">
-                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
-                    </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
-                `;
-                tableBody.appendChild(newRow);
-            }
+            let newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><b>${record.mc}</b></td>
+                <td>${record.usdot}</td>
+                <td>${record.name}</td>
+                <td>${record.entityType}</td>
+                <td><span class="badge badge-active">${record.status}</span></td>
+                ${phoneCellMarkup}
+                <td>${record.address}</td>
+                ${emailCellMarkup}
+                <td>${record.powerUnits}</td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
+                </td>
+                <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+            `;
+            tableBody.appendChild(newRow);
         }
 
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
@@ -2121,14 +2104,19 @@ window.startScraping = async function() {
 
         let mins = Math.floor(estimatedRemainingSeconds / 60);
         let secs = Math.floor(estimatedRemainingSeconds % 60);
-        let timeString = totalProcessed < 5 ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
+        let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
+
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Last Err: ${errorDetailsList[errorDetailsList.length - 1].substring(0, 35)}...</span>` : `<span style="color:#28a745; font-size:11px;">Status: Stable</span>`;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
                 <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processed ${totalProcessed} / ${totalToScan} MCs... ${errorCount > fnGetSafeErrCount(errorCount) ? '' : `<span style="color:#d9534f; font-size:11px;">(Errors: ${errorCount})</span>`}</div>
-                    <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
+                    <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
+                        ${latestErrorText}
+                    </div>
                 </div>
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
@@ -2139,7 +2127,8 @@ window.startScraping = async function() {
         populateStateDropdown();
         applyAdvancedFilters();
 
-        await new Promise(r => setTimeout(r, 600));
+        // Safe delay to ensure server responds accurately for large ranges (e.g. 1000 MCs)
+        await new Promise(r => setTimeout(r, 350));
     }
 
     scraping = false;
@@ -2152,7 +2141,7 @@ window.startScraping = async function() {
         statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records. ${errorCount > 0 ? `(${errorCount} connection warnings handled)` : ''}</strong>`;
+        statusBox.innerHTML = `<strong style="font-size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records. ${errorDetailsList.length > 0 ? `(Encountered ${errorDetailsList.length} connection issues)` : ''}</strong>`;
     }
 
     if(scrapedData.length > 0) {
@@ -2160,8 +2149,6 @@ window.startScraping = async function() {
         updateRealTimeHistory(scrapedData, true);
     }
 }
-
-function fnGetSafeErrCount(c) { return c; }
 
 window.downloadCSV = function() {
     if(scrapedData.length > 0) {
