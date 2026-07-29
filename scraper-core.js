@@ -880,7 +880,7 @@ window.openCallingDetailModal = function() {
     document.body.appendChild(modal);
 }
 
-// 👑 Advanced Admin Panel with Tab Navigation
+// 👑 Advanced Admin Panel with Tab Navigation & Refresh Button
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -902,7 +902,10 @@ async function renderAdvancedAdminModal() {
     modal.innerHTML = `
         <div style="background: white; width: 620px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
+                    <button onclick="refreshAdminModalData()" id="adminRefreshBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Refresh Data">🔄 Refresh</button>
+                </div>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             
@@ -927,6 +930,15 @@ async function renderAdvancedAdminModal() {
     `;
     document.body.appendChild(modal);
 
+    await fetchAndRenderAdminData();
+}
+
+async function fetchAndRenderAdminData() {
+    let bodyContainer = document.getElementById('adminReportsModalBody');
+    if (bodyContainer) {
+        bodyContainer.innerHTML = `<p style="color: #6c757d; font-style: italic; padding: 30px;">Refreshing live team status and reports...</p>`;
+    }
+
     try {
         let [sessionsRes, reportsRes] = await Promise.all([
             fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
@@ -939,15 +951,32 @@ async function renderAdvancedAdminModal() {
         window.cachedAdminSessions = sessionsData;
         window.cachedAdminReports = Array.isArray(reportsData) ? reportsData : [];
         
-        renderAdminTabContent('online');
+        let activeTab = window.currentActiveAdminTab || 'online';
+        renderAdminTabContent(activeTab);
     } catch (e) {
         console.error("Failed to load admin monitoring dashboard:", e);
-        let bodyContainer = document.getElementById('adminReportsModalBody');
         if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load data from database.</p>`;
     }
 }
 
+window.refreshAdminModalData = async function() {
+    let refBtn = document.getElementById('adminRefreshBtn');
+    if (refBtn) {
+        refBtn.innerText = "⏳ Updating...";
+        refBtn.style.pointerEvents = "none";
+    }
+    
+    await fetchAndRenderAdminData();
+    showPremiumNotification("🔄 Admin dashboard refreshed successfully!", 2500);
+
+    if (refBtn) {
+        refBtn.innerText = "🔄 Refresh";
+        refBtn.style.pointerEvents = "auto";
+    }
+};
+
 window.switchAdminTab = function(tabName) {
+    window.currentActiveAdminTab = tabName;
     let btnOnline = document.getElementById('adminTabBtnOnline');
     let btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
     let btnReports = document.getElementById('adminTabBtnReports');
@@ -1074,7 +1103,7 @@ function renderAdminTabContent(tabName) {
         reportsHtml += `</div>`;
         bodyContainer.innerHTML = reportsHtml;
     }
-}
+};
 
 window.downloadAdminReportCSV = function() {
     let reports = window.cachedAdminReports || [];
