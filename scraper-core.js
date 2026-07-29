@@ -993,7 +993,7 @@ async function renderAdminReportsModal() {
             html += `
                 <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 12px; border-radius: 4px; text-align: left;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 6px;">
-                        <span>👤 Dispatcher: ${rep.sender}</span>
+                        <span>👤 Sale Agent: ${rep.sender}</span>
                         <span style="color: #6c757d;">📅 Shift Date: ${rep.date}</span>
                     </div>
                     <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Sent At: ${rep.timestamp}</div>
