@@ -434,6 +434,7 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
+            /* Phone Cell Styling */
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
             .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
@@ -576,6 +577,25 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
+    document.addEventListener('click', function(event) {
+        let hDrawer = document.getElementById('dlHistoryDrawer');
+        let fDrawer = document.getElementById('dlFollowUpDrawer');
+        let hBtn = document.getElementById('openHistoryBtn');
+        let fBtn = document.getElementById('openFollowUpDrawerBtn');
+
+        if (hDrawer && hDrawer.style.right === "0px") {
+            if (!hDrawer.contains(event.target) && (!hBtn || !hBtn.contains(event.target))) {
+                hDrawer.style.right = "-420px";
+            }
+        }
+
+        if (fDrawer && fDrawer.style.right === "0px") {
+            if (!fDrawer.contains(event.target) && (!fBtn || !fBtn.contains(event.target))) {
+                fDrawer.style.right = "-420px";
+            }
+        }
+    });
+
     injectAdvancedFilterBar();
 
     let tableHeader = document.querySelector('table tr');
@@ -595,6 +615,7 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
+// ====== ADVANCED FILTER BAR WITH CLEAN PADDED COUNTS ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -859,7 +880,7 @@ window.openCallingDetailModal = function() {
     document.body.appendChild(modal);
 }
 
-// 👑 Advanced Admin Panel
+// 👑 Advanced Admin Panel with Tab Navigation & Refresh Button
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -867,13 +888,334 @@ window.openAdminPanelPrompt = function() {
         alert("Incorrect Admin Password!");
         return;
     }
-    alert("Admin Verified!");
+    renderAdvancedAdminModal();
+};
+
+async function renderAdvancedAdminModal() {
+    let existing = document.getElementById('dlAdminReportsModal');
+    if (existing) existing.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'dlAdminReportsModal';
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    
+    modal.innerHTML = `
+        <div style="background: white; width: 620px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+            <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
+                    <button onclick="refreshAdminModalData()" id="adminRefreshBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Refresh Data">🔄 Refresh</button>
+                </div>
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+            </div>
+            
+            <!-- Tab Navigation Bar -->
+            <div style="display: flex; background: #f1f3f4; border-bottom: 1px solid #ddd; padding: 10px 15px; gap: 8px;">
+                <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
+                <button onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
+                <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
+            </div>
+
+            <!-- Modal Body Container -->
+            <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
+                Loading live team status and reports...
+            </div>
+
+            <!-- Footer with Clean Actions -->
+            <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
+                <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export CSV Report</button>
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    await fetchAndRenderAdminData();
+}
+
+async function fetchAndRenderAdminData() {
+    let bodyContainer = document.getElementById('adminReportsModalBody');
+    if (bodyContainer) {
+        bodyContainer.innerHTML = `<p style="color: #6c757d; font-style: italic; padding: 30px;">Refreshing live team status and reports...</p>`;
+    }
+
+    try {
+        let [sessionsRes, reportsRes] = await Promise.all([
+            fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+            fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`)
+        ]);
+
+        let sessionsData = await sessionsRes.json() || {};
+        let reportsData = await reportsRes.json() || [];
+
+        window.cachedAdminSessions = sessionsData;
+        window.cachedAdminReports = Array.isArray(reportsData) ? reportsData : [];
+        
+        let activeTab = window.currentActiveAdminTab || 'online';
+        renderAdminTabContent(activeTab);
+    } catch (e) {
+        console.error("Failed to load admin monitoring dashboard:", e);
+        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load data from database.</p>`;
+    }
+}
+
+window.refreshAdminModalData = async function() {
+    let refBtn = document.getElementById('adminRefreshBtn');
+    if (refBtn) {
+        refBtn.innerText = "⏳ Updating...";
+        refBtn.style.pointerEvents = "none";
+    }
+    
+    await fetchAndRenderAdminData();
+    showPremiumNotification("🔄 Admin dashboard refreshed successfully!", 2500);
+
+    if (refBtn) {
+        refBtn.innerText = "🔄 Refresh";
+        refBtn.style.pointerEvents = "auto";
+    }
+};
+
+window.switchAdminTab = function(tabName) {
+    window.currentActiveAdminTab = tabName;
+    let btnOnline = document.getElementById('adminTabBtnOnline');
+    let btnLeaderboard = document.getElementById('adminTabBtnLeaderboard');
+    let btnReports = document.getElementById('adminTabBtnReports');
+
+    [btnOnline, btnLeaderboard, btnReports].forEach(b => {
+        if (b) {
+            b.style.background = "#e2eafc";
+            b.style.color = "#002d62";
+            b.style.border = "1px solid #b6ccfe";
+        }
+    });
+
+    let activeBtn = tabName === 'online' ? btnOnline : tabName === 'leaderboard' ? btnLeaderboard : btnReports;
+    if (activeBtn) {
+        activeBtn.style.background = "#002d62";
+        activeBtn.style.color = "white";
+        activeBtn.style.border = "none";
+    }
+
+    renderAdminTabContent(tabName);
+};
+
+function renderAdminTabContent(tabName) {
+    let bodyContainer = document.getElementById('adminReportsModalBody');
+    if (!bodyContainer) return;
+
+    let sessionsData = window.cachedAdminSessions || {};
+    let reportsList = window.cachedAdminReports || [];
+    let now = Date.now();
+
+    if (tabName === 'online') {
+        let activeUsersHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
+        let activeCount = 0;
+
+        Object.keys(sessionsData).forEach(key => {
+            let s = sessionsData[key];
+            if (s && s.nickname && s.timestamp) {
+                let isOnline = (now - s.timestamp < 25000);
+                if (isOnline) {
+                    activeCount++;
+                    let lastActiveTime = new Date(s.timestamp).toLocaleTimeString();
+                    activeUsersHtml += `
+                        <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #28a745; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                            <div>
+                                <div style="font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 6px;">
+                                    🟢 <span>${s.nickname}</span> <span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px;">Online</span>
+                                </div>
+                                <div style="color: #666; font-size: 11px; margin-top: 4px;">Login Time: <b>${s.loginTime || 'N/A'}</b></div>
+                            </div>
+                            <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee;">Last Heartbeat: <br><b>${lastActiveTime}</b></div>
+                        </div>
+                    `;
+                }
+            }
+        });
+
+        if (activeCount === 0) {
+            activeUsersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No dispatchers currently online.</div>`;
+        }
+        activeUsersHtml += `</div>`;
+        bodyContainer.innerHTML = activeUsersHtml;
+
+    } else if (tabName === 'leaderboard') {
+        let perfMap = {};
+        reportsList.forEach(rep => {
+            let name = rep.sender || "Unknown";
+            if (!perfMap[name]) {
+                perfMap[name] = { totalCalls: 0, shiftsCount: 0 };
+            }
+            perfMap[name].totalCalls += rep.totalCalls || 0;
+            perfMap[name].shiftsCount += 1;
+        });
+
+        let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
+        let leaderHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
+
+        if (sortedLeaderboard.length === 0) {
+            leaderHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No team calling performance data available yet.</div>`;
+        } else {
+            sortedLeaderboard.forEach((name, idx) => {
+                let stats = perfMap[name];
+                let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `<b>#${idx+1}</b>`;
+                leaderHtml += `
+                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #ff9800; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 20px; width: 25px; text-align: center;">${medal}</span>
+                            <div>
+                                <b style="color: #002d62; font-size: 15px;">${name}</b>
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Total Shifts Logged: ${stats.shiftsCount}</div>
+                            </div>
+                        </div>
+                        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">
+                            Total Calls: ${stats.totalCalls}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        leaderHtml += `</div>`;
+        bodyContainer.innerHTML = leaderHtml;
+
+    } else if (tabName === 'reports') {
+        let reportsHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
+        
+        if (reportsList.length === 0) {
+            reportsHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No shift reports received yet.</div>`;
+        } else {
+            reportsList.slice().reverse().forEach(rep => {
+                reportsHtml += `
+                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #17a2b8; padding: 12px 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 6px;">
+                            <span>👤 Agent: ${rep.sender}</span>
+                            <span style="color: #6c757d; font-weight: normal; font-size: 12px;">📅 Shift: ${rep.date}</span>
+                        </div>
+                        <div style="font-size: 11px; color: #888; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
+                        <div style="font-size: 12px; background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Total Calls Logged:</span>
+                            <b style="color: #002d62; font-size: 14px;">${rep.totalCalls} Calls</b>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        reportsHtml += `</div>`;
+        bodyContainer.innerHTML = reportsHtml;
+    }
+};
+
+window.downloadAdminReportCSV = function() {
+    let reports = window.cachedAdminReports || [];
+    if (reports.length === 0) return alert("No reports available to export.");
+
+    let csv = "Dispatcher Name,Shift Date,Submitted Timestamp,Total Calls\n";
+    reports.forEach(r => {
+        csv += `"${r.sender}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+    });
+
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Team_Performance_Report_${getCurrentShiftDateKey()}.csv`;
+    link.click();
 };
 
 window.openShiftShareModal = async function() {
     let modalBody = document.querySelector('#dlCallingDetailModal > div');
     if (!modalBody) return;
-    modalBody.innerHTML = `<div style="padding:20px; text-align:center;">Shift report modal active.</div>`;
+
+    modalBody.innerHTML = `
+        <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 16px;">📤 Share Shift Report</h3>
+            <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+        </div>
+        <div style="padding: 20px;">
+            <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select manager or team member to send shift report:</p>
+            <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;">Loading active members...</div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button onclick="openCallingDetailModal()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Back</button>
+                <button onclick="confirmSendShiftReport()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Send Report</button>
+            </div>
+        </div>
+    `;
+
+    try {
+        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
+        let sessionsData = await res.json() || {};
+        
+        let activeMembers = [];
+        let now = Date.now();
+
+        Object.keys(sessionsData).forEach(key => {
+            let s = sessionsData[key];
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < 25000)) {
+                if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
+                    activeMembers.push(s.nickname);
+                }
+            }
+        });
+
+        let radioListDiv = document.getElementById('dlShiftMembersRadioList');
+        if (activeMembers.length === 0) {
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other online members/managers found.</div>`;
+            return;
+        }
+
+        let html = "";
+        activeMembers.forEach((name, idx) => {
+            let checkedAttr = idx === 0 ? "checked" : "";
+            html += `
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
+                    <input type="radio" name="shiftTargetRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
+                    <span>💻 <b>${name}</b> (Online)</span>
+                </label>
+            `;
+        });
+        radioListDiv.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to load members for shift report:", e);
+    }
+};
+
+window.confirmSendShiftReport = async function() {
+    let selectedRadio = document.querySelector('input[name="shiftTargetRadio"]:checked');
+    if (!selectedRadio) {
+        return alert("Please select a recipient.");
+    }
+
+    let targetName = selectedRadio.value;
+    let shiftDateStr = getCurrentShiftDateKey();
+    let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+    let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
+
+    let reportData = {
+        sender: dispatcherNickname,
+        date: shiftDateStr,
+        timestamp: new Date().toLocaleString(),
+        totalCalls: todayLogs.length,
+        logs: todayLogs
+    };
+
+    try {
+        let reportUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${targetName}.json`;
+        let res = await fetch(reportUrl);
+        let reportsList = await res.json() || [];
+        if (!Array.isArray(reportsList)) reportsList = [];
+
+        reportsList.push(reportData);
+
+        await fetch(reportUrl, {
+            method: 'PUT',
+            body: JSON.stringify(reportsList)
+        });
+
+        showPremiumNotification(`✅ Shift report successfully sent to ${targetName}!`, 4000);
+        document.getElementById('dlCallingDetailModal').remove();
+    } catch (e) {
+        console.error("Failed to send shift report:", e);
+        alert("Failed to send report. Check internet connection.");
+    }
 };
 
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
@@ -914,7 +1256,7 @@ function buildPhoneCellMarkup(phoneNum) {
     `;
 }
 
-// ====== FOLLOW-UP ENGINE ======
+// ====== FOLLOW-UP ENGINE WITH CALENDAR & TIME PICKER MODAL ======
 let currentFollowUpFilterMode = 'today';
 let pendingFollowUpIndex = null;
 let pendingFollowUpRowBtn = null;
@@ -934,13 +1276,20 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
     let todayDateStr = new Date().toISOString().split('T')[0];
     let nowTimeStr = new Date().toTimeString().substring(0, 5);
 
-    document.getElementById('dlModalDateInput').value = todayDateStr;
-    document.getElementById('dlModalTimeInput').value = nowTimeStr;
-    document.getElementById('dlDatePickerModal').style.display = 'flex';
+    let dateInput = document.getElementById('dlModalDateInput');
+    let timeInput = document.getElementById('dlModalTimeInput');
+    if (dateInput) dateInput.value = todayDateStr;
+    if (timeInput) timeInput.value = nowTimeStr;
+
+    let modal = document.getElementById('dlDatePickerModal');
+    if (modal) modal.style.display = 'flex';
 };
 
 window.closeFollowUpModal = function() {
-    document.getElementById('dlDatePickerModal').style.display = 'none';
+    let modal = document.getElementById('dlDatePickerModal');
+    if (modal) modal.style.display = 'none';
+    pendingFollowUpIndex = null;
+    pendingFollowUpRowBtn = null;
 };
 
 window.confirmFollowUpSchedule = function() {
@@ -948,76 +1297,569 @@ window.confirmFollowUpSchedule = function() {
     let record = scrapedData[pendingFollowUpIndex];
     if (!record) return;
 
+    let selectedDate = document.getElementById('dlModalDateInput').value;
+    let selectedTime = document.getElementById('dlModalTimeInput').value;
+
+    if (!selectedDate) {
+        alert("Please select a valid date.");
+        return;
+    }
+
     record.addedAt = new Date().toLocaleString();
-    record.followUpDate = document.getElementById('dlModalDateInput').value;
-    record.followUpTime = document.getElementById('dlModalTimeInput').value;
+    record.followUpDate = selectedDate;
+    record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+    record.sharedBy = dispatcherNickname;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up`, 3500);
+    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
+    
+    if (pendingFollowUpRowBtn) {
+        let row = pendingFollowUpRowBtn.closest('tr');
+        if (row) row.style.background = "#d4edda";
+    }
+
     closeFollowUpModal();
+    if (document.getElementById('dlFollowUpDrawer').style.right === "0px") renderFollowUpItems();
 };
+
+function formatTime12Hour(time24) {
+    let parts = time24.split(':');
+    let hours = parseInt(parts[0]);
+    let minutes = parts[1];
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutes} ${ampm}`;
+}
 
 window.toggleFollowUpDrawer = function() {
     let drawer = document.getElementById('dlFollowUpDrawer');
-    if (drawer) drawer.style.right = drawer.style.right === "0px" ? "-420px" : "0px";
+    let historyDrawer = document.getElementById('dlHistoryDrawer');
+    if (!drawer) return;
+    
+    if(historyDrawer) historyDrawer.style.right = "-420px"; 
+    
+    if (drawer.style.right === "0px") {
+        drawer.style.right = "-420px";
+    } else {
+        drawer.style.right = "0px";
+        let searchInput = document.getElementById('followUpSearchInput');
+        if(searchInput) searchInput.value = ""; 
+        currentFollowUpFilterMode = 'today';
+        updateFollowUpFilterButtonsUI();
+        renderFollowUpItems(); 
+    }
 };
 
 window.filterFollowUpsByDate = function(mode) {
     currentFollowUpFilterMode = mode;
+    updateFollowUpFilterButtonsUI();
+    renderFollowUpItems();
 };
 
+function updateFollowUpFilterButtonsUI() {
+    let btnToday = document.getElementById('fubtnToday');
+    let btnAll = document.getElementById('fubtnAll');
+    if (!btnToday || !btnAll) return;
+
+    if (currentFollowUpFilterMode === 'today') {
+        btnToday.style.background = "#17a2b8";
+        btnToday.style.color = "white";
+        btnToday.style.border = "none";
+        btnAll.style.background = "#e2eafc";
+        btnAll.style.color = "#002d62";
+        btnAll.style.border = "1px solid #b6ccfe";
+    } else {
+        btnAll.style.background = "#17a2b8";
+        btnAll.style.color = "white";
+        btnAll.style.border = "none";
+        btnToday.style.background = "#e2eafc";
+        btnToday.style.color = "#002d62";
+        btnToday.style.border = "1px solid #b6ccfe";
+    }
+}
+
 window.clearFollowUpFilters = function() {
+    let searchInput = document.getElementById('followUpSearchInput');
+    if(searchInput) searchInput.value = "";
+    currentFollowUpFilterMode = 'all';
+    updateFollowUpFilterButtonsUI();
     renderFollowUpItems();
 };
 
 window.deleteFollowUpItem = function(mcNumber) {
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
-    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+    if (confirm("Remove carrier from Follow-Ups?")) {
+        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+        followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
+        localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+        renderFollowUpItems();
+        
+        let tableRows = document.querySelectorAll('#resultsTable tr');
+        tableRows.forEach(row => {
+            let cellMc = parseInt(row.cells[0]?.textContent);
+            if (cellMc === mcNumber) row.style.background = "";
+        });
+    }
 };
 
 window.downloadFollowUpsCSV = function() {
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    triggerCSVDownload(followUpStore, `FollowUps.csv`);
+    if (followUpStore.length === 0) return alert("The follow-up list is currently empty.");
+    triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
+};
+
+// ====== IN-TOOL ACTIVE LAPTOP TEAM SHARING ENGINE ======
+let pendingShareRecords = [];
+
+window.openTeamShareModal = async function(recordsToShare) {
+    if (!recordsToShare || recordsToShare.length === 0) return;
+    pendingShareRecords = recordsToShare;
+
+    let radioListDiv = document.getElementById('dlTeamMembersRadioList');
+    if (!radioListDiv) return;
+    radioListDiv.innerHTML = `<div style="text-align: center; color: #6c757d; font-size: 12px; padding: 15px;">Loading active online laptops...</div>`;
+
+    let tModal = document.getElementById('dlTeamSelectModal');
+    if (tModal) tModal.style.display = 'flex';
+
+    try {
+        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
+        let sessionsData = await res.json() || {};
+        
+        let activeMembers = [];
+        let now = Date.now();
+
+        Object.keys(sessionsData).forEach(key => {
+            let s = sessionsData[key];
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < 25000)) {
+                if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
+                    activeMembers.push(s.nickname);
+                }
+            }
+        });
+
+        if (activeMembers.length === 0) {
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other active team members online right now.</div>`;
+            return;
+        }
+
+        let html = "";
+        activeMembers.forEach((name, idx) => {
+            let checkedAttr = idx === 0 ? "checked" : "";
+            html += `
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
+                    <input type="radio" name="teamMemberRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
+                    <span>💻 <b>${name}</b> (Online)</span>
+                </label>
+            `;
+        });
+        radioListDiv.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to fetch active sessions:", e);
+        radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px;">Error loading active laptops.</div>`;
+    }
+};
+
+window.closeTeamSelectModal = function() {
+    let tModal = document.getElementById('dlTeamSelectModal');
+    if (tModal) tModal.style.display = 'none';
+    pendingShareRecords = [];
+};
+
+window.confirmTeamShareAction = async function() {
+    let selectedRadio = document.querySelector('input[name="teamMemberRadio"]:checked');
+    if (!selectedRadio) {
+        return alert("Please select a team member from the list.");
+    }
+
+    let targetName = selectedRadio.value;
+    pendingShareRecords.forEach(r => r.sharedBy = dispatcherNickname);
+
+    try {
+        let shareUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${targetName}.json`;
+        let res = await fetch(shareUrl);
+        let existingList = await res.json() || [];
+        if (!Array.isArray(existingList)) existingList = [];
+
+        let addedCount = 0;
+        pendingShareRecords.forEach(rec => {
+            if (!existingList.some(r => r.mc === rec.mc)) {
+                existingList.push(rec);
+                addedCount++;
+            }
+        });
+
+        if (addedCount > 0) {
+            await fetch(shareUrl, {
+                method: 'PUT',
+                body: JSON.stringify(existingList)
+            });
+            showPremiumNotification(`✅ Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
+            
+            document.querySelectorAll('.followup-select-checkbox:checked').forEach(cb => cb.checked = false);
+        } else {
+            alert(`Selected lead(s) are already present in ${targetName}'s shared inbox.`);
+        }
+        closeTeamSelectModal();
+    } catch (e) {
+        console.error("Team share action failed:", e);
+        alert("Failed to share leads with team member. Check connection.");
+    }
+};
+
+window.shareSingleFollowUpToTeam = function(record) {
+    openTeamShareModal([record]);
+};
+
+window.shareSelectedFollowUpsToTeam = function() {
+    let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        return alert("Please select at least one follow-up record to share with your team.");
+    }
+
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
+
+    openTeamShareModal(selectedRecords);
+};
+
+async function pollIncomingSharedLeads() {
+    if (!currentClient || !dispatcherNickname) return;
+    try {
+        let inboxUrl = `${FIREBASE_DB_URL}shared_leads/${currentClient}/${dispatcherNickname}.json`;
+        let res = await fetch(inboxUrl);
+        let sharedLeads = await res.json() || [];
+        if (!Array.isArray(sharedLeads) || sharedLeads.length === 0) return;
+
+        let localFollowUps = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+        let newLeadsAdded = false;
+
+        sharedLeads.forEach(lead => {
+            if (!localFollowUps.some(r => r.mc === lead.mc)) {
+                localFollowUps.push(lead);
+                newLeadsAdded = true;
+            }
+        });
+
+        if (newLeadsAdded) {
+            localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(localFollowUps));
+            showPremiumNotification(`📥 You received new shared follow-up leads from your team!`, 5000);
+            if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
+                renderFollowUpItems();
+            }
+            await fetch(inboxUrl, { method: 'DELETE' });
+        }
+    } catch (e) {
+        console.error("Polling shared leads failed:", e);
+    }
+}
+
+setInterval(pollIncomingSharedLeads, 10000);
+
+function renderFollowUpItems() {
+    const listContainer = document.getElementById('drawerFollowUpList');
+    if (!listContainer) return;
+
+    let data = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    data = data.reverse(); 
+
+    let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
+    let todayDateStr = new Date().toISOString().split('T')[0];
+
+    if (data.length === 0) {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
+        return;
+    }
+
+    let itemsHTML = "";
+    let matchCount = 0;
+
+    data.forEach(item => {
+        let fuDate = item.followUpDate || "N/A";
+        let fuTime = item.followUpTime || "N/A";
+
+        if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) {
+            return;
+        }
+
+        let mcString = (item.mc || "").toString().toLowerCase();
+        let nameString = (item.name || "").toLowerCase();
+        let phoneString = (item.phone || "").toLowerCase();
+
+        if (filterQuery !== "") {
+            let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
+            if (!textMatches) return;
+        }
+
+        matchCount++;
+        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
+
+        itemsHTML += `
+            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
+                    <span>Saved: ${item.addedAt}</span>
+                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
+                    ${senderTag}
+                </div>
+                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
+                    <b>Remarks:</b> ${item.remarks || 'No remarks added'}
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
+                </div>
+            </div>
+        `;
+    });
+
+    if (matchCount === 0) {
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
+    } else {
+        listContainer.innerHTML = itemsHTML;
+    }
+
+    if (!document.getElementById('dlBulkFollowUpActionBar')) {
+        let actionBar = document.createElement('div');
+        actionBar.id = 'dlBulkFollowUpActionBar';
+        actionBar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; align-items: center; background: #e2eafc; padding: 6px; border-radius: 4px; font-size: 11px;";
+        actionBar.innerHTML = `
+            <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
+                <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
+            </label>
+            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
+        `;
+        listContainer.parentNode.insertBefore(actionBar, listContainer);
+    }
+
+    let itemDivs = listContainer.querySelectorAll('div[style*="border-left"]');
+    itemDivs.forEach((div, idx) => {
+        if (!div.querySelector('.followup-select-checkbox')) {
+            let record = data[idx];
+            if (!record) return;
+
+            let topHeader = div.querySelector('div');
+            if (topHeader) {
+                let checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'followup-select-checkbox';
+                checkbox.value = record.mc;
+                checkbox.style.cssText = "margin-right: 6px; cursor: pointer;";
+                topHeader.insertBefore(checkbox, topHeader.firstChild);
+            }
+
+            let btnContainer = div.querySelector('div[style*="justify-content: flex-end"]');
+            if (btnContainer && !btnContainer.querySelector('.single-team-share-btn')) {
+                let teamBtn = document.createElement('button');
+                teamBtn.className = 'single-team-share-btn';
+                teamBtn.innerHTML = "👥 Share";
+                teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
+                teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
+                btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
+            }
+        }
+    });
+}
+
+window.toggleSelectAllFollowUps = function(masterCheckbox) {
+    let checkboxes = document.querySelectorAll('.followup-select-checkbox');
+    checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
 };
 
 // Remarks Handlers
 window.remarksFocus = function(index, textarea) {
     if (!textarea.value || textarea.value.trim() === "") {
         textarea.value = DEFAULT_REMARKS_TEMPLATE;
+        if (scrapedData[index]) scrapedData[index].remarks = DEFAULT_REMARKS_TEMPLATE;
     }
 };
 
 window.remarksBlur = function(index, textarea) {
-    if (!textarea.value.trim()) textarea.value = "";
+    let lines = textarea.value.split('\n');
+    const linesCheck = ["Truck Type:", "Length:", "Accessories:", "Load:", "Zip Code:", "Summary:"];
+    let hasData = false;
+    
+    for(let i = 0; i < 6; i++) {
+        if (lines[i]) {
+            let data = lines[i].replace(linesCheck[i], "").trim();
+            if (data !== "") { hasData = true; break; }
+        }
+    }
+
+    if (!hasData) {
+        textarea.value = "";
+        if (scrapedData[index]) {
+            scrapedData[index].remarks = "";
+            updateRealTimeHistory(scrapedData, false);
+        }
+    }
 };
 
 window.syncRemarksData = function(index, textarea) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = textarea.value;
+        updateRealTimeHistory(scrapedData, false);
     }
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
     recordsData.forEach(r => {
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${(r.remarks || '').replace(/"/g, '""')}"\n`;
+        let safeRemarks = r.remarks || "";
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
 
 window.toggleHistoryDrawer = function() {
     let drawer = document.getElementById('dlHistoryDrawer');
-    if (drawer) drawer.style.right = drawer.style.right === "0px" ? "-420px" : "0px";
+    let followUpDrawer = document.getElementById('dlFollowUpDrawer');
+    if (!drawer) return;
+    
+    if(followUpDrawer) followUpDrawer.style.right = "-420px"; 
+    
+    if (drawer.style.right === "0px") {
+        drawer.style.right = "-420px";
+    } else {
+        drawer.style.right = "0px";
+        renderHistoryItems();
+    }
 };
 
-function renderHistoryItems() {}
-window.loadHistorySheetToTable = function() {};
-window.downloadHistoryCSV = function() {};
-window.deleteHistoryItem = function() {};
+function renderHistoryItems() {
+    if (!db) return;
+    const listContainer = document.getElementById('drawerHistoryList');
+    if (!listContainer) return;
+
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const getAll = store.getAll();
+
+    getAll.onsuccess = function() {
+        let data = getAll.result || [];
+        if (data.length === 0) {
+            data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        }
+        data = data.reverse();
+
+        if (data.length === 0) {
+            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
+            return;
+        }
+
+        let itemsHTML = "";
+        data.forEach(item => {
+            let displayStatus = item.status === "Interrupted (Auto-Saved)"
+                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
+                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
+
+            itemsHTML += `
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                    <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="font-size: 12px; margin-bottom: 6px;">Status: ${displayStatus}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
+                        <div style="display: flex; gap: 4px;">
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">📂 Open</button>
+                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;"'}>📥 CSV</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        listContainer.innerHTML = itemsHTML;
+    };
+}
+
+window.loadHistorySheetToTable = async function(id) {
+    const tx = db.transaction("history", "readonly");
+    const req = tx.objectStore("history").get(id);
+
+    req.onsuccess = async function() {
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
+        if (!item || !item.records) return;
+        
+        scrapedData = item.records; 
+        currentHistoryId = item.id;
+
+        const tableBody = document.getElementById('resultsTable');
+        tableBody.innerHTML = '';
+        
+        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+
+        for (let index = 0; index < scrapedData.length; index++) {
+            let record = scrapedData[index];
+            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            let phoneCellHTML = buildPhoneCellMarkup(record.phone);
+            
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
+            let activeRemarksValue = record.remarks || "";
+
+            tableBody.innerHTML += `<tr ${rowStyleHTML}>
+                <td><b>${record.mc}</b></td>
+                <td>${record.usdot}</td>
+                <td>${record.name}</td>
+                <td>${record.entityType}</td>
+                <td><span class="badge badge-active">${record.status}</span></td>
+                ${phoneCellHTML}
+                <td>${record.address}</td> 
+                ${emailCellHTML}
+                <td>${record.powerUnits}</td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                </td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+            </tr>`;
+        }
+        populateStateDropdown();
+        toggleHistoryDrawer(); 
+    };
+};
+
+window.downloadHistoryCSV = function(id) {
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const req = store.get(id);
+    req.onsuccess = function() {
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
+        if (item && item.records.length > 0) {
+            triggerCSVDownload(item.records, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
+        }
+    };
+};
+
+window.deleteHistoryItem = function(id) {
+    if (confirm("Delete this sheet from history?")) {
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.delete(id);
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup = lsBackup.filter(r => r.id !== id);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+            renderHistoryItems();
+        };
+    }
+};
 
 function triggerCSVDownload(recordsData, filename) {
     const csv = generateCSVString(recordsData);
@@ -1028,13 +1870,34 @@ function triggerCSVDownload(recordsData, filename) {
     link.click();
 }
 
-function updateRealTimeHistory() {}
+function updateRealTimeHistory(recordsArray, isCompleted = false) {
+    if (!db || currentHistoryId === null) return;
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const req = store.get(currentHistoryId);
+    req.onsuccess = function() {
+        const data = req.result;
+        if (data) {
+            data.totalRecords = recordsArray.length;
+            data.records = recordsArray;
+            data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
+            
+            store.put(data);
+            
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            let index = lsBackup.findIndex(r => r.id === currentHistoryId);
+            if (index !== -1) {
+                lsBackup[index] = data;
+            } else {
+                lsBackup.push(data);
+            }
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+        }
+    };
+}
 
-// ====== BATCH CONCURRENT PROCESSING ENGINE WITH RETRY & RESUME ======
-let scraping = false; 
-let scrapedData = [];
-let lastScannedIndex = null;
-
+// ====== BATCH CONCURRENT PROCESSING ENGINE WITH ROBUST ERROR HANDLING & AUTO-RETRY ======
+let scraping = false; let scrapedData = [];
 window.stopScraping = function() {
     scraping = false;
     let statusBox = document.getElementById('status');
@@ -1042,99 +1905,96 @@ window.stopScraping = function() {
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
         statusBox.style.padding = "10px 15px";
-        statusBox.innerText = "Paused / Stopped. Click Resume to continue.";
-    }
-    let startBtn = document.getElementById('startBtn');
-    if(startBtn) {
-        startBtn.innerText = "▶ Resume Scraper";
-        startBtn.style.display = 'inline-block';
-    }
-    let stopBtn = document.getElementById('stopBtn');
-    if(stopBtn) stopBtn.style.display = 'none';
-}
-
-async function fetchWithRetry(url, retries = 3, delay = 1000) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            let response = await fetch(url);
-            if (response.ok) return await response.text();
-            throw new Error(`HTTP Error: ${response.status}`);
-        } catch (err) {
-            if (i === retries - 1) throw err;
-            await new Promise(res => setTimeout(res, delay * (i + 1)));
-        }
+        statusBox.innerText = "Paused / Stopped safely. You can resume anytime.";
     }
 }
 
-async function processSingleMC(mc) {
-    try {
-        const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
-        let htmlText;
+async function processSingleMCWithRetry(mc, retries = 2) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-            htmlText = await fetchWithRetry(snapshotUrl);
-        } catch (netErr) {
-            return { error: `SAFER Connection Error: ${netErr.message}` };
-        }
-
-        if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
-            return null;
-        }
-
-        let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
-        let el = document.createElement('html');
-        el.innerHTML = htmlText;
-        let cells = el.querySelectorAll('td, th');
-
-        for (let i = 0; i < cells.length; i++) {
-            let text = cells[i].textContent.trim();
-            if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
-                if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+            const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
+            const response = await fetch(snapshotUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP Error Status: ${response.status}`);
             }
-            if (text.startsWith("USDOT Number:")) {
-                if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+
+            const htmlText = await response.text();
+
+            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
+                return null; // Valid non-existent record response
             }
-            if (text.startsWith("Entity Type:")) {
-                if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-            }
-            if (text.startsWith("Operating Authority Status:")) {
-                if (cells[i+1]) {
-                    let rawStatus = cells[i+1].textContent.toUpperCase();
-                    if (rawStatus.includes("NOT AUTHORIZED")) {
-                        record.status = "NOT AUTHORIZED";
-                    } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
-                        record.status = "AUTHORIZED";
-                    } else {
-                        record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let el = document.createElement('html');
+            el.innerHTML = htmlText;
+            let cells = el.querySelectorAll('td, th');
+
+            for (let i = 0; i < cells.length; i++) {
+                let text = cells[i].textContent.trim();
+                if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
+                    if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("USDOT Number:")) {
+                    if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+                }
+                if (text.startsWith("Entity Type:")) {
+                    if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("Operating Authority Status:")) {
+                    if (cells[i+1]) {
+                        let rawStatus = cells[i+1].textContent.toUpperCase();
+                        if (rawStatus.includes("NOT AUTHORIZED")) {
+                            record.status = "NOT AUTHORIZED";
+                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
+                            record.status = "AUTHORIZED";
+                        } else {
+                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+                        }
                     }
                 }
-            }
-            if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-            if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-            if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
-                if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-            }
-        }
-
-        if (record.status !== "AUTHORIZED") { return null; }
-
-        if (record.usdot !== 'N/A') {
-            try {
-                const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
-                const smsHtml = await fetchWithRetry(smsUrl, 2, 500);
-                let smsEl = document.createElement('html');
-                smsEl.innerHTML = smsHtml;
-                let smsCells = smsEl.querySelectorAll('td, th, span, label');
-                for (let j = 0; j < smsCells.length; j++) {
-                    let smsText = smsCells[j].textContent.trim();
-                    let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                    if (emailMatch) { record.email = emailMatch[0]; break; }
+                if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
+                    if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
                 }
-            } catch (smsErr) {}
+            }
+
+            if (record.status !== "AUTHORIZED") { return null; }
+
+            if (record.usdot !== 'N/A') {
+                try {
+                    const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
+                    const smsResponse = await fetch(smsUrl);
+                    if (smsResponse.ok) {
+                        const smsHtml = await smsResponse.text();
+                        let smsEl = document.createElement('html');
+                        smsEl.innerHTML = smsHtml;
+                        let smsCells = smsEl.querySelectorAll('td, th, span, label');
+                        for (let j = 0; j < smsCells.length; j++) {
+                            let smsText = smsCells[j].textContent.trim();
+                            if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
+                                let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                                if (emailMatch) { record.email = emailMatch[0]; break; }
+                            }
+                        }
+                    }
+                } catch (smsErr) { 
+                    console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
+                }
+            }
+            return record;
+
+        } catch (err) {
+            console.warn(`Attempt ${attempt} failed for MC ${mc}:`, err.message);
+            if (attempt === retries) {
+                console.error(`Failed permanently for MC ${mc} after ${retries} attempts due to:`, err.message);
+                return { error: true, mc: mc, message: err.message };
+            }
+            await new Promise(r => setTimeout(r, 1000 * attempt)); // Exponential backoff delay
         }
-        return record;
-    } catch (e) {
-        return { error: e.message };
     }
+    return null;
 }
 
 window.startScraping = async function() {
@@ -1146,9 +2006,7 @@ window.startScraping = async function() {
         return;
     }
 
-    scraping = true;
-    let startFrom = lastScannedIndex !== null ? lastScannedIndex : start;
-
+    scraping = true; scrapedData = [];
     document.getElementById('startBtn').style.display = 'none';
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
     if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
@@ -1156,9 +2014,11 @@ window.startScraping = async function() {
     document.getElementById('downloadBtn').style.display = 'none';
 
     const tableBody = document.getElementById('resultsTable');
+    tableBody.innerHTML = '';
 
-    let totalToScan = (end - start) + 1;
+    let totalToScan = end - start + 1;
     let totalProcessed = 0;
+    let errorCount = 0;
     let startTime = Date.now();
 
     let statusBox = document.getElementById('status');
@@ -1175,21 +2035,43 @@ window.startScraping = async function() {
         statusBox.style.borderRadius = "4px";
     }
 
+    if (db) {
+        const now = new Date();
+        const formattedDate = now.toLocaleString('en-US', { hour12: true });
+
+        const initialHistoryItem = {
+            id: Date.now(),
+            date: formattedDate,
+            range: `${start} - ${end}`,
+            totalRecords: 0,
+            status: "Interrupted (Auto-Saved)",
+            records: []
+        };
+
+        currentHistoryId = initialHistoryItem.id;
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.add(initialHistoryItem);
+        
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup.push(initialHistoryItem);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+        };
+    }
+
     let mcQueue = [];
-    for (let mc = startFrom; mc <= end; mc++) {
+    for (let mc = start; mc <= end; mc++) {
         mcQueue.push(mc);
     }
 
-    const BATCH_SIZE = 2; // Safer batch size to avoid FMCSA rate-limit blocks
+    const BATCH_SIZE = 3;
     
     for (let i = 0; i < mcQueue.length; i += BATCH_SIZE) {
-        if (!scraping) {
-            lastScannedIndex = mcQueue[i];
-            break;
-        }
+        if (!scraping) break;
 
         let batch = mcQueue.slice(i, i + BATCH_SIZE);
-        let promises = batch.map(mc => processSingleMC(mc));
+        let promises = batch.map(mc => processSingleMCWithRetry(mc));
         let results = await Promise.all(promises);
 
         for (let record of results) {
@@ -1197,13 +2079,15 @@ window.startScraping = async function() {
             if (!scraping) break;
 
             if (record && record.error) {
-                if(statusBox) statusBox.innerHTML = `<span style="color:#dc3545; font-size:12px;">⚠️ ${record.error} (Retried & continuing...)</span>`;
+                errorCount++;
+                console.error(`Network or fetch error encountered on MC ${record.mc}: ${record.message}`);
                 continue;
             }
 
             if (record) {
                 scrapedData.push(record);
                 let recordIndex = scrapedData.length - 1;
+                updateRealTimeHistory(scrapedData, false);
 
                 let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
                 let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
@@ -1231,19 +2115,19 @@ window.startScraping = async function() {
 
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
         let elapsedSeconds = (Date.now() - startTime) / 1000;
-        let avgTimePerMC = elapsedSeconds / (totalProcessed || 1);
+        let avgTimePerMC = elapsedSeconds / totalProcessed;
         let remainingMCs = totalToScan - totalProcessed;
         let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
 
         let mins = Math.floor(estimatedRemainingSeconds / 60);
         let secs = Math.floor(estimatedRemainingSeconds % 60);
-        let timeString = totalProcessed < 3 ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
+        let timeString = totalProcessed < 5 ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
                 <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processed ${totalProcessed} / ${totalToScan} MCs...</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processed ${totalProcessed} / ${totalToScan} MCs... ${errorCount > fnGetSafeErrCount(errorCount) ? '' : `<span style="color:#d9534f; font-size:11px;">(Errors: ${errorCount})</span>`}</div>
                     <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
                 </div>
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -1258,32 +2142,26 @@ window.startScraping = async function() {
         await new Promise(r => setTimeout(r, 600));
     }
 
-    if (scraping) {
-        scraping = false;
-        lastScannedIndex = null;
-        let startBtn = document.getElementById('startBtn');
-        if(startBtn) {
-            startBtn.innerText = "Start Scraper";
-            startBtn.style.display = 'inline-block';
-        }
-        if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
-        if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
-        let stopBtn = document.getElementById('stopBtn');
-        if(stopBtn) stopBtn.style.display = 'none';
+    scraping = false;
+    document.getElementById('startBtn').style.display = 'inline-block';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'none';
 
-        if (statusBox) {
-            statusBox.style.padding = "15px";
-            statusBox.style.display = "flex";
-            statusBox.style.borderLeft = "5px solid #28a745";
-            statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
-        }
+    if (statusBox) {
+        statusBox.style.padding = "15px";
+        statusBox.style.display = "flex";
+        statusBox.style.borderLeft = "5px solid #28a745";
+        statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records. ${errorCount > 0 ? `(${errorCount} connection warnings handled)` : ''}</strong>`;
+    }
 
-        if(scrapedData.length > 0) {
-            let dlBtn = document.getElementById('downloadBtn');
-            if(dlBtn) dlBtn.style.display = 'inline-block';
-        }
+    if(scrapedData.length > 0) {
+        document.getElementById('downloadBtn').style.display = 'inline-block';
+        updateRealTimeHistory(scrapedData, true);
     }
 }
+
+function fnGetSafeErrCount(c) { return c; }
 
 window.downloadCSV = function() {
     if(scrapedData.length > 0) {
