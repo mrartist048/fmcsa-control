@@ -1,4 +1,4 @@
-// ====== DYNAMIC FAVICON INJECTOR ======
+// ====== DYNAMIC FAVICON INCORPORATOR ======
 (function injectFavicon() {
     const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png";
     let link = document.querySelector("link[rel*='icon']");
@@ -276,6 +276,7 @@ async function checkGlobalSessions() {
     if (userLimit === 0 || currentClient === "unknown") return;
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
+    const loginTimeString = new Date().toLocaleTimeString();
     
     try {
         const res = await fetch(url);
@@ -315,7 +316,7 @@ async function checkGlobalSessions() {
         } else {
             let postRes = await fetch(url, {
                 method: 'POST',
-                body: JSON.stringify({ id: window.name, nickname: dispatcherNickname, timestamp: now })
+                body: JSON.stringify({ id: window.name, nickname: dispatcherNickname, timestamp: now, loginTime: loginTimeString })
             });
             let postData = await postRes.json();
             if (postData && postData.name) {
@@ -934,7 +935,7 @@ window.openCallingDetailModal = function() {
     document.body.appendChild(modal);
 }
 
-// 👑 Advanced Admin Panel with Leaderboard & Performance Metrics
+// 👑 Advanced Admin Panel with Live Online Status, Leaderboard & Reports
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -954,13 +955,13 @@ async function renderAdvancedAdminModal() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 550px; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: white; width: 580px; max-height: 88vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Leaderboard</h3>
+                <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d;">
-                Loading team performance metrics...
+                Loading live team status and reports...
             </div>
             <div style="background: #f8f9fa; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
                 <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">📥 Export CSV Report</button>
@@ -971,20 +972,53 @@ async function renderAdvancedAdminModal() {
     document.body.appendChild(modal);
 
     try {
-        let reportsUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`;
-        let res = await fetch(reportsUrl);
-        let reportsData = await res.json() || [];
+        // Fetch Live Sessions and Shift Reports simultaneously
+        let [sessionsRes, reportsRes] = await Promise.all([
+            fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+            fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`)
+        ]);
+
+        let sessionsData = await sessionsRes.json() || {};
+        let reportsData = await reportsRes.json() || [];
 
         window.cachedAdminReports = Array.isArray(reportsData) ? reportsData : [];
         let bodyContainer = document.getElementById('adminReportsModalBody');
         if (!bodyContainer) return;
 
-        if (window.cachedAdminReports.length === 0) {
-            bodyContainer.innerHTML = `<p style="text-align: center; color: #6c757d; padding: 30px;">No shift reports received yet.</p>`;
-            return;
-        }
+        // 1. Live Online Status Section
+        let now = Date.now();
+        let activeUsersHtml = `
+            <h4 style="color: #002d62; text-align: left; margin-top: 0; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">🟢 Live Online Team Status</h4>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px;">
+        `;
 
-        // Aggregate Performance Leaderboard
+        let activeCount = 0;
+        Object.keys(sessionsData).forEach(key => {
+            let s = sessionsData[key];
+            if (s && s.nickname && s.timestamp) {
+                let isOnline = (now - s.timestamp < 25000);
+                if (isOnline) {
+                    activeCount++;
+                    let lastActiveTime = new Date(s.timestamp).toLocaleTimeString();
+                    activeUsersHtml += `
+                        <div style="background: #e8f5e9; border: 1px solid #c8e6c9; padding: 8px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; text-align: left; font-size: 12px;">
+                            <div>
+                                <span style="color: #2e7d32; font-weight: bold;">🟢 ${s.nickname}</span> (Online)
+                                <div style="color: #666; font-size: 11px; margin-top: 2px;">Login Time: <b>${s.loginTime || 'N/A'}</b></div>
+                            </div>
+                            <div style="color: #555; font-size: 11px;">Last Heartbeat: ${lastActiveTime}</div>
+                        </div>
+                    `;
+                }
+            }
+        });
+
+        if (activeCount === 0) {
+            activeUsersHtml += `<div style="text-align: left; color: #6c757d; font-size: 12px; font-style: italic; padding: 6px;">No dispatchers currently online.</div>`;
+        }
+        activeUsersHtml += `</div>`;
+
+        // 2. Leaderboard Section
         let perfMap = {};
         window.cachedAdminReports.forEach(rep => {
             let name = rep.sender || "Unknown";
@@ -1003,66 +1037,74 @@ async function renderAdvancedAdminModal() {
             }
         });
 
-        // Sort by Total Calls descending (Leaderboard)
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
 
         let leaderHtml = `
-            <h4 style="color: #002d62; text-align: left; margin-top: 0; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">🏆 Team Leaderboard (Performance Ranking)</h4>
+            <h4 style="color: #002d62; text-align: left; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">🏆 Team Leaderboard (Performance Ranking)</h4>
             <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 25px;">
         `;
 
-        sortedLeaderboard.forEach((name, idx) => {
-            let stats = perfMap[name];
-            let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `<b>#${idx+1}</b>`;
-            leaderHtml += `
-                <div style="background: #f4f7fe; border: 1px solid #b6ccfe; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left;">
-                    <div>
-                        <span style="font-size: 16px; margin-right: 6px;">${medal}</span>
-                        <b style="color: #002d62; font-size: 14px;">${name}</b>
-                        <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts Logged: ${stats.shiftsCount}</div>
+        if (sortedLeaderboard.length === 0) {
+            leaderHtml += `<div style="text-align: left; color: #6c757d; font-size: 12px; font-style: italic; padding: 6px;">No performance data available yet.</div>`;
+        } else {
+            sortedLeaderboard.forEach((name, idx) => {
+                let stats = perfMap[name];
+                let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `<b>#${idx+1}</b>`;
+                leaderHtml += `
+                    <div style="background: #f4f7fe; border: 1px solid #b6ccfe; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; text-align: left;">
+                        <div>
+                            <span style="font-size: 16px; margin-right: 6px;">${medal}</span>
+                            <b style="color: #002d62; font-size: 14px;">${name}</b>
+                            <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts Logged: ${stats.shiftsCount}</div>
+                        </div>
+                        <div style="display: flex; gap: 10px; font-size: 12px;">
+                            <span style="background: #002d62; color: white; padding: 3px 8px; border-radius: 4px;">Calls: <b>${stats.totalCalls}</b></span>
+                            <span style="background: #4caf50; color: white; padding: 3px 8px; border-radius: 4px;">Sales: <b>${stats.sales}</b></span>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; font-size: 12px;">
-                        <span style="background: #002d62; color: white; padding: 3px 8px; border-radius: 4px;">Calls: <b>${stats.totalCalls}</b></span>
-                        <span style="background: #4caf50; color: white; padding: 3px 8px; border-radius: 4px;">Sales: <b>${stats.sales}</b></span>
-                    </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
         leaderHtml += `</div>`;
 
+        // 3. Shift Reports Submissions Section
         let reportsHtml = `<h4 style="color: #002d62; text-align: left; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">📋 Detailed Shift Submissions</h4>`;
         
-        window.cachedAdminReports.slice().reverse().forEach(rep => {
-            let vms = rep.logs ? rep.logs.filter(l => l.status === 'Voicemail').length : 0;
-            let hps = rep.logs ? rep.logs.filter(l => l.status === 'Hung Up').length : 0;
-            let ints = rep.logs ? rep.logs.filter(l => l.status === 'Interested').length : 0;
-            let fus = rep.logs ? rep.logs.filter(l => l.status === 'Follow up').length : 0;
-            let sales = rep.logs ? rep.logs.filter(l => l.status === 'Sale').length : 0;
+        if (window.cachedAdminReports.length === 0) {
+            reportsHtml += `<div style="text-align: left; color: #6c757d; font-size: 12px; font-style: italic; padding: 6px;">No shift reports received yet.</div>`;
+        } else {
+            window.cachedAdminReports.slice().reverse().forEach(rep => {
+                let vms = rep.logs ? rep.logs.filter(l => l.status === 'Voicemail').length : 0;
+                let hps = rep.logs ? rep.logs.filter(l => l.status === 'Hung Up').length : 0;
+                let ints = rep.logs ? rep.logs.filter(l => l.status === 'Interested').length : 0;
+                let fus = rep.logs ? rep.logs.filter(l => l.status === 'Follow up').length : 0;
+                let sales = rep.logs ? rep.logs.filter(l => l.status === 'Sale').length : 0;
 
-            reportsHtml += `
-                <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; text-align: left;">
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 4px;">
-                        <span>👤 Dispatcher: ${rep.sender}</span>
-                        <span style="color: #6c757d;">📅 Shift: ${rep.date}</span>
+                reportsHtml += `
+                    <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; text-align: left;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 4px;">
+                            <span>👤 Dispatcher: ${rep.sender}</span>
+                            <span style="color: #6c757d;">📅 Shift: ${rep.date}</span>
+                        </div>
+                        <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                            <div>📞 Total: <b>${rep.totalCalls}</b></div>
+                            <div>🟣 VM: <b>${vms}</b></div>
+                            <div>🔴 HU: <b>${hps}</b></div>
+                            <div>🟡 Int: <b>${ints}</b></div>
+                            <div>🔵 FU: <b>${fus}</b></div>
+                            <div style="color: #4caf50;">🟢 Sale: <b>${sales}</b></div>
+                        </div>
                     </div>
-                    <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
-                        <div>📞 Total: <b>${rep.totalCalls}</b></div>
-                        <div>🟣 VM: <b>${vms}</b></div>
-                        <div>🔴 HU: <b>${hps}</b></div>
-                        <div>🟡 Int: <b>${ints}</b></div>
-                        <div>🔵 FU: <b>${fus}</b></div>
-                        <div style="color: #4caf50;">🟢 Sale: <b>${sales}</b></div>
-                    </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
 
-        bodyContainer.innerHTML = leaderHtml + reportsHtml;
+        bodyContainer.innerHTML = activeUsersHtml + leaderHtml + reportsHtml;
     } catch (e) {
-        console.error("Failed to load admin shift reports:", e);
+        console.error("Failed to load admin monitoring dashboard:", e);
         let bodyContainer = document.getElementById('adminReportsModalBody');
-        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load reports from database.</p>`;
+        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load data from database.</p>`;
     }
 }
 
