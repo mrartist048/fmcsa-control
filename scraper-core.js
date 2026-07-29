@@ -20,7 +20,7 @@ const allowedUsers = {
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
-const MASTER_ADMIN_PASS = "admin890";
+const MASTER_ADMIN_PASS = "admin890"; // <-- Yahan apna Admin Password set karein
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
@@ -140,6 +140,7 @@ window.processLogin = function() {
     initializeAccessControl();
 };
 
+// ====== DISPATCHER IDENTITY SETUP & SMART SHIFT DATE ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
@@ -650,12 +651,23 @@ function populateStateDropdown() {
         return nameA.localeCompare(nameB);
     });
 
+    let maxLabelLength = 0;
+    sortedCodes.forEach(code => {
+        let fullName = usStatesMap[code] || code;
+        let label = `${fullName} (${code})`;
+        if (label.length > maxLabelLength) maxLabelLength = label.length;
+    });
+
     sortedCodes.forEach(code => {
         let fullName = usStatesMap[code] || code;
         let count = stateCounts[code];
+        let label = `${fullName} (${code})`;
+        let paddingLength = Math.max(2, maxLabelLength - label.length + 4);
+        let spaces = "\u00A0".repeat(paddingLength);
+        
         let opt = document.createElement('option');
         opt.value = code;
-        opt.textContent = `${fullName} (${code}) — ${count}`;
+        opt.textContent = `${label}${spaces}${count}`;
         select.appendChild(opt);
     });
     select.value = currentVal;
@@ -709,6 +721,7 @@ function updateVisibleRecordCount() {
     if (badge) badge.innerText = visibleCount;
 }
 
+// ====== EMAIL PROPOSAL TEMPLATE PANEL ======
 function injectEmailProposalPanel() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('premiumProposalWrapper')) return;
@@ -747,7 +760,16 @@ window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
     let customizedBody = body.replace(/{company}/gi, companyName);
 
     let mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
-    window.open(mailtoUrl, '_blank');
+    let gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${emailAddress}&su=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`;
+
+    let activeWindow = window.open(mailtoUrl, '_blank');
+    setTimeout(() => {
+        try {
+            if (!activeWindow || activeWindow.location.href === 'about:blank' || activeWindow.document.body.innerHTML === '') {
+                if (activeWindow) activeWindow.location.href = gmailUrl;
+            }
+        } catch (e) {}
+    }, 500);
 };
 
 window.copyEmailToClipboard = function(element, emailAddress) {
@@ -774,9 +796,12 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL LOG & ADMIN PANEL ENGINE ======
+// ====== PHONE CALL LOG & ADVANCED ADMIN PANEL ENGINE ======
+let activeCallPhone = null;
+
 window.logCallCount = function(phoneNum, cellElement) {
     if (!phoneNum || phoneNum === 'N/A') return;
+    
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
@@ -790,6 +815,7 @@ window.logCallCount = function(phoneNum, cellElement) {
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
+
     showPremiumNotification(`✅ Call Count Logged for ${phoneNum}`, 2500);
 
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
@@ -805,6 +831,7 @@ window.openCallingDetailModal = function() {
     let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
     let shiftDateStr = getCurrentShiftDateKey();
     let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
+    
     let totalCallsCount = todayLogs.length;
 
     let modal = document.createElement('div');
@@ -821,12 +848,18 @@ window.openCallingDetailModal = function() {
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
                     <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #002d62; font-size: 16px;">${totalCallsCount}</span>
                 </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 8px;">
+                    <button onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
+                </div>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
 }
 
+// 👑 Advanced Admin Panel
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -837,7 +870,55 @@ window.openAdminPanelPrompt = function() {
     alert("Admin Verified!");
 };
 
+window.openShiftShareModal = async function() {
+    let modalBody = document.querySelector('#dlCallingDetailModal > div');
+    if (!modalBody) return;
+    modalBody.innerHTML = `<div style="padding:20px; text-align:center;">Shift report modal active.</div>`;
+};
+
+window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
+    event.stopPropagation();
+    if (!phoneNum || phoneNum === 'N/A') return;
+    
+    activeCallPhone = phoneNum;
+    navigator.clipboard.writeText(phoneNum).then(() => {
+        let badge = document.createElement('span');
+        badge.className = 'phone-copy-badge';
+        badge.innerText = "Copied!";
+        containerElement.appendChild(badge);
+        setTimeout(() => badge.remove(), 1200);
+    });
+};
+
+window.handlePhoneInteraction = function(cellElement, phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return;
+
+    activeCallPhone = phoneNum;
+    navigator.clipboard.writeText(phoneNum).then(() => {
+        logCallCount(phoneNum, cellElement);
+    });
+};
+
+function buildPhoneCellMarkup(phoneNum) {
+    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
+    return `
+        <td class="phone-clickable-container">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
+                <div class="phone-cell-content">
+                    <span class="phone-icon-span">📞</span>
+                    <span class="clickable-phone-text">${phoneNum}</span>
+                </div>
+            </a>
+            <span class="phone-hover-copy-icon" onclick="copyPhoneToClipboardDirect(event, this.parentNode, '${phoneNum}')" title="Copy Number">📋</span>
+        </td>
+    `;
+}
+
 // ====== FOLLOW-UP ENGINE ======
+let currentFollowUpFilterMode = 'today';
+let pendingFollowUpIndex = null;
+let pendingFollowUpRowBtn = null;
+
 window.addLeadToFollowUpList = function(index, buttonElement) {
     let record = scrapedData[index];
     if (!record) return;
@@ -881,12 +962,26 @@ window.confirmFollowUpSchedule = function() {
 
 window.toggleFollowUpDrawer = function() {
     let drawer = document.getElementById('dlFollowUpDrawer');
-    if (!drawer) return;
-    drawer.style.right = drawer.style.right === "0px" ? "-420px" : "0px";
+    if (drawer) drawer.style.right = drawer.style.right === "0px" ? "-420px" : "0px";
 };
 
 window.filterFollowUpsByDate = function(mode) {
     currentFollowUpFilterMode = mode;
+};
+
+window.clearFollowUpFilters = function() {
+    renderFollowUpItems();
+};
+
+window.deleteFollowUpItem = function(mcNumber) {
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
+    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+};
+
+window.downloadFollowUpsCSV = function() {
+    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+    triggerCSVDownload(followUpStore, `FollowUps.csv`);
 };
 
 // Remarks Handlers
@@ -906,16 +1001,12 @@ window.syncRemarksData = function(index, textarea) {
     }
 };
 
-function triggerCSVDownload(recordsData, filename) {
+function generateCSVString(recordsData) {
     let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Remarks\n";
     recordsData.forEach(r => {
         csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${(r.remarks || '').replace(/"/g, '""')}"\n`;
     });
-    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
+    return csv;
 }
 
 window.toggleHistoryDrawer = function() {
@@ -923,7 +1014,23 @@ window.toggleHistoryDrawer = function() {
     if (drawer) drawer.style.right = drawer.style.right === "0px" ? "-420px" : "0px";
 };
 
-// ====== ROBUST BATCH SCRAPING ENGINE WITH RETRY & RESUME ======
+function renderHistoryItems() {}
+window.loadHistorySheetToTable = function() {};
+window.downloadHistoryCSV = function() {};
+window.deleteHistoryItem = function() {};
+
+function triggerCSVDownload(recordsData, filename) {
+    const csv = generateCSVString(recordsData);
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
+function updateRealTimeHistory() {}
+
+// ====== BATCH CONCURRENT PROCESSING ENGINE WITH RETRY & RESUME ======
 let scraping = false; 
 let scrapedData = [];
 let lastScannedIndex = null;
@@ -934,11 +1041,16 @@ window.stopScraping = function() {
     if (statusBox) {
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
-        statusBox.innerText = "Paused / Stopped. You can Resume anytime.";
+        statusBox.style.padding = "10px 15px";
+        statusBox.innerText = "Paused / Stopped. Click Resume to continue.";
     }
-    document.getElementById('startBtn').innerText = "▶ Resume Scraper";
-    document.getElementById('startBtn').style.display = 'inline-block';
-    document.getElementById('stopBtn').style.display = 'none';
+    let startBtn = document.getElementById('startBtn');
+    if(startBtn) {
+        startBtn.innerText = "▶ Resume Scraper";
+        startBtn.style.display = 'inline-block';
+    }
+    let stopBtn = document.getElementById('stopBtn');
+    if(stopBtn) stopBtn.style.display = 'none';
 }
 
 async function fetchWithRetry(url, retries = 3, delay = 1000) {
@@ -949,7 +1061,7 @@ async function fetchWithRetry(url, retries = 3, delay = 1000) {
             throw new Error(`HTTP Error: ${response.status}`);
         } catch (err) {
             if (i === retries - 1) throw err;
-            await new Promise(res => setTimeout(res, delay * (i + 1))); // Exponential backoff
+            await new Promise(res => setTimeout(res, delay * (i + 1)));
         }
     }
 }
@@ -961,12 +1073,11 @@ async function processSingleMC(mc) {
         try {
             htmlText = await fetchWithRetry(snapshotUrl);
         } catch (netErr) {
-            console.warn(`Network/SAFER Error on MC ${mc}:`, netErr.message);
             return { error: `SAFER Connection Error: ${netErr.message}` };
         }
 
         if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
-            return null; // Not found, skip quietly
+            return null;
         }
 
         let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '' };
@@ -1018,7 +1129,7 @@ async function processSingleMC(mc) {
                     let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
                     if (emailMatch) { record.email = emailMatch[0]; break; }
                 }
-            } catch (smsErr) { /* Ignore SMS failure, keep primary data */ }
+            } catch (smsErr) {}
         }
         return record;
     } catch (e) {
@@ -1027,35 +1138,50 @@ async function processSingleMC(mc) {
 }
 
 window.startScraping = async function() {
-    const startInput = parseInt(document.getElementById('startMc').value);
-    const endInput = parseInt(document.getElementById('endMc').value);
+    const start = parseInt(document.getElementById('startMc').value);
+    const end = parseInt(document.getElementById('endMc').value);
 
-    if (isNaN(startInput) || isNaN(endInput) || startInput > endInput) {
+    if (isNaN(start) || isNaN(end) || start > end) {
         document.getElementById('status').innerText = "Please enter a valid MC range.";
         return;
     }
 
     scraping = true;
-    let startFrom = lastScannedIndex !== null ? lastScannedIndex : startInput;
+    let startFrom = lastScannedIndex !== null ? lastScannedIndex : start;
 
     document.getElementById('startBtn').style.display = 'none';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
 
     const tableBody = document.getElementById('resultsTable');
+
+    let totalToScan = (end - start) + 1;
+    let totalProcessed = 0;
+    let startTime = Date.now();
+
     let statusBox = document.getElementById('status');
+    if (statusBox) {
+        statusBox.style.display = "flex";
+        statusBox.style.flexDirection = "row";
+        statusBox.style.alignItems = "center";
+        statusBox.style.justifyContent = "space-between";
+        statusBox.style.padding = "10px 15px";
+        statusBox.style.background = "#f8f9fa";
+        statusBox.style.color = "#333";
+        statusBox.style.border = "1px solid #e9ecef";
+        statusBox.style.borderLeft = "5px solid #002d62";
+        statusBox.style.borderRadius = "4px";
+    }
 
     let mcQueue = [];
-    for (let mc = startFrom; mc <= endInput; mc++) {
+    for (let mc = startFrom; mc <= end; mc++) {
         mcQueue.push(mc);
     }
 
-    let totalToScan = mcQueue.length;
-    let totalProcessed = 0;
-    let errorCount = 0;
-
-    const BATCH_SIZE = 2; // Reduced batch size to prevent server rate limiting/blocks
-
+    const BATCH_SIZE = 2; // Safer batch size to avoid FMCSA rate-limit blocks
+    
     for (let i = 0; i < mcQueue.length; i += BATCH_SIZE) {
         if (!scraping) {
             lastScannedIndex = mcQueue[i];
@@ -1071,14 +1197,17 @@ window.startScraping = async function() {
             if (!scraping) break;
 
             if (record && record.error) {
-                errorCount++;
-                statusBox.innerHTML = `<span style="color: #dc3545; font-size: 13px;">⚠️ Warning: ${record.error} (Continuing...)</span>`;
+                if(statusBox) statusBox.innerHTML = `<span style="color:#dc3545; font-size:12px;">⚠️ ${record.error} (Retried & continuing...)</span>`;
                 continue;
             }
 
             if (record) {
                 scrapedData.push(record);
                 let recordIndex = scrapedData.length - 1;
+
+                let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+                let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
+                let activeRemarksValue = record.remarks || "";
 
                 let newRow = document.createElement('tr');
                 newRow.innerHTML = `
@@ -1087,12 +1216,12 @@ window.startScraping = async function() {
                     <td>${record.name}</td>
                     <td>${record.entityType}</td>
                     <td><span class="badge badge-active">${record.status}</span></td>
-                    <td>${record.phone}</td>
+                    ${phoneCellMarkup}
                     <td>${record.address}</td>
-                    <td>${record.email}</td>
+                    ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
                     <td class="remarks-cell-container">
-                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${record.remarks}</textarea>
+                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
                     <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
@@ -1101,26 +1230,65 @@ window.startScraping = async function() {
         }
 
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
-        if (statusBox && scraping) {
-            statusBox.innerHTML = `Processed ${totalProcessed} / ${totalToScan} MCs | Errors encountered: ${errorCount} | Progress: ${percentage}%`;
-        }
+        let elapsedSeconds = (Date.now() - startTime) / 1000;
+        let avgTimePerMC = elapsedSeconds / (totalProcessed || 1);
+        let remainingMCs = totalToScan - totalProcessed;
+        let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
 
-        await new Promise(r => setTimeout(r, 800)); // Safer delay between batches
+        let mins = Math.floor(estimatedRemainingSeconds / 60);
+        let secs = Math.floor(estimatedRemainingSeconds % 60);
+        let timeString = totalProcessed < 3 ? "Calculating ETA..." : `Estimated Time Remaining: ${mins}m ${secs}s`;
+        let degrees = percentage * 3.6;
+
+        if (statusBox && scraping) {
+            statusBox.innerHTML = `
+                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333;">Processed ${totalProcessed} / ${totalToScan} MCs...</div>
+                    <div style="font-size: 12px; color: #6c757d; font-weight: bold;">${timeString}</div>
+                </div>
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                </div>
+            `;
+        }
+        populateStateDropdown();
+        applyAdvancedFilters();
+
+        await new Promise(r => setTimeout(r, 600));
     }
 
     if (scraping) {
         scraping = false;
         lastScannedIndex = null;
-        document.getElementById('startBtn').innerText = "Start Scraper";
-        document.getElementById('startBtn').style.display = 'inline-block';
-        document.getElementById('stopBtn').style.display = 'none';
-        if (scrapedData.length > 0) document.getElementById('downloadBtn').style.display = 'inline-block';
-        statusBox.innerHTML = `<strong style="color: #28a745;">Done! Successfully fetched ${scrapedData.length} records.</strong>`;
+        let startBtn = document.getElementById('startBtn');
+        if(startBtn) {
+            startBtn.innerText = "Start Scraper";
+            startBtn.style.display = 'inline-block';
+        }
+        if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
+        if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
+        let stopBtn = document.getElementById('stopBtn');
+        if(stopBtn) stopBtn.style.display = 'none';
+
+        if (statusBox) {
+            statusBox.style.padding = "15px";
+            statusBox.style.display = "flex";
+            statusBox.style.borderLeft = "5px solid #28a745";
+            statusBox.innerHTML = `<strong style="font-size: 16px; color: #28a745; font-family: sans-serif;">Done! Found ${scrapedData.length} active records.</strong>`;
+        }
+
+        if(scrapedData.length > 0) {
+            let dlBtn = document.getElementById('downloadBtn');
+            if(dlBtn) dlBtn.style.display = 'inline-block';
+        }
     }
 }
 
 window.downloadCSV = function() {
     if(scrapedData.length > 0) {
-        triggerCSVDownload(scrapedData, `DispatchLink_Data_Export.csv`);
+        const start = document.getElementById('startMc').value;
+        const end = document.getElementById('endMc').value;
+        triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
