@@ -1083,7 +1083,7 @@ async function renderAdvancedAdminModal() {
                 reportsHtml += `
                     <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; text-align: left;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 4px;">
-                            <span>👤 Dispatcher: ${rep.sender}</span>
+                            <span>👤 Sale Agent: ${rep.sender}</span>
                             <span style="color: #6c757d;">📅 Shift: ${rep.date}</span>
                         </div>
                         <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
