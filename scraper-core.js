@@ -447,10 +447,6 @@ function injectHistoryUIFramework() {
             .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; }
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            
-            /* Modern Disposition Popup Buttons */
-            .disp-btn { width: 100%; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; transition: transform 0.1s, opacity 0.2s; margin-bottom: 8px; }
-            .disp-btn:hover { opacity: 0.9; transform: scale(1.02); }
         `;
         document.head.appendChild(styleTag);
     }
@@ -821,59 +817,32 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL, POPUP DISPOSITION & ADVANCED ADMIN PANEL ENGINE ======
+// ====== PHONE CALL LOG & ADVANCED ADMIN PANEL ENGINE ======
 let activeCallPhone = null;
 
-function showDispositionPopup(phoneNum) {
-    let existing = document.getElementById('dlDispositionPopup');
-    if (existing) existing.remove();
-
-    let popup = document.createElement('div');
-    popup.id = 'dlDispositionPopup';
-    popup.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
-    
-    popup.innerHTML = `
-        <div style="background: white; padding: 25px; border-radius: 8px; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
-            <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px;">Call Status</h3>
-            <p style="font-size: 13px; color: #6c757d; margin-bottom: 20px;">What was the outcome for <b>${phoneNum}</b>?</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <button onclick="saveCallStatus('Voicemail')" class="disp-btn" style="background: #9c27b0; color: white;">🟣 Voicemail</button>
-                <button onclick="saveCallStatus('Hung Up')" class="disp-btn" style="background: #f44336; color: white;">🔴 Hung Up</button>
-                <button onclick="saveCallStatus('Interested')" class="disp-btn" style="background: #ffeb3b; color: #333;">🟡 Interested</button>
-                <button onclick="saveCallStatus('Follow up')" class="disp-btn" style="background: #2196f3; color: white;">🔵 Follow up</button>
-                <button onclick="saveCallStatus('Sale')" class="disp-btn" style="background: #4caf50; color: white;">🟢 Sale</button>
-            </div>
-            <button onclick="closeDispositionPopup()" style="margin-top: 15px; background: transparent; border: none; color: #6c757d; text-decoration: underline; cursor: pointer; font-size: 12px;">Skip / Cancel</button>
-        </div>
-    `;
-    document.body.appendChild(popup);
-}
-
-window.closeDispositionPopup = function() {
-    let p = document.getElementById('dlDispositionPopup');
-    if (p) p.remove();
-}
-
-window.saveCallStatus = function(status) {
-    if (!activeCallPhone) return;
+window.logCallCount = function(phoneNum, cellElement) {
+    if (!phoneNum || phoneNum === 'N/A') return;
     
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
     let logEntry = {
-        phone: activeCallPhone,
+        phone: phoneNum,
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
         date: new Date().toLocaleString(),
-        status: status
+        status: 'Called'
     };
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    showPremiumNotification(`✅ Call Logged: ${status}`, 2500);
-    closeDispositionPopup();
+    showPremiumNotification(`✅ Call Count Logged for ${phoneNum}`, 2500);
+
+    document.querySelectorAll('.phone-clickable-cell').forEach(el => {
+        el.classList.remove('active-called-cell');
+    });
+    cellElement.classList.add('active-called-cell');
 }
 
 window.openCallingDetailModal = function() {
@@ -884,16 +853,7 @@ window.openCallingDetailModal = function() {
     let shiftDateStr = getCurrentShiftDateKey();
     let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
     
-    let counts = { Total: todayLogs.length, Voicemail: 0, HungUp: 0, Interested: 0, FollowUp: 0, Sale: 0, Unknown: 0 };
-
-    todayLogs.forEach(log => {
-        if (log.status === 'Voicemail') counts.Voicemail++;
-        else if (log.status === 'Hung Up') counts.HungUp++;
-        else if (log.status === 'Interested') counts.Interested++;
-        else if (log.status === 'Follow up') counts.FollowUp++;
-        else if (log.status === 'Sale') counts.Sale++;
-        else counts.Unknown++;
-    });
+    let totalCallsCount = todayLogs.length;
 
     let modal = document.createElement('div');
     modal.id = 'dlCallingDetailModal';
@@ -907,22 +867,7 @@ window.openCallingDetailModal = function() {
             </div>
             <div style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #002d62; font-size: 16px;">${counts.Total}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
-                    <span>🟣 Voicemail:</span> <strong>${counts.Voicemail}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
-                    <span>🔴 Hung Up:</span> <strong>${counts.HungUp}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
-                    <span>🟡 Interested:</span> <strong>${counts.Interested}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
-                    <span>🔵 Follow up:</span> <strong>${counts.FollowUp}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
-                    <span>🟢 Sale:</span> <strong style="color: #4caf50;">${counts.Sale}</strong>
+                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #002d62; font-size: 16px;">${totalCallsCount}</span>
                 </div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 8px;">
@@ -972,7 +917,6 @@ async function renderAdvancedAdminModal() {
     document.body.appendChild(modal);
 
     try {
-        // Fetch Live Sessions and Shift Reports simultaneously
         let [sessionsRes, reportsRes] = await Promise.all([
             fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
             fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`)
@@ -985,7 +929,6 @@ async function renderAdvancedAdminModal() {
         let bodyContainer = document.getElementById('adminReportsModalBody');
         if (!bodyContainer) return;
 
-        // 1. Live Online Status Section
         let now = Date.now();
         let activeUsersHtml = `
             <h4 style="color: #002d62; text-align: left; margin-top: 0; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">🟢 Live Online Team Status</h4>
@@ -1018,23 +961,14 @@ async function renderAdvancedAdminModal() {
         }
         activeUsersHtml += `</div>`;
 
-        // 2. Leaderboard Section
         let perfMap = {};
         window.cachedAdminReports.forEach(rep => {
             let name = rep.sender || "Unknown";
             if (!perfMap[name]) {
-                perfMap[name] = { totalCalls: 0, sales: 0, interested: 0, followUps: 0, shiftsCount: 0 };
+                perfMap[name] = { totalCalls: 0, shiftsCount: 0 };
             }
             perfMap[name].totalCalls += rep.totalCalls || 0;
             perfMap[name].shiftsCount += 1;
-            
-            if (rep.logs && Array.isArray(rep.logs)) {
-                rep.logs.forEach(l => {
-                    if (l.status === 'Sale') perfMap[name].sales++;
-                    else if (l.status === 'Interested') perfMap[name].interested++;
-                    else if (l.status === 'Follow up') perfMap[name].followUps++;
-                });
-            }
         });
 
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
@@ -1058,8 +992,7 @@ async function renderAdvancedAdminModal() {
                             <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts Logged: ${stats.shiftsCount}</div>
                         </div>
                         <div style="display: flex; gap: 10px; font-size: 12px;">
-                            <span style="background: #002d62; color: white; padding: 3px 8px; border-radius: 4px;">Calls: <b>${stats.totalCalls}</b></span>
-                            <span style="background: #4caf50; color: white; padding: 3px 8px; border-radius: 4px;">Sales: <b>${stats.sales}</b></span>
+                            <span style="background: #002d62; color: white; padding: 3px 8px; border-radius: 4px;">Total Calls: <b>${stats.totalCalls}</b></span>
                         </div>
                     </div>
                 `;
@@ -1067,19 +1000,12 @@ async function renderAdvancedAdminModal() {
         }
         leaderHtml += `</div>`;
 
-        // 3. Shift Reports Submissions Section
         let reportsHtml = `<h4 style="color: #002d62; text-align: left; margin-bottom: 10px; font-size: 15px; border-bottom: 2px solid #002d62; padding-bottom: 5px;">📋 Detailed Shift Submissions</h4>`;
         
         if (window.cachedAdminReports.length === 0) {
             reportsHtml += `<div style="text-align: left; color: #6c757d; font-size: 12px; font-style: italic; padding: 6px;">No shift reports received yet.</div>`;
         } else {
             window.cachedAdminReports.slice().reverse().forEach(rep => {
-                let vms = rep.logs ? rep.logs.filter(l => l.status === 'Voicemail').length : 0;
-                let hps = rep.logs ? rep.logs.filter(l => l.status === 'Hung Up').length : 0;
-                let ints = rep.logs ? rep.logs.filter(l => l.status === 'Interested').length : 0;
-                let fus = rep.logs ? rep.logs.filter(l => l.status === 'Follow up').length : 0;
-                let sales = rep.logs ? rep.logs.filter(l => l.status === 'Sale').length : 0;
-
                 reportsHtml += `
                     <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px; text-align: left;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 4px;">
@@ -1087,13 +1013,8 @@ async function renderAdvancedAdminModal() {
                             <span style="color: #6c757d;">📅 Shift: ${rep.date}</span>
                         </div>
                         <div style="font-size: 11px; color: #6c757d; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
-                            <div>📞 Total: <b>${rep.totalCalls}</b></div>
-                            <div>🟣 VM: <b>${vms}</b></div>
-                            <div>🔴 HU: <b>${hps}</b></div>
-                            <div>🟡 Int: <b>${ints}</b></div>
-                            <div>🔵 FU: <b>${fus}</b></div>
-                            <div style="color: #4caf50;">🟢 Sale: <b>${sales}</b></div>
+                        <div style="font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
+                            📞 Total Calls Logged: <b>${rep.totalCalls}</b>
                         </div>
                     </div>
                 `;
@@ -1112,16 +1033,9 @@ window.downloadAdminReportCSV = function() {
     let reports = window.cachedAdminReports || [];
     if (reports.length === 0) return alert("No reports available to export.");
 
-    let csv = "Dispatcher Name,Shift Date,Submitted Timestamp,Total Calls,Voicemail,Hung Up,Interested,Follow Up,Sale\n";
+    let csv = "Dispatcher Name,Shift Date,Submitted Timestamp,Total Calls\n";
     reports.forEach(r => {
-        let logs = r.logs || [];
-        let vms = logs.filter(l => l.status === 'Voicemail').length;
-        let hps = logs.filter(l => l.status === 'Hung Up').length;
-        let ints = logs.filter(l => l.status === 'Interested').length;
-        let fus = logs.filter(l => l.status === 'Follow up').length;
-        let sales = logs.filter(l => l.status === 'Sale').length;
-
-        csv += `"${r.sender}","${r.date}","${r.timestamp}",${r.totalCalls},${vms},${hps},${ints},${fus},${sales}\n`;
+        csv += `"${r.sender}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
     });
 
     let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1239,8 +1153,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         badge.innerText = "Copied!";
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
-        
-        showDispositionPopup(phoneNum);
     });
 };
 
@@ -1249,20 +1161,15 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
 
     activeCallPhone = phoneNum;
     navigator.clipboard.writeText(phoneNum).then(() => {
-        showDispositionPopup(phoneNum);
+        logCallCount(phoneNum, cellElement);
     });
-
-    document.querySelectorAll('.phone-clickable-cell').forEach(el => {
-        el.classList.remove('active-called-cell');
-    });
-    cellElement.classList.add('active-called-cell');
 };
 
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
