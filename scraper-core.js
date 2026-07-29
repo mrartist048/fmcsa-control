@@ -154,12 +154,11 @@ function setupDispatcherIdentity() {
     injectNicknameProfileUI();
 }
 
-// 12 baje wala masla fix: Ab shift subah 10 baje tak purani date hi dikhayegi (Local time use karegi)
 function getCurrentShiftDateKey() {
     let now = new Date();
     let hour = now.getHours();
     
-    if (hour < 10) { // Subah 10 baje se pehle sab kuch kal ki shift mein count hoga
+    if (hour < 10) { 
         now.setDate(now.getDate() - 1);
     }
     
@@ -176,7 +175,6 @@ function getTodayCallCount() {
     return callLogs.filter(log => log.shiftDate === shiftDateStr).length;
 }
 
-// UI Updated: Left side par User Name aur Right side par Calling Detail Button
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
@@ -825,7 +823,6 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 // ====== PHONE CALL, POPUP DISPOSITION & CALLING DETAIL ENGINE ======
 let activeCallPhone = null;
 
-// The Colorful Disposition Popup that shows immediately after clicking the phone
 function showDispositionPopup(phoneNum) {
     let existing = document.getElementById('dlDispositionPopup');
     if (existing) existing.remove();
@@ -863,27 +860,28 @@ window.saveCallStatus = function(status) {
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
-    callLogs.push({
+    let logEntry = {
         phone: activeCallPhone,
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
         date: new Date().toLocaleString(),
-        status: status // Save specific status
-    });
+        status: status
+    };
+    
+    callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
     showPremiumNotification(`✅ Call Logged: ${status}`, 2500);
     closeDispositionPopup();
 }
 
-// 📊 Calling Detail Modal (Replaces the basic counter)
+// 📊 Calling Detail Modal with Team Shift Sharing Feature
 window.openCallingDetailModal = function() {
     let existing = document.getElementById('dlCallingDetailModal');
     if (existing) existing.remove();
 
     let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
     let shiftDateStr = getCurrentShiftDateKey();
-    
     let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
     
     let counts = { Total: todayLogs.length, Voicemail: 0, HungUp: 0, Interested: 0, FollowUp: 0, Sale: 0, Unknown: 0 };
@@ -894,7 +892,7 @@ window.openCallingDetailModal = function() {
         else if (log.status === 'Interested') counts.Interested++;
         else if (log.status === 'Follow up') counts.FollowUp++;
         else if (log.status === 'Sale') counts.Sale++;
-        else counts.Unknown++; // Any calls logged before this update
+        else counts.Unknown++;
     });
 
     let modal = document.createElement('div');
@@ -902,7 +900,7 @@ window.openCallingDetailModal = function() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 350px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+        <div style="background: white; width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
             <div style="background: #ff9800; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
                 <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
@@ -926,14 +924,136 @@ window.openCallingDetailModal = function() {
                 <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #333;">
                     <span>🟢 Sale:</span> <strong style="color: #4caf50;">${counts.Sale}</strong>
                 </div>
-                <div style="text-align: center; margin-top: 20px;">
-                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #002d62; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">Close Panel</button>
+                
+                <div style="margin-top: 20px; display: flex; gap: 8px;">
+                    <button onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
                 </div>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
 }
+
+// Modal to select manager/team member to send shift report
+window.openShiftShareModal = async function() {
+    let modalBody = document.querySelector('#dlCallingDetailModal > div');
+    if (!modalBody) return;
+
+    modalBody.innerHTML = `
+        <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 16px;">📤 Share Shift Report</h3>
+            <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+        </div>
+        <div style="padding: 20px;">
+            <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select manager or team member to send shift report:</p>
+            <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;">Loading active members...</div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button onclick="openCallingDetailModal()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Back</button>
+                <button onclick="confirmSendShiftReport()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Send Report</button>
+            </div>
+        </div>
+    `;
+
+    try {
+        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
+        let sessionsData = await res.json() || {};
+        
+        let activeMembers = [];
+        let now = Date.now();
+
+        Object.keys(sessionsData).forEach(key => {
+            let s = sessionsData[key];
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < 25000)) {
+                if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
+                    activeMembers.push(s.nickname);
+                }
+            }
+        });
+
+        let radioListDiv = document.getElementById('dlShiftMembersRadioList');
+        if (activeMembers.length === 0) {
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other online members/managers found.</div>`;
+            return;
+        }
+
+        let html = "";
+        activeMembers.forEach((name, idx) => {
+            let checkedAttr = idx === 0 ? "checked" : "";
+            html += `
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
+                    <input type="radio" name="shiftTargetRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
+                    <span>💻 <b>${name}</b> (Online)</span>
+                </label>
+            `;
+        });
+        radioListDiv.innerHTML = html;
+    } catch (e) {
+        console.error("Failed to load members for shift report:", e);
+    }
+};
+
+window.confirmSendShiftReport = async function() {
+    let selectedRadio = document.querySelector('input[name="shiftTargetRadio"]:checked');
+    if (!selectedRadio) {
+        return alert("Please select a recipient.");
+    }
+
+    let targetName = selectedRadio.value;
+    let shiftDateStr = getCurrentShiftDateKey();
+    let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+    let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
+
+    let reportData = {
+        sender: dispatcherNickname,
+        date: shiftDateStr,
+        timestamp: new Date().toLocaleString(),
+        totalCalls: todayLogs.length,
+        logs: todayLogs
+    };
+
+    try {
+        let reportUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${targetName}.json`;
+        let res = await fetch(reportUrl);
+        let reportsList = await res.json() || [];
+        if (!Array.isArray(reportsList)) reportsList = [];
+
+        reportsList.push(reportData);
+
+        await fetch(reportUrl, {
+            method: 'PUT',
+            body: JSON.stringify(reportsList)
+        });
+
+        showPremiumNotification(`✅ Shift report successfully sent to ${targetName}!`, 4000);
+        document.getElementById('dlCallingDetailModal').remove();
+    } catch (e) {
+        console.error("Failed to send shift report:", e);
+        alert("Failed to send report. Check internet connection.");
+    }
+};
+
+// Periodic checker for incoming shift reports (for Managers/Team Leads)
+async function pollIncomingShiftReports() {
+    if (!currentClient || !dispatcherNickname) return;
+    try {
+        let reportInboxUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`;
+        let res = await fetch(reportInboxUrl);
+        let reports = await res.json() || [];
+        if (!Array.isArray(reports) || reports.length === 0) return;
+
+        reports.forEach(rep => {
+            showPremiumNotification(`📥 Shift Report received from ${rep.sender}! Total Calls: ${rep.totalCalls}`, 6000);
+        });
+
+        // Clear inbox after notification
+        await fetch(reportInboxUrl, { method: 'DELETE' });
+    } catch (e) {
+        console.error("Polling shift reports failed:", e);
+    }
+}
+
+setInterval(pollIncomingShiftReports, 12000);
 
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
@@ -947,7 +1067,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
         
-        // Show popup instantly on copy
         showDispositionPopup(phoneNum);
     });
 };
@@ -956,10 +1075,7 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
 
     activeCallPhone = phoneNum;
-    
-    // Copy for Dialer
     navigator.clipboard.writeText(phoneNum).then(() => {
-        // Automatically show the popup on screen so it's ready when they return from dialer
         showDispositionPopup(phoneNum);
     });
 
@@ -1255,7 +1371,6 @@ window.shareSelectedFollowUpsToTeam = function() {
     openTeamShareModal(selectedRecords);
 };
 
-// Periodic checker for incoming shared leads from team members
 async function pollIncomingSharedLeads() {
     if (!currentClient || !dispatcherNickname) return;
     try {
