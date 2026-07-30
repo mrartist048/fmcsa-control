@@ -1229,6 +1229,11 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         badge.innerText = "Copied!";
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
+
+        let clickableCell = containerElement.querySelector('.phone-clickable-cell') || containerElement.closest('.phone-clickable-container').querySelector('.phone-clickable-cell');
+        if (clickableCell) {
+            logCallCount(phoneNum, clickableCell);
+        }
     });
 };
 
@@ -1251,7 +1256,7 @@ function buildPhoneCellMarkup(phoneNum) {
                     <span class="clickable-phone-text">${phoneNum}</span>
                 </div>
             </a>
-            <span class="phone-hover-copy-icon" onclick="copyPhoneToClipboardDirect(event, this.parentNode, '${phoneNum}')" title="Copy Number">📋</span>
+            <span class="phone-hover-copy-icon" onclick="copyPhoneToClipboardDirect(event, this, '${phoneNum}')" title="Copy Number">📋</span>
         </td>
     `;
 }
@@ -2057,7 +2062,6 @@ window.startScraping = async function() {
         };
     }
 
-    // Process sequentially (one-by-one with controlled delay to prevent server blocking/skipping)
     for (let mc = start; mc <= end; mc++) {
         if (!scraping) break;
 
@@ -2127,7 +2131,6 @@ window.startScraping = async function() {
         populateStateDropdown();
         applyAdvancedFilters();
 
-        // Safe delay to ensure server responds accurately for large ranges (e.g. 1000 MCs)
         await new Promise(r => setTimeout(r, 350));
     }
 
