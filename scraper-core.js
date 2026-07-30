@@ -1901,7 +1901,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH EXPLICIT ERROR REPORTING ======
+// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH EMAIL & SMS SCRAPING ======
 let scraping = false; 
 let scrapedData = [];
 
@@ -1970,6 +1970,7 @@ async function processSingleMCWithDetailedError(mc) {
             return { status: "filtered_out" }; 
         }
 
+        // Email Scraping from SMS Portal
         if (record.usdot !== 'N/A') {
             try {
                 const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
@@ -1978,12 +1979,22 @@ async function processSingleMCWithDetailedError(mc) {
                     const smsHtml = await smsResponse.text();
                     let smsEl = document.createElement('html');
                     smsEl.innerHTML = smsHtml;
-                    let smsCells = smsEl.querySelectorAll('td, th, span, label');
+                    let smsCells = smsEl.querySelectorAll('td, th, span, label, a');
                     for (let j = 0; j < smsCells.length; j++) {
                         let smsText = smsCells[j].textContent.trim();
                         if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
                             let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                            if (emailMatch) { record.email = emailMatch[0]; break; }
+                            if (emailMatch && !emailMatch[0].includes("fmcsa") && !emailMatch[0].includes("dot.gov")) { 
+                                record.email = emailMatch[0]; 
+                                break; 
+                            }
+                        }
+                    }
+                    if (record.email === 'N/A') {
+                        let fullPageEmailMatch = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+                        if (fullPageEmailMatch) {
+                            let validEmail = fullPageEmailMatch.find(e => !e.toLowerCase().includes("fmcsa") && !e.toLowerCase().includes("dot.gov"));
+                            if (validEmail) record.email = validEmail;
                         }
                     }
                 }
