@@ -451,6 +451,18 @@ function injectHistoryUIFramework() {
         document.head.appendChild(styleTag);
     }
 
+    // Inject Floating Scroll Up & Scroll Down Nav Arrows
+    if (!document.getElementById('dlFloatingNavPanel')) {
+        let navPanel = document.createElement('div');
+        navPanel.id = 'dlFloatingNavPanel';
+        navPanel.style.cssText = "position: fixed; bottom: 25px; right: 25px; z-index: 999999; display: flex; flex-direction: column; gap: 8px;";
+        navPanel.innerHTML = `
+            <button onclick="scrollToTopScreen()" title="Scroll to Top (Search Panel)" style="background: #002d62; color: white; border: none; width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s;">⬆️</button>
+            <button onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s;">⬇️</button>
+        `;
+        document.body.appendChild(navPanel);
+    }
+
     let coreTable = document.querySelector('table');
     if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
         let wrapperDiv = document.createElement('div');
@@ -614,6 +626,23 @@ function injectHistoryUIFramework() {
 
     injectEmailProposalPanel();
 }
+
+// Scroll Navigation Helper Functions
+window.scrollToTopScreen = function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    let startInput = document.getElementById('startMc');
+    if (startInput) startInput.focus();
+};
+
+window.scrollToLastCalledLead = function() {
+    let activeCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell');
+    if (activeCalledCell) {
+        activeCalledCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showPremiumNotification("📍 Jumped to last called lead!", 2000);
+    } else {
+        showPremiumNotification("⚠️ No call logged yet in this session.", 2500);
+    }
+};
 
 // ====== ADVANCED FILTER BAR WITH CLEAN PADDED COUNTS ======
 function injectAdvancedFilterBar() {
@@ -1202,6 +1231,9 @@ window.confirmSendShiftReport = async function() {
         let res = await fetch(reportUrl);
         let reportsList = await res.json() || [];
         if (!Array.isArray(reportsList)) reportsList = [];
+
+        // Smart Overwriting: Remove existing report for the exact same sender & shift date
+        reportsList = reportsList.filter(r => !(r.sender === dispatcherNickname && r.date === shiftDateStr));
 
         reportsList.push(reportData);
 
