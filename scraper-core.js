@@ -451,16 +451,34 @@ function injectHistoryUIFramework() {
         document.head.appendChild(styleTag);
     }
 
-    // Inject Floating Scroll Up & Scroll Down Nav Arrows
+    // Inject Smart Dynamic Floating Navigation Panel (Scroll Up / Scroll Down)
     if (!document.getElementById('dlFloatingNavPanel')) {
         let navPanel = document.createElement('div');
         navPanel.id = 'dlFloatingNavPanel';
-        navPanel.style.cssText = "position: fixed; bottom: 25px; right: 25px; z-index: 999999; display: flex; flex-direction: column; gap: 8px;";
+        navPanel.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; transition: opacity 0.3s ease-in-out;";
         navPanel.innerHTML = `
-            <button onclick="scrollToTopScreen()" title="Scroll to Top (Search Panel)" style="background: #002d62; color: white; border: none; width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s;">⬆️</button>
-            <button onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s;">⬇️</button>
+            <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
+            <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
         `;
         document.body.appendChild(navPanel);
+
+        // Scroll Event Listener to Toggle Arrows Smartly
+        window.addEventListener('scroll', function() {
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            let upBtn = document.getElementById('dlScrollUpBtn');
+            let downBtn = document.getElementById('dlScrollDownBtn');
+            let hasActiveCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell') !== null;
+
+            // Show Scroll Up button only when scrolled down more than 250px
+            if (upBtn) {
+                upBtn.style.display = scrollTop > 250 ? 'flex' : 'none';
+            }
+
+            // Show Scroll Down button only when scrolled up near top and an active called lead exists
+            if (downBtn) {
+                downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
+            }
+        });
     }
 
     let coreTable = document.querySelector('table');
@@ -872,6 +890,10 @@ window.logCallCount = function(phoneNum, cellElement) {
         el.classList.remove('active-called-cell');
     });
     cellElement.classList.add('active-called-cell');
+
+    // Automatically hide scroll down arrow once a call is made/clicked
+    let downBtn = document.getElementById('dlScrollDownBtn');
+    if (downBtn) downBtn.style.display = 'none';
 }
 
 window.openCallingDetailModal = function() {
