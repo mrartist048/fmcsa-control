@@ -355,7 +355,7 @@ const request = indexedDB.open("DispatchLinkHistoryDB", 1);
 request.onupgradeneeded = function(e) {
     db = e.target.result;
     if (!db.objectStoreNames.contains("history")) {
-        db.createObjectStore("history", { keyPath: "id", autoIncrement: true });
+        db.createObjectStore("history", { keyPath: "id", autoIncrement: false });
     }
 };
 request.onsuccess = function(e) {
@@ -1825,7 +1825,6 @@ function renderHistoryItems() {
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
-            // Compact button styling
             let resumeBtnStyle = recordsCount === 0 
                 ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
                 : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
@@ -2026,41 +2025,35 @@ function triggerCSVDownload(recordsData, filename) {
 }
 
 function updateRealTimeHistory(recordsArray, isCompleted = false) {
-    if (!db) return;
+    if (!currentHistoryId) return;
     
-    // Fallback agar currentHistoryId null ho toh latest active history entry utha lo
-    if (currentHistoryId === null) {
-        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        if (lsBackup.length > 0) {
-            currentHistoryId = lsBackup[lsBackup.length - 1].id;
-        } else {
-            return;
+    const historyItem = {
+        id: currentHistoryId,
+        date: window.activeHistoryDateStr || new Date().toLocaleString('en-US', { hour12: true }),
+        range: window.activeScrapeRange || "1 - 100",
+        totalRecords: recordsArray.length,
+        status: isCompleted ? "Completed" : "Interrupted (Auto-Saved)",
+        records: recordsArray
+    };
+
+    if (db) {
+        try {
+            const tx = db.transaction("history", "readwrite");
+            const store = tx.objectStore("history");
+            store.put(historyItem);
+        } catch (e) {
+            console.error("IndexedDB write error:", e);
         }
     }
-
-    const tx = db.transaction("history", "readwrite");
-    const store = tx.objectStore("history");
-    const req = store.get(currentHistoryId);
     
-    req.onsuccess = function() {
-        const data = req.result;
-        if (data) {
-            data.totalRecords = recordsArray.length;
-            data.records = recordsArray;
-            data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
-            
-            store.put(data);
-            
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            let index = lsBackup.findIndex(r => r.id === currentHistoryId);
-            if (index !== -1) {
-                lsBackup[index] = data;
-            } else {
-                lsBackup.push(data);
-            }
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-        }
-    };
+    let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+    let index = lsBackup.findIndex(r => r.id === currentHistoryId);
+    if (index !== -1) {
+        lsBackup[index] = historyItem;
+    } else {
+        lsBackup.push(historyItem);
+    }
+    localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
 }
 
 // ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH RETRY & LIMIT MONITORING ======
@@ -2213,42 +2206,38 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     }
 
     let currentRangeStr = `${start} - ${end}`;
-    
-    // Agar fresh start hai toh naya history entry foran create karo
+    window.activeScrapeRange = currentRangeStr;
+    window.activeHistoryDateStr = new Date().toLocaleString('en-US', { hour12: true });
+
     if (overrideStart === null) {
-        currentHistoryId = null;
+        currentHistoryId = Date.now();
         scrapedData = [];
-        window.activeScrapeRange = currentRangeStr;
         
         const tableBody = document.getElementById('resultsTable');
         if (tableBody) tableBody.innerHTML = '';
 
+        const initialHistoryItem = {
+            id: currentHistoryId,
+            date: window.activeHistoryDateStr,
+            range: currentRangeStr,
+            totalRecords: 0,
+            status: "Interrupted (Auto-Saved)",
+            records: []
+        };
+
         if (db) {
-            const now = new Date();
-            const formattedDate = now.toLocaleString('en-US', { hour12: true });
-
-            const initialHistoryItem = {
-                id: Date.now(),
-                date: formattedDate,
-                range: currentRangeStr,
-                totalRecords: 0,
-                status: "Interrupted (Auto-Saved)",
-                records: []
-            };
-
-            currentHistoryId = initialHistoryItem.id;
-            const tx = db.transaction("history", "readwrite");
-            const store = tx.objectStore("history");
-            store.add(initialHistoryItem);
-            
-            tx.oncomplete = function() {
-                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-                lsBackup.push(initialHistoryItem);
-                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-            };
+            try {
+                const tx = db.transaction("history", "readwrite");
+                const store = tx.objectStore("history");
+                store.put(initialHistoryItem);
+            } catch (e) {
+                console.error("Failed to initialize IndexedDB record:", e);
+            }
         }
-    } else {
-        window.activeScrapeRange = currentRangeStr;
+        
+        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        lsBackup.push(initialHistoryItem);
+        localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
     }
 
     scraping = true; 
