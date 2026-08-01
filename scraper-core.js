@@ -299,7 +299,6 @@ async function checkGlobalSessions() {
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
         if (!currentTabRecord && activeTabs.length >= userLimit) {
-            // Trigger automatic pause if scraping is currently active
             if (typeof scraping !== 'undefined' && scraping) {
                 stopScraping();
                 showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping paused safely.", 6000);
@@ -1809,7 +1808,7 @@ function renderHistoryItems() {
                 : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
             let resumeBtnHTML = item.status === "Interrupted (Auto-Saved)" 
-                ? `<button onclick="resumeHistorySheet(${item.id})" style="background: #ff9800; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Resume Scraping">▶️ Resume</button>`
+                ? `<button onclick="resumeHistorySheet(${item.id})" style="background: #ff9800; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Resume Scraping">Resume</button>`
                 : "";
 
             itemsHTML += `
@@ -1847,6 +1846,17 @@ window.loadHistorySheetToTable = async function(id) {
         
         scrapedData = item.records; 
         currentHistoryId = item.id;
+
+        // Set inputs to the original history range
+        if (item.range) {
+            let parts = item.range.split('-');
+            if (parts.length === 2) {
+                let startInput = document.getElementById('startMc');
+                let endInput = document.getElementById('endMc');
+                if (startInput) startInput.value = parts[0].trim();
+                if (endInput) endInput.value = parts[1].trim();
+            }
+        }
 
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
@@ -1899,17 +1909,11 @@ window.resumeHistorySheet = async function(id) {
         let startRange = parseInt(parts[0].trim());
         let endRange = parseInt(parts[1].trim());
 
-        let alreadyScannedMCs = item.records.map(r => parseInt(r.mc));
-        let nextMcToScan = startRange;
-        for (let m = startRange; m <= endRange; m++) {
-            if (!alreadyScannedMCs.includes(m)) {
-                nextMcToScan = m;
-                break;
-            }
-        }
-
-        document.getElementById('startMc').value = nextMcToScan;
-        document.getElementById('endMc').value = endRange;
+        // Populate header input fields back to the full range
+        let startInput = document.getElementById('startMc');
+        let endInput = document.getElementById('endMc');
+        if (startInput) startInput.value = startRange;
+        if (endInput) endInput.value = endRange;
 
         scrapedData = item.records || [];
         currentHistoryId = item.id;
@@ -1943,7 +1947,9 @@ window.resumeHistorySheet = async function(id) {
             </tr>`;
         }
         toggleHistoryDrawer();
-        startScraping(nextMcToScan, endRange);
+        
+        // Start scraping from the beginning (startRange), the internal check will automatically skip already saved/scraped MCs
+        startScraping(startRange, endRange);
     };
 };
 
@@ -2036,7 +2042,6 @@ async function processSingleMCWithDetailedError(mc) {
 
     while (attempt < maxRetries) {
         try {
-            // Check global session limits before making network requests
             const sessionUrl = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
