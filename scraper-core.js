@@ -329,6 +329,22 @@ async function checkGlobalSessions() {
 
 window.addEventListener('beforeunload', function () {
     if (currentClient === "unknown" || !window.sessionDbKey) return;
+    if (typeof scraping !== 'undefined' && scraping && currentHistoryId) {
+        let currentRangeStr = window.activeScrapeRange || "1 - 100";
+        let backupObj = {
+            id: currentHistoryId,
+            date: new Date().toLocaleString('en-US', { hour12: true }),
+            range: currentRangeStr,
+            totalRecords: scrapedData.length,
+            status: "Interrupted (Auto-Saved)",
+            records: scrapedData
+        };
+        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        let idx = lsBackup.findIndex(r => r.id === currentHistoryId);
+        if (idx !== -1) lsBackup[idx] = backupObj;
+        else lsBackup.push(backupObj);
+        localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+    }
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}.json?_method=DELETE`);
 });
 
@@ -1809,7 +1825,7 @@ function renderHistoryItems() {
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
-            // Conditional styling for action buttons to match screenshot requirements (compact buttons without giant boxes)
+            // Compact button styling
             let resumeBtnStyle = recordsCount === 0 
                 ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
                 : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
@@ -1957,7 +1973,7 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
-        // Correct resume logic: Find the maximum MC successfully scraped so far, and resume from the next MC.
+        // Resume logic: find the max MC successfully scanned and resume from the next MC
         let nextStartMc = startRange;
         if (scrapedData.length > 0) {
             let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
