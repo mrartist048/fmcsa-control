@@ -355,7 +355,7 @@ const request = indexedDB.open("DispatchLinkHistoryDB", 1);
 request.onupgradeneeded = function(e) {
     db = e.target.result;
     if (!db.objectStoreNames.contains("history")) {
-        db.createObjectStore("history", { keyPath: "id", autoIncrement: false });
+        db.createObjectStore("history", { keyPath: "id", autoIncrement: true });
     }
 };
 request.onsuccess = function(e) {
@@ -366,26 +366,22 @@ request.onsuccess = function(e) {
 
 function syncIndexedDBWithLocalStorage() {
     if (!db) return;
-    try {
-        const tx = db.transaction("history", "readwrite");
-        const store = tx.objectStore("history");
-        const getAll = store.getAll();
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const getAll = store.getAll();
+    
+    getAll.onsuccess = function() {
+        let dbRecords = getAll.result || [];
+        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
         
-        getAll.onsuccess = function() {
-            let dbRecords = getAll.result || [];
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            
-            if (dbRecords.length === 0 && lsBackup.length > 0) {
-                lsBackup.forEach(item => {
-                    store.put(item);
-                });
-            } else if (dbRecords.length > 0) {
-                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
-            }
-        };
-    } catch (e) {
-        console.error("IndexedDB Sync error:", e);
-    }
+        if (dbRecords.length === 0 && lsBackup.length > 0) {
+            lsBackup.forEach(item => {
+                store.put(item);
+            });
+        } else if (dbRecords.length > 0) {
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
+        }
+    };
 }
 
 const DEFAULT_REMARKS_TEMPLATE = 
@@ -1805,68 +1801,64 @@ function renderHistoryItems() {
     const listContainer = document.getElementById('drawerHistoryList');
     if (!listContainer) return;
 
-    try {
-        const tx = db.transaction("history", "readonly");
-        const store = tx.objectStore("history");
-        const getAll = store.getAll();
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const getAll = store.getAll();
 
-        getAll.onsuccess = function() {
-            let data = getAll.result || [];
-            if (data.length === 0) {
-                data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            }
-            data = data.reverse();
+    getAll.onsuccess = function() {
+        let data = getAll.result || [];
+        if (data.length === 0) {
+            data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        }
+        data = data.reverse();
 
-            if (data.length === 0) {
-                listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
-                return;
-            }
+        if (data.length === 0) {
+            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
+            return;
+        }
 
-            let itemsHTML = "";
-            data.forEach(item => {
-                let displayStatus = item.status === "Interrupted (Auto-Saved)"
-                    ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
-                    : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
+        let itemsHTML = "";
+        data.forEach(item => {
+            let displayStatus = item.status === "Interrupted (Auto-Saved)"
+                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
+                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
-                let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
+            let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
-                let resumeBtnStyle = recordsCount === 0 
-                    ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                    : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
-                
-                let csvBtnStyle = recordsCount === 0 
-                    ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                    : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+            // Compact button styling
+            let resumeBtnStyle = recordsCount === 0 
+                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+            
+            let csvBtnStyle = recordsCount === 0 
+                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
 
-                let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
-                let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
+            let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
+            let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
 
-                itemsHTML += `
-                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
-                        <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
-                        <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
-                        <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
-                            <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
-                            <div style="display: flex; gap: 4px; align-items: center;">
-                                <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
-                                <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
-                                <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
-                                <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
-                            </div>
+            itemsHTML += `
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
+                    <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
+                        <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
+                            <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
                         </div>
                     </div>
-                `;
-            });
-            listContainer.innerHTML = itemsHTML;
-        };
-    } catch (e) {
-        console.error("Render history items error:", e);
-    }
+                </div>
+            `;
+        });
+        listContainer.innerHTML = itemsHTML;
+    };
 }
 
 window.loadHistorySheetToTable = async function(id) {
-    if (!db) return;
     const tx = db.transaction("history", "readonly");
     const req = tx.objectStore("history").get(id);
 
@@ -1927,7 +1919,6 @@ window.loadHistorySheetToTable = async function(id) {
 };
 
 window.resumeHistorySheet = async function(id) {
-    if (!db) return;
     const tx = db.transaction("history", "readonly");
     const req = tx.objectStore("history").get(id);
 
@@ -1982,6 +1973,7 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
+        // Resume logic: find the max MC successfully scanned and resume from the next MC
         let nextStartMc = startRange;
         if (scrapedData.length > 0) {
             let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
@@ -1995,7 +1987,6 @@ window.resumeHistorySheet = async function(id) {
 };
 
 window.downloadHistoryCSV = function(id) {
-    if (!db) return;
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
     const req = store.get(id);
@@ -2014,30 +2005,15 @@ window.downloadHistoryCSV = function(id) {
 
 window.deleteHistoryItem = function(id) {
     if (confirm("Delete this sheet from history?")) {
-        if (db) {
-            try {
-                const tx = db.transaction("history", "readwrite");
-                const store = tx.objectStore("history");
-                store.delete(id);
-                tx.oncomplete = function() {
-                    let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-                    lsBackup = lsBackup.filter(r => r.id !== id);
-                    localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-                    renderHistoryItems();
-                };
-            } catch (e) {
-                console.error("Delete history error:", e);
-                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-                lsBackup = lsBackup.filter(r => r.id !== id);
-                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-                renderHistoryItems();
-            }
-        } else {
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.delete(id);
+        tx.oncomplete = function() {
             let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
             lsBackup = lsBackup.filter(r => r.id !== id);
             localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
             renderHistoryItems();
-        }
+        };
     }
 };
 
@@ -2051,35 +2027,29 @@ function triggerCSVDownload(recordsData, filename) {
 }
 
 function updateRealTimeHistory(recordsArray, isCompleted = false) {
-    if (!currentHistoryId) return;
-    
-    const historyItem = {
-        id: currentHistoryId,
-        date: window.activeHistoryDateStr || new Date().toLocaleString('en-US', { hour12: true }),
-        range: window.activeScrapeRange || "1 - 100",
-        totalRecords: recordsArray.length,
-        status: isCompleted ? "Completed" : "Interrupted (Auto-Saved)",
-        records: recordsArray
-    };
-
-    if (db) {
-        try {
-            const tx = db.transaction("history", "readwrite");
-            const store = tx.objectStore("history");
-            store.put(historyItem);
-        } catch (e) {
-            console.error("IndexedDB write error:", e);
+    if (!db || currentHistoryId === null) return;
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const req = store.get(currentHistoryId);
+    req.onsuccess = function() {
+        const data = req.result;
+        if (data) {
+            data.totalRecords = recordsArray.length;
+            data.records = recordsArray;
+            data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
+            
+            store.put(data);
+            
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            let index = lsBackup.findIndex(r => r.id === currentHistoryId);
+            if (index !== -1) {
+                lsBackup[index] = data;
+            } else {
+                lsBackup.push(data);
+            }
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
         }
-    }
-    
-    let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-    let index = lsBackup.findIndex(r => r.id === currentHistoryId);
-    if (index !== -1) {
-        lsBackup[index] = historyItem;
-    } else {
-        lsBackup.push(historyItem);
-    }
-    localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+    };
 }
 
 // ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH RETRY & LIMIT MONITORING ======
@@ -2232,38 +2202,16 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     }
 
     let currentRangeStr = `${start} - ${end}`;
-    window.activeScrapeRange = currentRangeStr;
-    window.activeHistoryDateStr = new Date().toLocaleString('en-US', { hour12: true });
-
-    if (overrideStart === null) {
-        currentHistoryId = Date.now();
-        scrapedData = [];
-        
-        const tableBody = document.getElementById('resultsTable');
-        if (tableBody) tableBody.innerHTML = '';
-
-        const initialHistoryItem = {
-            id: currentHistoryId,
-            date: window.activeHistoryDateStr,
-            range: currentRangeStr,
-            totalRecords: 0,
-            status: "Interrupted (Auto-Saved)",
-            records: []
-        };
-
-        if (db) {
-            try {
-                const tx = db.transaction("history", "readwrite");
-                const store = tx.objectStore("history");
-                store.put(initialHistoryItem);
-            } catch (e) {
-                console.error("Failed to initialize IndexedDB record:", e);
-            }
+    if (!currentHistoryId || window.activeScrapeRange !== currentRangeStr) {
+        if (overrideStart === null) {
+            currentHistoryId = null;
+            scrapedData = [];
         }
-        
-        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        lsBackup.push(initialHistoryItem);
-        localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+        window.activeScrapeRange = currentRangeStr;
+        if (overrideStart === null) {
+            const tableBody = document.getElementById('resultsTable');
+            if (tableBody) tableBody.innerHTML = '';
+        }
     }
 
     scraping = true; 
@@ -2290,6 +2238,31 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         statusBox.style.border = "1px solid #e9ecef";
         statusBox.style.borderLeft = "5px solid #002d62";
         statusBox.style.borderRadius = "4px";
+    }
+
+    if (!currentHistoryId && db) {
+        const now = new Date();
+        const formattedDate = now.toLocaleString('en-US', { hour12: true });
+
+        const initialHistoryItem = {
+            id: Date.now(),
+            date: formattedDate,
+            range: currentRangeStr,
+            totalRecords: scrapedData.length,
+            status: "Interrupted (Auto-Saved)",
+            records: scrapedData
+        };
+
+        currentHistoryId = initialHistoryItem.id;
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.add(initialHistoryItem);
+        
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup.push(initialHistoryItem);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+        };
     }
 
     let effectiveStart = start;
