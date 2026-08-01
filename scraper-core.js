@@ -366,22 +366,26 @@ request.onsuccess = function(e) {
 
 function syncIndexedDBWithLocalStorage() {
     if (!db) return;
-    const tx = db.transaction("history", "readwrite");
-    const store = tx.objectStore("history");
-    const getAll = store.getAll();
-    
-    getAll.onsuccess = function() {
-        let dbRecords = getAll.result || [];
-        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+    try {
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        const getAll = store.getAll();
         
-        if (dbRecords.length === 0 && lsBackup.length > 0) {
-            lsBackup.forEach(item => {
-                store.put(item);
-            });
-        } else if (dbRecords.length > 0) {
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
-        }
-    };
+        getAll.onsuccess = function() {
+            let dbRecords = getAll.result || [];
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            
+            if (dbRecords.length === 0 && lsBackup.length > 0) {
+                lsBackup.forEach(item => {
+                    store.put(item);
+                });
+            } else if (dbRecords.length > 0) {
+                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
+            }
+        };
+    } catch (e) {
+        console.error("IndexedDB Sync error:", e);
+    }
 }
 
 const DEFAULT_REMARKS_TEMPLATE = 
@@ -1801,63 +1805,68 @@ function renderHistoryItems() {
     const listContainer = document.getElementById('drawerHistoryList');
     if (!listContainer) return;
 
-    const tx = db.transaction("history", "readonly");
-    const store = tx.objectStore("history");
-    const getAll = store.getAll();
+    try {
+        const tx = db.transaction("history", "readonly");
+        const store = tx.objectStore("history");
+        const getAll = store.getAll();
 
-    getAll.onsuccess = function() {
-        let data = getAll.result || [];
-        if (data.length === 0) {
-            data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        }
-        data = data.reverse();
+        getAll.onsuccess = function() {
+            let data = getAll.result || [];
+            if (data.length === 0) {
+                data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            }
+            data = data.reverse();
 
-        if (data.length === 0) {
-            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
-            return;
-        }
+            if (data.length === 0) {
+                listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
+                return;
+            }
 
-        let itemsHTML = "";
-        data.forEach(item => {
-            let displayStatus = item.status === "Interrupted (Auto-Saved)"
-                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
-                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
+            let itemsHTML = "";
+            data.forEach(item => {
+                let displayStatus = item.status === "Interrupted (Auto-Saved)"
+                    ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
+                    : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
-            let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
+                let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
-            let resumeBtnStyle = recordsCount === 0 
-                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
-            
-            let csvBtnStyle = recordsCount === 0 
-                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+                let resumeBtnStyle = recordsCount === 0 
+                    ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                    : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+                
+                let csvBtnStyle = recordsCount === 0 
+                    ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                    : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
 
-            let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
-            let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
+                let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
+                let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
 
-            itemsHTML += `
-                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
-                    <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
-                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
-                    <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
-                        <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
-                        <div style="display: flex; gap: 4px; align-items: center;">
-                            <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
-                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
-                            <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
-                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
+                itemsHTML += `
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
+                        <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
+                        <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                        <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
+                            <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
+                                <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
+                                <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
+                                <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-        });
-        listContainer.innerHTML = itemsHTML;
-    };
+                `;
+            });
+            listContainer.innerHTML = itemsHTML;
+        };
+    } catch (e) {
+        console.error("Render history items error:", e);
+    }
 }
 
 window.loadHistorySheetToTable = async function(id) {
+    if (!db) return;
     const tx = db.transaction("history", "readonly");
     const req = tx.objectStore("history").get(id);
 
@@ -1918,6 +1927,7 @@ window.loadHistorySheetToTable = async function(id) {
 };
 
 window.resumeHistorySheet = async function(id) {
+    if (!db) return;
     const tx = db.transaction("history", "readonly");
     const req = tx.objectStore("history").get(id);
 
@@ -1985,6 +1995,7 @@ window.resumeHistorySheet = async function(id) {
 };
 
 window.downloadHistoryCSV = function(id) {
+    if (!db) return;
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
     const req = store.get(id);
@@ -2003,15 +2014,30 @@ window.downloadHistoryCSV = function(id) {
 
 window.deleteHistoryItem = function(id) {
     if (confirm("Delete this sheet from history?")) {
-        const tx = db.transaction("history", "readwrite");
-        const store = tx.objectStore("history");
-        store.delete(id);
-        tx.oncomplete = function() {
+        if (db) {
+            try {
+                const tx = db.transaction("history", "readwrite");
+                const store = tx.objectStore("history");
+                store.delete(id);
+                tx.oncomplete = function() {
+                    let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+                    lsBackup = lsBackup.filter(r => r.id !== id);
+                    localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+                    renderHistoryItems();
+                };
+            } catch (e) {
+                console.error("Delete history error:", e);
+                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+                lsBackup = lsBackup.filter(r => r.id !== id);
+                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+                renderHistoryItems();
+            }
+        } else {
             let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
             lsBackup = lsBackup.filter(r => r.id !== id);
             localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
             renderHistoryItems();
-        };
+        }
     }
 };
 
