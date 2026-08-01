@@ -899,7 +899,9 @@ window.logCallCount = function(phoneNum, cellElement) {
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
         el.classList.remove('active-called-cell');
     });
-    cellElement.classList.add('active-called-cell');
+    if (cellElement) {
+        cellElement.classList.add('active-called-cell');
+    }
 
     let downBtn = document.getElementById('dlScrollDownBtn');
     if (downBtn) downBtn.style.display = 'none';
@@ -1287,7 +1289,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        let clickableCell = containerElement.querySelector('.phone-clickable-cell') || containerElement.closest('.phone-clickable-container').querySelector('.phone-clickable-cell');
+        let clickableCell = containerElement.closest('td').querySelector('.phone-clickable-cell');
         if (clickableCell) {
             logCallCount(phoneNum, clickableCell);
         }
