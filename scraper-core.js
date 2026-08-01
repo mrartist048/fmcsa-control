@@ -1916,6 +1916,7 @@ window.resumeHistorySheet = async function(id) {
 
         scrapedData = item.records || [];
         currentHistoryId = item.id;
+        window.activeScrapeRange = item.range;
 
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
@@ -1947,7 +1948,7 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
-        // Resume execution. startScraping handles skipping already scraped MCs.
+        // Start scraping from the exact next MC based on existing history records
         startScraping(startRange, endRange);
     };
 };
@@ -2166,8 +2167,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         return;
     }
 
-    // Check if the input range is different from the currently active history sheet range.
-    // If range changed or no current history ID, start a completely fresh table and history session.
     let currentRangeStr = `${start} - ${end}`;
     if (!currentHistoryId || window.activeScrapeRange !== currentRangeStr) {
         currentHistoryId = null;
@@ -2228,8 +2227,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         };
     }
 
-    // Determine starting point: if we already have records in memory/history for this range,
-    // find the last scanned MC or jump straight past already scraped records to avoid iterating one by one from the beginning!
+    // Determine the precise starting MC point: scan past already processed records without reiterating them from the beginning
     let effectiveStart = start;
     if (scrapedData.length > 0) {
         let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
@@ -2249,36 +2247,40 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         let result = await processSingleMCWithDetailedError(mc, statusBox);
         totalProcessed++;
 
+        // Clear any prior error messages as soon as a request succeeds or gets handled properly
         if (result.status === "error") {
             errorDetailsList.push(result.message);
-        } else if (result.status === "success" && result.data) {
-            let record = result.data;
-            scrapedData.push(record);
-            let recordIndex = scrapedData.length - 1;
-            updateRealTimeHistory(scrapedData, false);
+        } else {
+            errorDetailsList = []; // Clear errors on successful fetch/filter/not-found completion
+            if (result.status === "success" && result.data) {
+                let record = result.data;
+                scrapedData.push(record);
+                let recordIndex = scrapedData.length - 1;
+                updateRealTimeHistory(scrapedData, false);
 
-            let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
-            let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
-            let activeRemarksValue = record.remarks || "";
+                let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+                let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
+                let activeRemarksValue = record.remarks || "";
 
-            const tableBody = document.getElementById('resultsTable');
-            let newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td><b>${record.mc}</b></td>
-                <td>${record.usdot}</td>
-                <td>${record.name}</td>
-                <td>${record.entityType}</td>
-                <td><span class="badge badge-active">${record.status}</span></td>
-                ${phoneCellMarkup}
-                <td>${record.address}</td>
-                ${emailCellMarkup}
-                <td>${record.powerUnits}</td>
-                <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
-                </td>
-                <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
-            `;
-            tableBody.appendChild(newRow);
+                const tableBody = document.getElementById('resultsTable');
+                let newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td><b>${record.mc}</b></td>
+                    <td>${record.usdot}</td>
+                    <td>${record.name}</td>
+                    <td>${record.entityType}</td>
+                    <td><span class="badge badge-active">${record.status}</span></td>
+                    ${phoneCellMarkup}
+                    <td>${record.address}</td>
+                    ${emailCellMarkup}
+                    <td>${record.powerUnits}</td>
+                    <td class="remarks-cell-container">
+                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
+                    </td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                `;
+                tableBody.appendChild(newRow);
+            }
         }
 
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
