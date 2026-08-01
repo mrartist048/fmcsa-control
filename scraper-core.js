@@ -1807,6 +1807,7 @@ function renderHistoryItems() {
                 ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
                 : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
+            // Styled matching normal button sizes
             let resumeBtnHTML = item.status === "Interrupted (Auto-Saved)" 
                 ? `<button onclick="resumeHistorySheet(${item.id})" style="background: #ff9800; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Resume Scraping">Resume</button>`
                 : "";
@@ -1847,7 +1848,6 @@ window.loadHistorySheetToTable = async function(id) {
         scrapedData = item.records; 
         currentHistoryId = item.id;
 
-        // Set inputs to the original history range
         if (item.range) {
             let parts = item.range.split('-');
             if (parts.length === 2) {
@@ -1909,7 +1909,6 @@ window.resumeHistorySheet = async function(id) {
         let startRange = parseInt(parts[0].trim());
         let endRange = parseInt(parts[1].trim());
 
-        // Populate header input fields back to the full range
         let startInput = document.getElementById('startMc');
         let endInput = document.getElementById('endMc');
         if (startInput) startInput.value = startRange;
@@ -1948,7 +1947,7 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
-        // Start scraping from the beginning (startRange), the internal check will automatically skip already saved/scraped MCs
+        // Resume execution. startScraping handles skipping already scraped MCs.
         startScraping(startRange, endRange);
     };
 };
@@ -2036,7 +2035,7 @@ window.stopScraping = function() {
     }
 }
 
-async function processSingleMCWithDetailedError(mc) {
+async function processSingleMCWithDetailedError(mc, statusBox) {
     let maxRetries = 3;
     let attempt = 0;
 
@@ -2049,7 +2048,6 @@ async function processSingleMCWithDetailedError(mc) {
             let activeTabsCount = Object.keys(sData).filter(k => sData[k] && (now - sData[k].timestamp < 25000)).length;
 
             if (userLimit > 0 && activeTabsCount > userLimit) {
-                let statusBox = document.getElementById('status');
                 if (statusBox) {
                     statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded. Retrying automatically once slot frees up...</strong>`;
                 }
@@ -2062,6 +2060,9 @@ async function processSingleMCWithDetailedError(mc) {
             
             if (!response.ok) {
                 attempt++;
+                if (statusBox) {
+                    statusBox.innerHTML = `<strong>⚠️ Safer Server Issue (Attempt ${attempt}/${maxRetries}). Retrying...</strong>`;
+                }
                 await new Promise(r => setTimeout(r, 2000 * attempt));
                 continue;
             }
@@ -2146,9 +2147,8 @@ async function processSingleMCWithDetailedError(mc) {
 
         } catch (err) {
             attempt++;
-            let statusBox = document.getElementById('status');
             if (statusBox) {
-                statusBox.innerHTML = `<strong>⚠️ Connection issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
+                statusBox.innerHTML = `<strong>⚠️ Safer Server Issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
             }
             await new Promise(r => setTimeout(r, 3000 * attempt));
         }
@@ -2161,8 +2161,20 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     const end = overrideEnd !== null ? overrideEnd : parseInt(document.getElementById('endMc').value);
 
     if (isNaN(start) || isNaN(end) || start > end) {
-        document.getElementById('status').innerText = "Please enter a valid MC range.";
+        let stBox = document.getElementById('status');
+        if (stBox) stBox.innerText = "Please enter a valid MC range.";
         return;
+    }
+
+    // Check if the input range is different from the currently active history sheet range.
+    // If range changed or no current history ID, start a completely fresh table and history session.
+    let currentRangeStr = `${start} - ${end}`;
+    if (!currentHistoryId || window.activeScrapeRange !== currentRangeStr) {
+        currentHistoryId = null;
+        scrapedData = [];
+        window.activeScrapeRange = currentRangeStr;
+        const tableBody = document.getElementById('resultsTable');
+        if (tableBody) tableBody.innerHTML = '';
     }
 
     scraping = true; 
@@ -2198,7 +2210,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         const initialHistoryItem = {
             id: Date.now(),
             date: formattedDate,
-            range: `${start} - ${end}`,
+            range: currentRangeStr,
             totalRecords: scrapedData.length,
             status: "Interrupted (Auto-Saved)",
             records: scrapedData
@@ -2216,16 +2228,25 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         };
     }
 
-    for (let mc = start; mc <= end; mc++) {
+    // Determine starting point: if we already have records in memory/history for this range,
+    // find the last scanned MC or jump straight past already scraped records to avoid iterating one by one from the beginning!
+    let effectiveStart = start;
+    if (scrapedData.length > 0) {
+        let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
+        if (maxScannedMc >= start && maxScannedMc < end) {
+            effectiveStart = maxScannedMc + 1;
+        }
+    }
+
+    for (let mc = effectiveStart; mc <= end; mc++) {
         if (!scraping) break;
 
-        // Skip if already present in scrapedData (resume safety check)
         if (scrapedData.some(r => r.mc === mc)) {
             totalProcessed++;
             continue;
         }
 
-        let result = await processSingleMCWithDetailedError(mc);
+        let result = await processSingleMCWithDetailedError(mc, statusBox);
         totalProcessed++;
 
         if (result.status === "error") {
@@ -2271,7 +2292,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
-        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px;">Status: Stable</span>`;
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
