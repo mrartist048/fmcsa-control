@@ -1807,23 +1807,32 @@ function renderHistoryItems() {
                 ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
                 : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
-            // Styled matching normal button sizes
-            let resumeBtnHTML = item.status === "Interrupted (Auto-Saved)" 
-                ? `<button onclick="resumeHistorySheet(${item.id})" style="background: #ff9800; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Resume Scraping">Resume</button>`
-                : "";
+            let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
+
+            // Conditional styling for action buttons to match screenshot requirements (compact buttons without giant boxes)
+            let resumeBtnStyle = recordsCount === 0 
+                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+            
+            let csvBtnStyle = recordsCount === 0 
+                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+
+            let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
+            let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
 
             itemsHTML += `
-                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
                     <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
                     <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
-                    <div style="font-size: 12px; margin-bottom: 6px;">Status: ${displayStatus}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                        <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
-                        <div style="display: flex; gap: 4px;">
-                            ${resumeBtnHTML}
-                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">📂 Open</button>
-                            <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;"'}>📥 CSV</button>
-                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
+                    <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
+                        <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
+                            <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -1948,8 +1957,16 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
-        // Start scraping from the exact next MC based on existing history records
-        startScraping(startRange, endRange);
+        // Correct resume logic: Find the maximum MC successfully scraped so far, and resume from the next MC.
+        let nextStartMc = startRange;
+        if (scrapedData.length > 0) {
+            let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
+            if (!isNaN(maxScannedMc) && maxScannedMc >= startRange) {
+                nextStartMc = maxScannedMc + 1;
+            }
+        }
+        
+        startScraping(nextStartMc, endRange);
     };
 };
 
@@ -1963,8 +1980,9 @@ window.downloadHistoryCSV = function(id) {
             let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
             item = lsBackup.find(r => r.id === id);
         }
-        if (item && item.records.length > 0) {
-            triggerCSVDownload(item.records, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
+        let recordsList = item && item.records ? item.records : [];
+        if (recordsList.length > 0) {
+            triggerCSVDownload(recordsList, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
         }
     };
 };
@@ -2169,11 +2187,15 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     let currentRangeStr = `${start} - ${end}`;
     if (!currentHistoryId || window.activeScrapeRange !== currentRangeStr) {
-        currentHistoryId = null;
-        scrapedData = [];
+        if (overrideStart === null) {
+            currentHistoryId = null;
+            scrapedData = [];
+        }
         window.activeScrapeRange = currentRangeStr;
-        const tableBody = document.getElementById('resultsTable');
-        if (tableBody) tableBody.innerHTML = '';
+        if (overrideStart === null) {
+            const tableBody = document.getElementById('resultsTable');
+            if (tableBody) tableBody.innerHTML = '';
+        }
     }
 
     scraping = true; 
@@ -2227,11 +2249,10 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         };
     }
 
-    // Determine the precise starting MC point: scan past already processed records without reiterating them from the beginning
     let effectiveStart = start;
     if (scrapedData.length > 0) {
         let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
-        if (maxScannedMc >= start && maxScannedMc < end) {
+        if (!isNaN(maxScannedMc) && maxScannedMc >= start && maxScannedMc < end) {
             effectiveStart = maxScannedMc + 1;
         }
     }
@@ -2247,11 +2268,10 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         let result = await processSingleMCWithDetailedError(mc, statusBox);
         totalProcessed++;
 
-        // Clear any prior error messages as soon as a request succeeds or gets handled properly
         if (result.status === "error") {
             errorDetailsList.push(result.message);
         } else {
-            errorDetailsList = []; // Clear errors on successful fetch/filter/not-found completion
+            errorDetailsList = []; 
             if (result.status === "success" && result.data) {
                 let record = result.data;
                 scrapedData.push(record);
