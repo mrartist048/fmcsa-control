@@ -19,7 +19,6 @@ const allowedUsers = {
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
      "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
      "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
-
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
@@ -300,14 +299,12 @@ async function checkGlobalSessions() {
         const currentTabRecord = activeTabs.find(tab => tab.id === window.name);
         
         if (!currentTabRecord && activeTabs.length >= userLimit) {
-            document.body.innerHTML = `
-                <div style="font-family:sans-serif; text-align:center; padding:50px; margin-top:100px;">
-                    <h1 style="color:#dc3545; font-size:30px;">⚠️ Global License Limit Exceeded</h1>
-                    <p style="font-size:16px; color:#333;">Your account is limited to a maximum of <b>${userLimit}</b> active Chrome instances or laptops.</p>
-                    <button onclick="window.location.reload()" style="background:#002d62; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:15px;">Retry Connection</button>
-                </div>
-            `;
-            throw new Error("Global Session Limit Exceeded");
+            // Trigger automatic pause if scraping is currently active
+            if (typeof scraping !== 'undefined' && scraping) {
+                stopScraping();
+                showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping paused safely.", 6000);
+            }
+            return;
         }
         
         if (currentTabRecord) {
@@ -454,7 +451,6 @@ function injectHistoryUIFramework() {
         document.head.appendChild(styleTag);
     }
 
-    // Inject Smart Dynamic Floating Navigation Panel (Scroll Up / Scroll Down)
     if (!document.getElementById('dlFloatingNavPanel')) {
         let navPanel = document.createElement('div');
         navPanel.id = 'dlFloatingNavPanel';
@@ -465,19 +461,15 @@ function injectHistoryUIFramework() {
         `;
         document.body.appendChild(navPanel);
 
-        // Scroll Event Listener to Toggle Arrows Smartly
         window.addEventListener('scroll', function() {
             let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             let upBtn = document.getElementById('dlScrollUpBtn');
             let downBtn = document.getElementById('dlScrollDownBtn');
             let hasActiveCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell') !== null;
 
-            // Show Scroll Up button only when scrolled down more than 250px
             if (upBtn) {
                 upBtn.style.display = scrollTop > 250 ? 'flex' : 'none';
             }
-
-            // Show Scroll Down button only when scrolled up near top and an active called lead exists
             if (downBtn) {
                 downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
             }
@@ -894,7 +886,6 @@ window.logCallCount = function(phoneNum, cellElement) {
     });
     cellElement.classList.add('active-called-cell');
 
-    // Automatically hide scroll down arrow once a call is made/clicked
     let downBtn = document.getElementById('dlScrollDownBtn');
     if (downBtn) downBtn.style.display = 'none';
 }
@@ -934,7 +925,6 @@ window.openCallingDetailModal = function() {
     document.body.appendChild(modal);
 }
 
-// 👑 Advanced Admin Panel with Tab Navigation & Refresh Button
 window.openAdminPanelPrompt = function() {
     let passInput = prompt("Enter Master Admin Password:");
     if (passInput === null) return;
@@ -963,19 +953,16 @@ async function renderAdvancedAdminModal() {
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             
-            <!-- Tab Navigation Bar -->
             <div style="display: flex; background: #f1f3f4; border-bottom: 1px solid #ddd; padding: 10px 15px; gap: 8px;">
                 <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
                 <button onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <!-- Modal Body Container -->
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
                 Loading live team status and reports...
             </div>
 
-            <!-- Footer with Clean Actions -->
             <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
                 <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export CSV Report</button>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
@@ -1257,9 +1244,7 @@ window.confirmSendShiftReport = async function() {
         let reportsList = await res.json() || [];
         if (!Array.isArray(reportsList)) reportsList = [];
 
-        // Smart Overwriting: Remove existing report for the exact same sender & shift date
         reportsList = reportsList.filter(r => !(r.sender === dispatcherNickname && r.date === shiftDateStr));
-
         reportsList.push(reportData);
 
         await fetch(reportUrl, {
@@ -1823,6 +1808,10 @@ function renderHistoryItems() {
                 ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
                 : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
+            let resumeBtnHTML = item.status === "Interrupted (Auto-Saved)" 
+                ? `<button onclick="resumeHistorySheet(${item.id})" style="background: #ff9800; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Resume Scraping">▶️ Resume</button>`
+                : "";
+
             itemsHTML += `
                 <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 4px;">
                     <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
@@ -1831,6 +1820,7 @@ function renderHistoryItems() {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                         <span style="background: #e2eafc; color: #002d62; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${item.totalRecords} Active</span>
                         <div style="display: flex; gap: 4px;">
+                            ${resumeBtnHTML}
                             <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">📂 Open</button>
                             <button onclick="downloadHistoryCSV(${item.id})" ${item.totalRecords === 0 ? 'disabled style="opacity:0.5; background:#6c757d;"' : 'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;"'}>📥 CSV</button>
                             <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; font-weight: bold;">🗑️</button>
@@ -1890,6 +1880,70 @@ window.loadHistorySheetToTable = async function(id) {
         }
         populateStateDropdown();
         toggleHistoryDrawer(); 
+    };
+};
+
+window.resumeHistorySheet = async function(id) {
+    const tx = db.transaction("history", "readonly");
+    const req = tx.objectStore("history").get(id);
+
+    req.onsuccess = async function() {
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
+        if (!item || !item.range) return;
+
+        let parts = item.range.split('-');
+        let startRange = parseInt(parts[0].trim());
+        let endRange = parseInt(parts[1].trim());
+
+        let alreadyScannedMCs = item.records.map(r => parseInt(r.mc));
+        let nextMcToScan = startRange;
+        for (let m = startRange; m <= endRange; m++) {
+            if (!alreadyScannedMCs.includes(m)) {
+                nextMcToScan = m;
+                break;
+            }
+        }
+
+        document.getElementById('startMc').value = nextMcToScan;
+        document.getElementById('endMc').value = endRange;
+
+        scrapedData = item.records || [];
+        currentHistoryId = item.id;
+
+        const tableBody = document.getElementById('resultsTable');
+        tableBody.innerHTML = '';
+        
+        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+        for (let index = 0; index < scrapedData.length; index++) {
+            let record = scrapedData[index];
+            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            let phoneCellHTML = buildPhoneCellMarkup(record.phone);
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
+            let activeRemarksValue = record.remarks || "";
+
+            tableBody.innerHTML += `<tr ${rowStyleHTML}>
+                <td><b>${record.mc}</b></td>
+                <td>${record.usdot}</td>
+                <td>${record.name}</td>
+                <td>${record.entityType}</td>
+                <td><span class="badge badge-active">${record.status}</span></td>
+                ${phoneCellHTML}
+                <td>${record.address}</td> 
+                ${emailCellHTML}
+                <td>${record.powerUnits}</td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                </td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+            </tr>`;
+        }
+        toggleHistoryDrawer();
+        startScraping(nextMcToScan, endRange);
     };
 };
 
@@ -1958,7 +2012,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH EMAIL & SMS SCRAPING ======
+// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH RETRY & LIMIT MONITORING ======
 let scraping = false; 
 let scrapedData = [];
 
@@ -1971,104 +2025,135 @@ window.stopScraping = function() {
         statusBox.style.padding = "10px 15px";
         statusBox.innerHTML = "<strong>⏸️ Processing Paused Safely. Click Start to resume/run again.</strong>";
     }
-}
-
-async function processSingleMCWithDetailedError(mc) {
-    try {
-        const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
-        const response = await fetch(snapshotUrl);
-        
-        if (!response.ok) {
-            return { status: "error", message: `HTTP Status ${response.status} on MC ${mc}` };
-        }
-
-        const htmlText = await response.text();
-
-        if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
-            return { status: "not_found" };
-        }
-
-        let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
-        let el = document.createElement('html');
-        el.innerHTML = htmlText;
-        let cells = el.querySelectorAll('td, th');
-
-        for (let i = 0; i < cells.length; i++) {
-            let text = cells[i].textContent.trim();
-            if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
-                if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-            }
-            if (text.startsWith("USDOT Number:")) {
-                if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
-            }
-            if (text.startsWith("Entity Type:")) {
-                if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-            }
-            if (text.startsWith("Operating Authority Status:")) {
-                if (cells[i+1]) {
-                    let rawStatus = cells[i+1].textContent.toUpperCase();
-                    if (rawStatus.includes("NOT AUTHORIZED")) {
-                        record.status = "NOT AUTHORIZED";
-                    } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
-                        record.status = "AUTHORIZED";
-                    } else {
-                        record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
-                    }
-                }
-            }
-            if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-            if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-            if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
-                if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-            }
-        }
-
-        if (record.status !== "AUTHORIZED") { 
-            return { status: "filtered_out" }; 
-        }
-
-        // Email Scraping from SMS Portal
-        if (record.usdot !== 'N/A') {
-            try {
-                const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
-                const smsResponse = await fetch(smsUrl);
-                if (smsResponse.ok) {
-                    const smsHtml = await smsResponse.text();
-                    let smsEl = document.createElement('html');
-                    smsEl.innerHTML = smsHtml;
-                    let smsCells = smsEl.querySelectorAll('td, th, span, label, a');
-                    for (let j = 0; j < smsCells.length; j++) {
-                        let smsText = smsCells[j].textContent.trim();
-                        if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
-                            let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                            if (emailMatch && !emailMatch[0].includes("fmcsa") && !emailMatch[0].includes("dot.gov")) { 
-                                record.email = emailMatch[0]; 
-                                break; 
-                            }
-                        }
-                    }
-                    if (record.email === 'N/A') {
-                        let fullPageEmailMatch = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
-                        if (fullPageEmailMatch) {
-                            let validEmail = fullPageEmailMatch.find(e => !e.toLowerCase().includes("fmcsa") && !e.toLowerCase().includes("dot.gov"));
-                            if (validEmail) record.email = validEmail;
-                        }
-                    }
-                }
-            } catch (smsErr) { 
-                console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
-            }
-        }
-        return { status: "success", data: record };
-
-    } catch (err) {
-        return { status: "error", message: `Connection Failed for MC ${mc}: ${err.message}` };
+    if (currentHistoryId) {
+        updateRealTimeHistory(scrapedData, false);
     }
 }
 
-window.startScraping = async function() {
-    const start = parseInt(document.getElementById('startMc').value);
-    const end = parseInt(document.getElementById('endMc').value);
+async function processSingleMCWithDetailedError(mc) {
+    let maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            // Check global session limits before making network requests
+            const sessionUrl = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
+            const sRes = await fetch(sessionUrl);
+            const sData = await sRes.json() || {};
+            let now = Date.now();
+            let activeTabsCount = Object.keys(sData).filter(k => sData[k] && (now - sData[k].timestamp < 25000)).length;
+
+            if (userLimit > 0 && activeTabsCount > userLimit) {
+                let statusBox = document.getElementById('status');
+                if (statusBox) {
+                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded. Retrying automatically once slot frees up...</strong>`;
+                }
+                await new Promise(r => setTimeout(r, 5000));
+                continue;
+            }
+
+            const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
+            const response = await fetch(snapshotUrl);
+            
+            if (!response.ok) {
+                attempt++;
+                await new Promise(r => setTimeout(r, 2000 * attempt));
+                continue;
+            }
+
+            const htmlText = await response.text();
+
+            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
+                return { status: "not_found" };
+            }
+
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let el = document.createElement('html');
+            el.innerHTML = htmlText;
+            let cells = el.querySelectorAll('td, th');
+
+            for (let i = 0; i < cells.length; i++) {
+                let text = cells[i].textContent.trim();
+                if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
+                    if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("USDOT Number:")) {
+                    if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+                }
+                if (text.startsWith("Entity Type:")) {
+                    if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("Operating Authority Status:")) {
+                    if (cells[i+1]) {
+                        let rawStatus = cells[i+1].textContent.toUpperCase();
+                        if (rawStatus.includes("NOT AUTHORIZED")) {
+                            record.status = "NOT AUTHORIZED";
+                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
+                            record.status = "AUTHORIZED";
+                        } else {
+                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+                        }
+                    }
+                }
+                if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
+                    if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+            }
+
+            if (record.status !== "AUTHORIZED") { 
+                return { status: "filtered_out" }; 
+            }
+
+            if (record.usdot !== 'N/A') {
+                try {
+                    const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
+                    const smsResponse = await fetch(smsUrl);
+                    if (smsResponse.ok) {
+                        const smsHtml = await smsResponse.text();
+                        let smsEl = document.createElement('html');
+                        smsEl.innerHTML = smsHtml;
+                        let smsCells = smsEl.querySelectorAll('td, th, span, label, a');
+                        for (let j = 0; j < smsCells.length; j++) {
+                            let smsText = smsCells[j].textContent.trim();
+                            if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
+                                let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                                if (emailMatch && !emailMatch[0].includes("fmcsa") && !emailMatch[0].includes("dot.gov")) { 
+                                    record.email = emailMatch[0]; 
+                                    break; 
+                                }
+                            }
+                        }
+                        if (record.email === 'N/A') {
+                            let fullPageEmailMatch = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+                            if (fullPageEmailMatch) {
+                                let validEmail = fullPageEmailMatch.find(e => !e.toLowerCase().includes("fmcsa") && !e.toLowerCase().includes("dot.gov"));
+                                if (validEmail) record.email = validEmail;
+                            }
+                        }
+                    }
+                } catch (smsErr) { 
+                    console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
+                }
+            }
+            return { status: "success", data: record };
+
+        } catch (err) {
+            attempt++;
+            let statusBox = document.getElementById('status');
+            if (statusBox) {
+                statusBox.innerHTML = `<strong>⚠️ Connection issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
+            }
+            await new Promise(r => setTimeout(r, 3000 * attempt));
+        }
+    }
+    return { status: "error", message: `Failed after retries for MC ${mc}` };
+}
+
+window.startScraping = async function(overrideStart = null, overrideEnd = null) {
+    const start = overrideStart !== null ? overrideStart : parseInt(document.getElementById('startMc').value);
+    const end = overrideEnd !== null ? overrideEnd : parseInt(document.getElementById('endMc').value);
 
     if (isNaN(start) || isNaN(end) || start > end) {
         document.getElementById('status').innerText = "Please enter a valid MC range.";
@@ -2076,15 +2161,11 @@ window.startScraping = async function() {
     }
 
     scraping = true; 
-    scrapedData = [];
     document.getElementById('startBtn').style.display = 'none';
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
     if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
-
-    const tableBody = document.getElementById('resultsTable');
-    tableBody.innerHTML = '';
 
     let totalToScan = end - start + 1;
     let totalProcessed = 0;
@@ -2105,7 +2186,7 @@ window.startScraping = async function() {
         statusBox.style.borderRadius = "4px";
     }
 
-    if (db) {
+    if (!currentHistoryId && db) {
         const now = new Date();
         const formattedDate = now.toLocaleString('en-US', { hour12: true });
 
@@ -2113,9 +2194,9 @@ window.startScraping = async function() {
             id: Date.now(),
             date: formattedDate,
             range: `${start} - ${end}`,
-            totalRecords: 0,
+            totalRecords: scrapedData.length,
             status: "Interrupted (Auto-Saved)",
-            records: []
+            records: scrapedData
         };
 
         currentHistoryId = initialHistoryItem.id;
@@ -2133,12 +2214,17 @@ window.startScraping = async function() {
     for (let mc = start; mc <= end; mc++) {
         if (!scraping) break;
 
+        // Skip if already present in scrapedData (resume safety check)
+        if (scrapedData.some(r => r.mc === mc)) {
+            totalProcessed++;
+            continue;
+        }
+
         let result = await processSingleMCWithDetailedError(mc);
         totalProcessed++;
 
         if (result.status === "error") {
             errorDetailsList.push(result.message);
-            console.error(result.message);
         } else if (result.status === "success" && result.data) {
             let record = result.data;
             scrapedData.push(record);
@@ -2149,6 +2235,7 @@ window.startScraping = async function() {
             let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
             let activeRemarksValue = record.remarks || "";
 
+            const tableBody = document.getElementById('resultsTable');
             let newRow = document.createElement('tr');
             newRow.innerHTML = `
                 <td><b>${record.mc}</b></td>
@@ -2170,7 +2257,7 @@ window.startScraping = async function() {
 
         let percentage = Math.floor((totalProcessed / totalToScan) * 100);
         let elapsedSeconds = (Date.now() - startTime) / 1000;
-        let avgTimePerMC = elapsedSeconds / totalProcessed;
+        let avgTimePerMC = elapsedSeconds / (totalProcessed || 1);
         let remainingMCs = totalToScan - totalProcessed;
         let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
 
@@ -2179,7 +2266,7 @@ window.startScraping = async function() {
         let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
-        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Last Err: ${errorDetailsList[errorDetailsList.length - 1].substring(0, 35)}...</span>` : `<span style="color:#28a745; font-size:11px;">Status: Stable</span>`;
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px;">Status: Stable</span>`;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
@@ -2212,7 +2299,7 @@ window.startScraping = async function() {
         statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records. ${errorDetailsList.length > 0 ? `(Encountered ${errorDetailsList.length} connection issues)` : ''}</strong>`;
+        statusBox.innerHTML = `<strong style="font-size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
     }
 
     if(scrapedData.length > 0) {
