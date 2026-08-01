@@ -1973,7 +1973,6 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
-        // Resume logic: find the max MC successfully scanned and resume from the next MC
         let nextStartMc = startRange;
         if (scrapedData.length > 0) {
             let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
@@ -2027,10 +2026,22 @@ function triggerCSVDownload(recordsData, filename) {
 }
 
 function updateRealTimeHistory(recordsArray, isCompleted = false) {
-    if (!db || currentHistoryId === null) return;
+    if (!db) return;
+    
+    // Fallback agar currentHistoryId null ho toh latest active history entry utha lo
+    if (currentHistoryId === null) {
+        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+        if (lsBackup.length > 0) {
+            currentHistoryId = lsBackup[lsBackup.length - 1].id;
+        } else {
+            return;
+        }
+    }
+
     const tx = db.transaction("history", "readwrite");
     const store = tx.objectStore("history");
     const req = store.get(currentHistoryId);
+    
     req.onsuccess = function() {
         const data = req.result;
         if (data) {
@@ -2202,16 +2213,42 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     }
 
     let currentRangeStr = `${start} - ${end}`;
-    if (!currentHistoryId || window.activeScrapeRange !== currentRangeStr) {
-        if (overrideStart === null) {
-            currentHistoryId = null;
-            scrapedData = [];
-        }
+    
+    // Agar fresh start hai toh naya history entry foran create karo
+    if (overrideStart === null) {
+        currentHistoryId = null;
+        scrapedData = [];
         window.activeScrapeRange = currentRangeStr;
-        if (overrideStart === null) {
-            const tableBody = document.getElementById('resultsTable');
-            if (tableBody) tableBody.innerHTML = '';
+        
+        const tableBody = document.getElementById('resultsTable');
+        if (tableBody) tableBody.innerHTML = '';
+
+        if (db) {
+            const now = new Date();
+            const formattedDate = now.toLocaleString('en-US', { hour12: true });
+
+            const initialHistoryItem = {
+                id: Date.now(),
+                date: formattedDate,
+                range: currentRangeStr,
+                totalRecords: 0,
+                status: "Interrupted (Auto-Saved)",
+                records: []
+            };
+
+            currentHistoryId = initialHistoryItem.id;
+            const tx = db.transaction("history", "readwrite");
+            const store = tx.objectStore("history");
+            store.add(initialHistoryItem);
+            
+            tx.oncomplete = function() {
+                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+                lsBackup.push(initialHistoryItem);
+                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+            };
         }
+    } else {
+        window.activeScrapeRange = currentRangeStr;
     }
 
     scraping = true; 
@@ -2238,31 +2275,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         statusBox.style.border = "1px solid #e9ecef";
         statusBox.style.borderLeft = "5px solid #002d62";
         statusBox.style.borderRadius = "4px";
-    }
-
-    if (!currentHistoryId && db) {
-        const now = new Date();
-        const formattedDate = now.toLocaleString('en-US', { hour12: true });
-
-        const initialHistoryItem = {
-            id: Date.now(),
-            date: formattedDate,
-            range: currentRangeStr,
-            totalRecords: scrapedData.length,
-            status: "Interrupted (Auto-Saved)",
-            records: scrapedData
-        };
-
-        currentHistoryId = initialHistoryItem.id;
-        const tx = db.transaction("history", "readwrite");
-        const store = tx.objectStore("history");
-        store.add(initialHistoryItem);
-        
-        tx.oncomplete = function() {
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            lsBackup.push(initialHistoryItem);
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-        };
     }
 
     let effectiveStart = start;
