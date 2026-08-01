@@ -2031,6 +2031,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     const tx = db.transaction("history", "readwrite");
     const store = tx.objectStore("history");
     const req = store.get(currentHistoryId);
+    
     req.onsuccess = function() {
         const data = req.result;
         if (data) {
@@ -2040,14 +2041,20 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
             
             store.put(data);
             
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            let index = lsBackup.findIndex(r => r.id === currentHistoryId);
-            if (index !== -1) {
-                lsBackup[index] = data;
-            } else {
-                lsBackup.push(data);
-            }
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+            tx.oncomplete = function() {
+                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+                let index = lsBackup.findIndex(r => r.id === currentHistoryId);
+                if (index !== -1) {
+                    lsBackup[index] = data;
+                } else {
+                    lsBackup.push(data);
+                }
+                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+                
+                if (document.getElementById('dlHistoryDrawer') && document.getElementById('dlHistoryDrawer').style.right === "0px") {
+                    renderHistoryItems();
+                }
+            };
         }
     };
 }
