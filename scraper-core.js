@@ -1344,19 +1344,19 @@ function buildPhoneCellMarkup(phoneNum) {
 
 // ====== FOLLOW-UP ENGINE WITH CALENDAR & TIME PICKER MODAL ======
 let currentFollowUpFilterMode = 'today';
-let pendingFollowUpIndex = null;
+let pendingFollowUpMc = null;
 let pendingFollowUpRowBtn = null;
 
-window.addLeadToFollowUpList = function(index, buttonElement) {
-    let record = scrapedData[index];
+window.addLeadToFollowUpList = function(mcNumber, buttonElement) {
+    let record = scrapedData.find(r => r.mc == mcNumber);
     if (!record) return;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    if (followUpStore.some(r => r.mc === record.mc)) {
+    if (followUpStore.some(r => r.mc == record.mc)) {
         return alert("This carrier is already added to your Follow-Up list.");
     }
     
-    pendingFollowUpIndex = index;
+    pendingFollowUpMc = record.mc;
     pendingFollowUpRowBtn = buttonElement;
 
     let todayDateStr = new Date().toISOString().split('T')[0];
@@ -1374,13 +1374,13 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
 window.closeFollowUpModal = function() {
     let modal = document.getElementById('dlDatePickerModal');
     if (modal) modal.style.display = 'none';
-    pendingFollowUpIndex = null;
+    pendingFollowUpMc = null;
     pendingFollowUpRowBtn = null;
 };
 
 window.confirmFollowUpSchedule = function() {
-    if (pendingFollowUpIndex === null) return;
-    let record = scrapedData[pendingFollowUpIndex];
+    if (pendingFollowUpMc === null) return;
+    let record = scrapedData.find(r => r.mc == pendingFollowUpMc);
     if (!record) return;
 
     let selectedDate = document.getElementById('dlModalDateInput').value;
@@ -1391,16 +1391,19 @@ window.confirmFollowUpSchedule = function() {
         return;
     }
 
-    record.addedAt = new Date().toLocaleString();
-    record.followUpDate = selectedDate;
-    record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
-    record.sharedBy = dispatcherNickname;
+    let clonedRecord = JSON.parse(JSON.stringify(record));
+    clonedRecord.addedAt = new Date().toLocaleString();
+    clonedRecord.followUpDate = selectedDate;
+    clonedRecord.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+    clonedRecord.sharedBy = dispatcherNickname;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    followUpStore.push(record);
-    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+    if (!followUpStore.some(r => r.mc == clonedRecord.mc)) {
+        followUpStore.push(clonedRecord);
+        localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+    }
     
-    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
+    showPremiumNotification(`⭐ Added MC ${clonedRecord.mc} for Follow-Up on ${clonedRecord.followUpDate}`, 3500);
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
@@ -1479,14 +1482,14 @@ window.clearFollowUpFilters = function() {
 window.deleteFollowUpItem = function(mcNumber) {
     if (confirm("Remove carrier from Follow-Ups?")) {
         let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-        followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
+        followUpStore = followUpStore.filter(r => r.mc != mcNumber);
         localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
         renderFollowUpItems();
         
         let tableRows = document.querySelectorAll('#resultsTable tr');
         tableRows.forEach(row => {
             let cellMc = parseInt(row.cells[0]?.textContent);
-            if (cellMc === mcNumber) row.style.background = "";
+            if (cellMc == mcNumber) row.style.background = "";
         });
     }
 };
@@ -1572,7 +1575,7 @@ window.confirmTeamShareAction = async function() {
 
         let addedCount = 0;
         pendingShareRecords.forEach(rec => {
-            if (!existingList.some(r => r.mc === rec.mc)) {
+            if (!existingList.some(r => r.mc == rec.mc)) {
                 existingList.push(rec);
                 addedCount++;
             }
@@ -1607,8 +1610,8 @@ window.shareSelectedFollowUpsToTeam = function() {
     }
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
-    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
+    let selectedMCs = Array.from(selectedCheckboxes).map(cb => cb.value);
+    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(String(r.mc)));
 
     openTeamShareModal(selectedRecords);
 };
@@ -1625,7 +1628,7 @@ async function pollIncomingSharedLeads() {
         let newLeadsAdded = false;
 
         sharedLeads.forEach(lead => {
-            if (!localFollowUps.some(r => r.mc === lead.mc)) {
+            if (!localFollowUps.some(r => r.mc == lead.mc)) {
                 localFollowUps.push(lead);
                 newLeadsAdded = true;
             }
@@ -1916,7 +1919,7 @@ window.loadHistorySheetToTable = async function(id) {
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
             let phoneCellHTML = buildPhoneCellMarkup(record.phone);
             
-            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let isAlreadyFollowed = followUpStore.some(r => r.mc == record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             let activeRemarksValue = record.remarks || "";
 
@@ -1933,7 +1936,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList('${record.mc}', this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         populateStateDropdown();
@@ -1974,7 +1977,7 @@ window.resumeHistorySheet = async function(id) {
             let record = scrapedData[index];
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
             let phoneCellHTML = buildPhoneCellMarkup(record.phone);
-            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let isAlreadyFollowed = followUpStore.some(r => r.mc == record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             let activeRemarksValue = record.remarks || "";
 
@@ -1991,7 +1994,7 @@ window.resumeHistorySheet = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList('${record.mc}', this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         toggleHistoryDrawer();
@@ -2350,7 +2353,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList('${record.mc}', this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
             }
@@ -2416,4 +2419,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
