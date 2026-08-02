@@ -15,7 +15,7 @@
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
     "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
-    "dispatchloadify": { pass: "admin789", maxLaptops: 2, expires: "2026-09-01" }, 
+    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
     "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
@@ -28,11 +28,11 @@ let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
-// Unique tab session ID using sessionStorage to strictly track multi-tabs even in same Chrome profile
-if (!sessionStorage.getItem("dl_tab_instance_id")) {
-    sessionStorage.setItem("dl_tab_instance_id", "tab_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now());
+// Unique session ID stored in sessionStorage so every new tab/window gets its own unique token
+if (!sessionStorage.getItem("dl_tab_unique_id")) {
+    sessionStorage.setItem("dl_tab_unique_id", "tab_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now());
 }
-const tabInstanceId = sessionStorage.getItem("dl_tab_instance_id");
+const tabUniqueId = sessionStorage.getItem("dl_tab_unique_id");
 
 // US State Code to Full Name Mapping Dictionary
 const usStatesMap = {
@@ -240,7 +240,7 @@ window.changeDispatcherName = function() {
 };
 
 window.logoutUser = function() {
-    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
     localStorage.removeItem("dl_logged_client");
     window.location.reload();
@@ -290,7 +290,7 @@ if (document.readyState === 'loading') {
 
 async function updateActiveSessionData() {
     if (!currentClient) return;
-    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     try {
         await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}/nickname.json`, {
             method: 'PUT',
@@ -306,7 +306,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     const loginTimeString = new Date().toLocaleTimeString();
-    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     
     try {
         const res = await fetch(url);
@@ -336,7 +336,7 @@ async function checkGlobalSessions() {
         await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json`, {
             method: 'PUT',
             body: JSON.stringify({
-                instanceId: tabInstanceId,
+                instanceId: tabUniqueId,
                 nickname: dispatcherNickname,
                 timestamp: now,
                 loginTime: loginTimeString
@@ -366,7 +366,7 @@ window.addEventListener('beforeunload', function () {
         else lsBackup.push(backupObj);
         localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
     }
-    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
 });
 
