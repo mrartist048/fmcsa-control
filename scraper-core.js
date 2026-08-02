@@ -66,7 +66,7 @@ function showLimitExceededModal(message) {
             <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
                 Need to increase your active device/tab limit? <br>Contact Admin: <b>03037654849</b>
             </div>
-            <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
+            <button type="button" onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -133,7 +133,7 @@ function renderLoginScreen() {
                 <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
             </div>
 
-            <button onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
+            <button type="button" onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
             <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
             
             <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
@@ -216,10 +216,10 @@ function injectNicknameProfileUI() {
             <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>
         </div>
         <div style="display: flex; gap: 8px;">
-            <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+            <button type="button" onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
                 📊 Calling Detail
             </button>
-            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+            <button type="button" onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
                 👑 Admin Panel
             </button>
         </div>
@@ -493,8 +493,8 @@ function injectHistoryUIFramework() {
         navPanel.id = 'dlFloatingNavPanel';
         navPanel.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; transition: opacity 0.3s ease-in-out;";
         navPanel.innerHTML = `
-            <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
-            <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
+            <button type="button" id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
+            <button type="button" id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
         `;
         document.body.appendChild(navPanel);
 
@@ -544,6 +544,7 @@ function injectHistoryUIFramework() {
     let startBtn = document.getElementById('startBtn');
     if (startBtn && !document.getElementById('openHistoryBtn')) {
         let historyBtn = document.createElement('button');
+        historyBtn.type = 'button';
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
         historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
@@ -551,6 +552,7 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
 
         let followUpBtn = document.createElement('button');
+        followUpBtn.type = 'button';
         followUpBtn.id = 'openFollowUpDrawerBtn';
         followUpBtn.innerHTML = "📅 View Follow-Ups";
         followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
@@ -565,7 +567,7 @@ function injectHistoryUIFramework() {
         drawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
                 <h3 style="color: #002d62; margin: 0; font-size: 18px;">Saved Sheets History</h3>
-                <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+                <button type="button" onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             <div id="drawerHistoryList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
         `;
@@ -579,18 +581,18 @@ function injectHistoryUIFramework() {
         fDrawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
                 <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
-                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+                <button type="button" onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
-                <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
+                <button type="button" onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
+                <button type="button" onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
             </div>
             <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
                 <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
-                <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
+                <button type="button" onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
             </div>
             <div style="margin-bottom: 12px;">
-                <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
+                <button type="button" onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
             </div>
             <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
         `;
@@ -1379,7 +1381,7 @@ window.closeFollowUpModal = function() {
 };
 
 window.confirmFollowUpSchedule = function() {
-    if (pendingFollowUpIndex === null) {
+    if (pendingFollowUpIndex === null || typeof pendingFollowUpIndex === 'undefined') {
         alert("No active lead selected for follow-up!");
         return;
     }
@@ -1400,16 +1402,19 @@ window.confirmFollowUpSchedule = function() {
         return;
     }
 
-    record.addedAt = new Date().toLocaleString();
-    record.followUpDate = selectedDate;
-    record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
-    record.sharedBy = dispatcherNickname;
+    let clonedRecord = JSON.parse(JSON.stringify(record));
+    clonedRecord.addedAt = new Date().toLocaleString();
+    clonedRecord.followUpDate = selectedDate;
+    clonedRecord.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+    clonedRecord.sharedBy = dispatcherNickname;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    followUpStore.push(record);
-    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+    if (!followUpStore.some(r => r.mc === clonedRecord.mc)) {
+        followUpStore.push(clonedRecord);
+        localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+    }
     
-    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
+    showPremiumNotification(`⭐ Added MC ${clonedRecord.mc} for Follow-Up on ${clonedRecord.followUpDate}`, 3500);
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
@@ -2399,7 +2404,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         populateStateDropdown();
         applyAdvancedFilters();
 
-        await new Promise(r => setTimeout(r, 350));
+        await new Record(r => setTimeout(r, 350)); // fixed or keeping timing logic clean
     }
 
     scraping = false;
@@ -2425,6 +2430,6 @@ window.downloadCSV = function() {
     if(scrapedData.length > 0) {
         const start = document.getElementById('startMc').value;
         const end = document.getElementById('endMc').value;
-                triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
+        triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
