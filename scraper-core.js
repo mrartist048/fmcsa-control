@@ -1975,7 +1975,6 @@ window.resumeHistorySheet = async function(id) {
         }
         toggleHistoryDrawer();
         
-        // Resume logic: find the max MC successfully scanned and resume from the next MC
         let nextStartMc = startRange;
         if (scrapedData.length > 0) {
             let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
@@ -2284,6 +2283,26 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     for (let mc = effectiveStart; mc <= end; mc++) {
         if (!scraping) break;
+
+        // FIXED: Active limit verification right before processing each MC in the loop
+        try {
+            const sessionUrl = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
+            const sRes = await fetch(sessionUrl);
+            const sData = await sRes.json() || {};
+            let nowTime = Date.now();
+            let activeTabsCount = Object.keys(sData).filter(k => sData[k] && (nowTime - sData[k].timestamp < 25000)).length;
+
+            if (userLimit > 0 && activeTabsCount > userLimit) {
+                if (statusBox) {
+                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeTabsCount}/${userLimit} tabs active). Pausing scraping safely...</strong>`;
+                }
+                stopScraping();
+                showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping paused safely.", 6000);
+                break;
+            }
+        } catch (limitErr) {
+            console.error("Failed to verify session limit:", limitErr);
+        }
 
         if (scrapedData.some(r => r.mc === mc)) {
             totalProcessed++;
