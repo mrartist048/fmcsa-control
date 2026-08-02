@@ -15,7 +15,7 @@
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
     "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
-    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
+    "dispatchloadify": { pass: "admin789", maxLaptops: 2, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
     "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
@@ -1933,7 +1933,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button type="button" onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         populateStateDropdown();
@@ -1991,7 +1991,7 @@ window.resumeHistorySheet = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button type="button" onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         toggleHistoryDrawer();
@@ -2350,7 +2350,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button type="button" onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
             }
@@ -2416,4 +2416,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
