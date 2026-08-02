@@ -1299,7 +1299,8 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
+window.copyPhoneToClipboardDirect = function(event, copyIconEl, phoneNum) {
+    event.preventDefault();
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
     
@@ -1308,17 +1309,17 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         let badge = document.createElement('span');
         badge.className = 'phone-copy-badge';
         badge.innerText = "Copied!";
-        containerElement.appendChild(badge);
+        copyIconEl.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        let clickableCell = containerElement.closest('td').querySelector('.phone-clickable-cell');
+        let clickableCell = copyIconEl.closest('td').querySelector('.phone-clickable-cell');
         if (clickableCell) {
             logCallCount(phoneNum, clickableCell);
         }
     });
 };
 
-window.handlePhoneInteraction = function(cellElement, phoneNum) {
+window.handlePhoneInteraction = function(event, cellElement, phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
 
     activeCallPhone = phoneNum;
@@ -1331,7 +1332,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(event, this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
