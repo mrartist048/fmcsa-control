@@ -2404,7 +2404,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         populateStateDropdown();
         applyAdvancedFilters();
 
-        await new Record(r => setTimeout(r, 350)); // fixed or keeping timing logic clean
+        await new Promise(r => setTimeout(r, 350));
     }
 
     scraping = false;
