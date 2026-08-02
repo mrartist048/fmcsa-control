@@ -1318,10 +1318,9 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     });
 };
 
-window.handlePhoneInteraction = function(event, cellElement, phoneNum) {
+window.handlePhoneInteraction = function(cellElement, phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
-    
-    // Log call count & update cell class visually
+
     activeCallPhone = phoneNum;
     navigator.clipboard.writeText(phoneNum).then(() => {
         logCallCount(phoneNum, cellElement);
@@ -1332,7 +1331,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(event, this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
@@ -2417,3 +2416,4 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
