@@ -15,7 +15,7 @@
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
     "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
-    "dispatchloadify": { pass: "admin789", maxLaptops: 2, expires: "2026-09-01" }, 
+    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
     "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
@@ -66,7 +66,7 @@ function showLimitExceededModal(message) {
             <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
                 Need to increase your active device/tab limit? <br>Contact Admin: <b>03037654849</b>
             </div>
-            <button type="button" onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
+            <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -133,7 +133,7 @@ function renderLoginScreen() {
                 <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
             </div>
 
-            <button type="button" onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
+            <button onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
             <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
             
             <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
@@ -216,10 +216,10 @@ function injectNicknameProfileUI() {
             <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>
         </div>
         <div style="display: flex; gap: 8px;">
-            <button type="button" onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+            <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
                 📊 Calling Detail
             </button>
-            <button type="button" onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
+            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
                 👑 Admin Panel
             </button>
         </div>
@@ -493,8 +493,8 @@ function injectHistoryUIFramework() {
         navPanel.id = 'dlFloatingNavPanel';
         navPanel.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; transition: opacity 0.3s ease-in-out;";
         navPanel.innerHTML = `
-            <button type="button" id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
-            <button type="button" id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
+            <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
+            <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
         `;
         document.body.appendChild(navPanel);
 
@@ -544,7 +544,6 @@ function injectHistoryUIFramework() {
     let startBtn = document.getElementById('startBtn');
     if (startBtn && !document.getElementById('openHistoryBtn')) {
         let historyBtn = document.createElement('button');
-        historyBtn.type = 'button';
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
         historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
@@ -552,7 +551,6 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
 
         let followUpBtn = document.createElement('button');
-        followUpBtn.type = 'button';
         followUpBtn.id = 'openFollowUpDrawerBtn';
         followUpBtn.innerHTML = "📅 View Follow-Ups";
         followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
@@ -567,7 +565,7 @@ function injectHistoryUIFramework() {
         drawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
                 <h3 style="color: #002d62; margin: 0; font-size: 18px;">Saved Sheets History</h3>
-                <button type="button" onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+                <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             <div id="drawerHistoryList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
         `;
@@ -581,18 +579,18 @@ function injectHistoryUIFramework() {
         fDrawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
                 <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
-                <button type="button" onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
+                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button type="button" onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
-                <button type="button" onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
+                <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
+                <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
             </div>
             <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
                 <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
-                <button type="button" onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
+                <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
             </div>
             <div style="margin-bottom: 12px;">
-                <button type="button" onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
+                <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
             </div>
             <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
         `;
@@ -615,8 +613,8 @@ function injectHistoryUIFramework() {
                     <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button type="button" onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button type="button" onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
+                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
                 </div>
             </div>
         `;
@@ -633,8 +631,8 @@ function injectHistoryUIFramework() {
                 <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select an active online laptop/user from your account group:</p>
                 <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;"></div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button type="button" onclick="closeTeamSelectModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button type="button" onclick="confirmTeamShareAction()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Share Now</button>
+                    <button onclick="closeTeamSelectModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmTeamShareAction()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Share Now</button>
                 </div>
             </div>
         `;
@@ -716,7 +714,7 @@ function injectAdvancedFilterBar() {
                 <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
                 <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
             </div>
-            <button type="button" onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
         <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
             📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
@@ -842,7 +840,7 @@ function injectEmailProposalPanel() {
         <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
             <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px;"></div>
             <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px;">${savedBody}</textarea></div>
-            <button type="button" onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
         </div>
     `;
     table.parentNode.insertBefore(proposalPanel, table);
@@ -949,7 +947,7 @@ window.openCallingDetailModal = function() {
         <div style="background: white; width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
             <div style="background: #ff9800; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
-                <button type="button" onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+                <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <div style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
@@ -957,8 +955,8 @@ window.openCallingDetailModal = function() {
                 </div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 8px;">
-                    <button type="button" onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
-                    <button type="button" onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
+                    <button onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
                 </div>
             </div>
         </div>
@@ -989,15 +987,15 @@ async function renderAdvancedAdminModal() {
             <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
-                    <button type="button" onclick="refreshAdminModalData()" id="adminRefreshBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Refresh Data">🔄 Refresh</button>
+                    <button onclick="refreshAdminModalData()" id="adminRefreshBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Refresh Data">🔄 Refresh</button>
                 </div>
-                <button type="button" onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             
             <div style="display: flex; background: #f1f3f4; border-bottom: 1px solid #ddd; padding: 10px 15px; gap: 8px;">
-                <button type="button" onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
-                <button type="button" onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
-                <button type="button" onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
+                <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
+                <button onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
+                <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1005,8 +1003,8 @@ async function renderAdvancedAdminModal() {
             </div>
 
             <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
-                <button type="button" onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export CSV Report</button>
-                <button type="button" onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
+                <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export CSV Report</button>
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
             </div>
         </div>
     `;
@@ -1210,14 +1208,14 @@ window.openShiftShareModal = async function() {
     modalBody.innerHTML = `
         <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px;">📤 Share Shift Report</h3>
-            <button type="button" onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
+            <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
         </div>
         <div style="padding: 20px;">
             <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select manager or team member to send shift report:</p>
             <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;">Loading active members...</div>
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button type="button" onclick="openCallingDetailModal()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Back</button>
-                <button type="button" onclick="confirmSendShiftReport()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Send Report</button>
+                <button onclick="openCallingDetailModal()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Back</button>
+                <button onclick="confirmSendShiftReport()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Send Report</button>
             </div>
         </div>
     `;
@@ -1346,19 +1344,19 @@ function buildPhoneCellMarkup(phoneNum) {
 
 // ====== FOLLOW-UP ENGINE WITH CALENDAR & TIME PICKER MODAL ======
 let currentFollowUpFilterMode = 'today';
-let pendingFollowUpMc = null;
+let pendingFollowUpIndex = null;
 let pendingFollowUpRowBtn = null;
 
-window.addLeadToFollowUpList = function(mcNumber, buttonElement) {
-    let record = scrapedData.find(r => r.mc == mcNumber);
+window.addLeadToFollowUpList = function(index, buttonElement) {
+    let record = scrapedData[index];
     if (!record) return;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    if (followUpStore.some(r => r.mc == record.mc)) {
+    if (followUpStore.some(r => r.mc === record.mc)) {
         return alert("This carrier is already added to your Follow-Up list.");
     }
     
-    pendingFollowUpMc = record.mc;
+    pendingFollowUpIndex = index;
     pendingFollowUpRowBtn = buttonElement;
 
     let todayDateStr = new Date().toISOString().split('T')[0];
@@ -1376,45 +1374,33 @@ window.addLeadToFollowUpList = function(mcNumber, buttonElement) {
 window.closeFollowUpModal = function() {
     let modal = document.getElementById('dlDatePickerModal');
     if (modal) modal.style.display = 'none';
-    pendingFollowUpMc = null;
+    pendingFollowUpIndex = null;
     pendingFollowUpRowBtn = null;
 };
 
 window.confirmFollowUpSchedule = function() {
-    if (pendingFollowUpMc === null || typeof pendingFollowUpMc === 'undefined') {
-        alert("No active lead selected for follow-up!");
-        return;
-    }
-    let record = scrapedData.find(r => r.mc == pendingFollowUpMc);
-    if (!record) {
-        alert("Lead record not found.");
-        return;
-    }
+    if (pendingFollowUpIndex === null) return;
+    let record = scrapedData[pendingFollowUpIndex];
+    if (!record) return;
 
-    let dateInputEl = document.getElementById('dlModalDateInput');
-    let timeInputEl = document.getElementById('dlModalTimeInput');
-    
-    let selectedDate = dateInputEl ? dateInputEl.value : "";
-    let selectedTime = timeInputEl ? timeInputEl.value : "";
+    let selectedDate = document.getElementById('dlModalDateInput').value;
+    let selectedTime = document.getElementById('dlModalTimeInput').value;
 
     if (!selectedDate) {
         alert("Please select a valid date.");
         return;
     }
 
-    let clonedRecord = JSON.parse(JSON.stringify(record));
-    clonedRecord.addedAt = new Date().toLocaleString();
-    clonedRecord.followUpDate = selectedDate;
-    clonedRecord.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
-    clonedRecord.sharedBy = dispatcherNickname;
+    record.addedAt = new Date().toLocaleString();
+    record.followUpDate = selectedDate;
+    record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+    record.sharedBy = dispatcherNickname;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    if (!followUpStore.some(r => r.mc == clonedRecord.mc)) {
-        followUpStore.push(clonedRecord);
-        localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
-    }
+    followUpStore.push(record);
+    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    showPremiumNotification(`⭐ Added MC ${clonedRecord.mc} for Follow-Up on ${clonedRecord.followUpDate}`, 3500);
+    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
@@ -1422,9 +1408,7 @@ window.confirmFollowUpSchedule = function() {
     }
 
     closeFollowUpModal();
-    if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
-        renderFollowUpItems();
-    }
+    if (document.getElementById('dlFollowUpDrawer').style.right === "0px") renderFollowUpItems();
 };
 
 function formatTime12Hour(time24) {
@@ -1495,14 +1479,14 @@ window.clearFollowUpFilters = function() {
 window.deleteFollowUpItem = function(mcNumber) {
     if (confirm("Remove carrier from Follow-Ups?")) {
         let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-        followUpStore = followUpStore.filter(r => r.mc != mcNumber);
+        followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
         localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
         renderFollowUpItems();
         
         let tableRows = document.querySelectorAll('#resultsTable tr');
         tableRows.forEach(row => {
             let cellMc = parseInt(row.cells[0]?.textContent);
-            if (cellMc == mcNumber) row.style.background = "";
+            if (cellMc === mcNumber) row.style.background = "";
         });
     }
 };
@@ -1588,7 +1572,7 @@ window.confirmTeamShareAction = async function() {
 
         let addedCount = 0;
         pendingShareRecords.forEach(rec => {
-            if (!existingList.some(r => r.mc == rec.mc)) {
+            if (!existingList.some(r => r.mc === rec.mc)) {
                 existingList.push(rec);
                 addedCount++;
             }
@@ -1623,8 +1607,8 @@ window.shareSelectedFollowUpsToTeam = function() {
     }
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    let selectedMCs = Array.from(selectedCheckboxes).map(cb => cb.value);
-    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(String(r.mc)));
+    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
 
     openTeamShareModal(selectedRecords);
 };
@@ -1641,7 +1625,7 @@ async function pollIncomingSharedLeads() {
         let newLeadsAdded = false;
 
         sharedLeads.forEach(lead => {
-            if (!localFollowUps.some(r => r.mc == lead.mc)) {
+            if (!localFollowUps.some(r => r.mc === lead.mc)) {
                 localFollowUps.push(lead);
                 newLeadsAdded = true;
             }
@@ -1716,8 +1700,8 @@ function renderFollowUpItems() {
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
-                    <button type="button" onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
-                    <button type="button" onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
                 </div>
             </div>
         `;
@@ -1737,7 +1721,7 @@ function renderFollowUpItems() {
             <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
                 <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
             </label>
-            <button type="button" onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
+            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
         `;
         listContainer.parentNode.insertBefore(actionBar, listContainer);
     }
@@ -1761,7 +1745,6 @@ function renderFollowUpItems() {
             let btnContainer = div.querySelector('div[style*="justify-content: flex-end"]');
             if (btnContainer && !btnContainer.querySelector('.single-team-share-btn')) {
                 let teamBtn = document.createElement('button');
-                teamBtn.type = 'button';
                 teamBtn.className = 'single-team-share-btn';
                 teamBtn.innerHTML = "👥 Share";
                 teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
@@ -1885,10 +1868,10 @@ function renderHistoryItems() {
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
                         <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
                         <div style="display: flex; gap: 4px; align-items: center;">
-                            <button type="button" ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
-                            <button type="button" onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
-                            <button type="button" ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
-                            <button type="button" onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
+                            <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
+                            <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -1933,7 +1916,7 @@ window.loadHistorySheetToTable = async function(id) {
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
             let phoneCellHTML = buildPhoneCellMarkup(record.phone);
             
-            let isAlreadyFollowed = followUpStore.some(r => r.mc == record.mc);
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             let activeRemarksValue = record.remarks || "";
 
@@ -1950,7 +1933,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button type="button" onclick="addLeadToFollowUpList('${record.mc}', this)" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         populateStateDropdown();
@@ -1991,7 +1974,7 @@ window.resumeHistorySheet = async function(id) {
             let record = scrapedData[index];
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
             let phoneCellHTML = buildPhoneCellMarkup(record.phone);
-            let isAlreadyFollowed = followUpStore.some(r => r.mc == record.mc);
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
             let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             let activeRemarksValue = record.remarks || "";
 
@@ -2008,7 +1991,7 @@ window.resumeHistorySheet = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button type="button" onclick="addLeadToFollowUpList('${record.mc}', this)" class="premium-followup-btn">⭐ Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         toggleHistoryDrawer();
@@ -2367,7 +2350,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
-                    <td><button type="button" onclick="addLeadToFollowUpList('${record.mc}', this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                 `;
                 tableBody.appendChild(newRow);
             }
@@ -2433,3 +2416,4 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
