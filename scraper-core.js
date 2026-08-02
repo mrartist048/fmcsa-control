@@ -48,6 +48,30 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
+function showLimitExceededModal(message) {
+    let existingModal = document.getElementById('dlLimitExceededModal');
+    if (existingModal) existingModal.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'dlLimitExceededModal';
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 99999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    
+    modal.innerHTML = `
+        <div style="background: #ffffff; padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
+            <div style="font-size: 42px; margin-bottom: 10px;">⚠️</div>
+            <h2 style="color: #dc3545; margin-top: 0; margin-bottom: 10px; font-size: 22px;">License Limit Exceeded!</h2>
+            <p style="color: #444; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+                ${message}
+            </p>
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
+                Need to increase your active device/tab limit? <br>Contact Admin: <b>03037654849</b>
+            </div>
+            <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
 function showPremiumNotification(message, duration = 4500) {
     let toast = document.createElement('div');
     toast.innerHTML = `
@@ -294,7 +318,6 @@ async function checkGlobalSessions() {
             if (session && session.timestamp && (now - session.timestamp < 12000)) {
                 activeSessionsMap[key] = session;
             } else if (key !== safeInstanceKey) {
-                // Clean up expired dead sessions immediately
                 fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
             }
         });
@@ -302,16 +325,14 @@ async function checkGlobalSessions() {
         let activeCount = Object.keys(activeSessionsMap).length;
         let isCurrentRegistered = !!activeSessionsMap[safeInstanceKey];
 
-        // If this browser instance is not registered yet and active sessions have reached or exceeded the limit
         if (!isCurrentRegistered && activeCount >= userLimit) {
             if (typeof scraping !== 'undefined' && scraping) {
                 stopScraping();
             }
-            showPremiumNotification(`⚠️ Global License Limit Exceeded! Max allowed devices/tabs: ${userLimit}`, 6000);
+            showLimitExceededModal(`Your global license limit for "${currentClient}" has been reached. Max allowed active tabs/devices is <b>${userLimit}</b>, but currently <b>${activeCount}</b> sessions are active.`);
             return;
         }
 
-        // Register or send heartbeat update for current browser instance
         await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json`, {
             method: 'PUT',
             body: JSON.stringify({
@@ -2294,7 +2315,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         
         if (result.status === "limit_exceeded") {
             stopScraping();
-            showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping stopped safely.", 6000);
+            showLimitExceededModal(`Your global license limit for "${currentClient}" has been reached. Max allowed active tabs/devices is <b>${userLimit}</b>. Scraping has been paused safely.`);
             break;
         }
 
