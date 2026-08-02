@@ -918,10 +918,11 @@ window.logCallCount = function(phoneNum, cellElement) {
 
     showPremiumNotification(`✅ Call Count Logged for ${phoneNum}`, 2500);
 
-    // Color change update immediately across all rows matching this phone number
+    // Color change update immediately across all matching phone cells in the table
+    let cleanPhone = phoneNum.trim();
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
         let textSpan = el.querySelector('.clickable-phone-text');
-        if (textSpan && textSpan.textContent.trim() === phoneNum.trim()) {
+        if (textSpan && textSpan.textContent.trim() === cleanPhone) {
             el.classList.add('active-called-cell');
         }
     });
@@ -1303,45 +1304,50 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
-    event.stopPropagation();
-    if (!phoneNum || phoneNum === 'N/A') return;
-    
-    activeCallPhone = phoneNum;
-    navigator.clipboard.writeText(phoneNum).then(() => {
-        let badge = document.createElement('span');
-        badge.className = 'phone-copy-badge';
-        badge.innerText = "Copied!";
-        containerElement.appendChild(badge);
-        setTimeout(() => badge.remove(), 1200);
+// Robust Event Delegation for Phone Call Logging & Copying
+document.addEventListener('click', function(e) {
+    let copyIcon = e.target.closest('.phone-hover-copy-icon');
+    if (copyIcon) {
+        e.preventDefault();
+        e.stopPropagation();
+        let phoneNum = copyIcon.getAttribute('data-phone');
+        if (!phoneNum || phoneNum === 'N/A') return;
 
-        let clickableCell = containerElement.closest('td').querySelector('.phone-clickable-cell');
-        if (clickableCell) {
+        navigator.clipboard.writeText(phoneNum).then(() => {
+            let badge = document.createElement('span');
+            badge.className = 'phone-copy-badge';
+            badge.innerText = "Copied!";
+            copyIcon.parentNode.appendChild(badge);
+            setTimeout(() => badge.remove(), 1200);
+
+            let clickableCell = copyIcon.closest('td').querySelector('.phone-clickable-cell');
             logCallCount(phoneNum, clickableCell);
-        }
-    });
-};
+        });
+        return;
+    }
 
-window.handlePhoneInteraction = function(cellElement, phoneNum) {
-    if (!phoneNum || phoneNum === 'N/A') return;
+    let phoneCell = e.target.closest('.phone-clickable-cell');
+    if (phoneCell) {
+        let phoneNum = phoneCell.getAttribute('data-phone');
+        if (!phoneNum || phoneNum === 'N/A') return;
 
-    activeCallPhone = phoneNum;
-    navigator.clipboard.writeText(phoneNum).then(() => {
-        logCallCount(phoneNum, cellElement);
-    });
-};
+        navigator.clipboard.writeText(phoneNum).then(() => {
+            logCallCount(phoneNum, phoneCell);
+        });
+    }
+});
 
 function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
+            <a href="tel:${phoneNum}" class="phone-clickable-cell" data-phone="${phoneNum}" title="Click to Call & Log Count">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
                 </div>
             </a>
-            <span class="phone-hover-copy-icon" onclick="copyPhoneToClipboardDirect(event, this, '${phoneNum}')" title="Copy Number">📋</span>
+            <span class="phone-hover-copy-icon" data-phone="${phoneNum}" title="Copy Number">📋</span>
         </td>
     `;
 }
