@@ -28,11 +28,11 @@ let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
-// Unique persistent browser instance ID to prevent multi-tab bypass
-if (!localStorage.getItem("dl_browser_instance_id")) {
-    localStorage.setItem("dl_browser_instance_id", "inst_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now());
+// Unique tab session ID using sessionStorage to strictly track multi-tabs even in same Chrome profile
+if (!sessionStorage.getItem("dl_tab_instance_id")) {
+    sessionStorage.setItem("dl_tab_instance_id", "tab_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now());
 }
-const browserInstanceId = localStorage.getItem("dl_browser_instance_id");
+const tabInstanceId = sessionStorage.getItem("dl_tab_instance_id");
 
 // US State Code to Full Name Mapping Dictionary
 const usStatesMap = {
@@ -240,8 +240,8 @@ window.changeDispatcherName = function() {
 };
 
 window.logoutUser = function() {
-    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json?_method=DELETE`);
+    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
     localStorage.removeItem("dl_logged_client");
     window.location.reload();
 };
@@ -290,9 +290,9 @@ if (document.readyState === 'loading') {
 
 async function updateActiveSessionData() {
     if (!currentClient) return;
-    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
     try {
-        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}/nickname.json`, {
+        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}/nickname.json`, {
             method: 'PUT',
             body: JSON.stringify(dispatcherNickname)
         });
@@ -306,7 +306,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     const loginTimeString = new Date().toLocaleTimeString();
-    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
     
     try {
         const res = await fetch(url);
@@ -317,13 +317,13 @@ async function checkGlobalSessions() {
             let session = data[key];
             if (session && session.timestamp && (now - session.timestamp < 12000)) {
                 activeSessionsMap[key] = session;
-            } else if (key !== safeInstanceKey) {
+            } else if (key !== safeTabKey) {
                 fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
             }
         });
 
         let activeCount = Object.keys(activeSessionsMap).length;
-        let isCurrentRegistered = !!activeSessionsMap[safeInstanceKey];
+        let isCurrentRegistered = !!activeSessionsMap[safeTabKey];
 
         if (!isCurrentRegistered && activeCount >= userLimit) {
             if (typeof scraping !== 'undefined' && scraping) {
@@ -333,10 +333,10 @@ async function checkGlobalSessions() {
             return;
         }
 
-        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json`, {
+        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json`, {
             method: 'PUT',
             body: JSON.stringify({
-                instanceId: browserInstanceId,
+                instanceId: tabInstanceId,
                 nickname: dispatcherNickname,
                 timestamp: now,
                 loginTime: loginTimeString
@@ -366,8 +366,8 @@ window.addEventListener('beforeunload', function () {
         else lsBackup.push(backupObj);
         localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
     }
-    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json?_method=DELETE`);
+    let safeTabKey = tabInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
 });
 
 // ====== DUAL STORAGE HISTORY & RESPONSIVE UI FRAMEWORK ======
