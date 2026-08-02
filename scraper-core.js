@@ -1383,17 +1383,17 @@ window.confirmFollowUpSchedule = function() {
     let record = scrapedData[pendingFollowUpIndex];
     if (!record) return;
 
-    let selectedDate = document.getElementById('dlModalDateInput').value;
-    let selectedTime = document.getElementById('dlModalTimeInput').value;
+    let selectedDateInput = document.getElementById('dlModalDateInput').value;
+    let selectedTimeInput = document.getElementById('dlModalTimeInput').value;
 
-    if (!selectedDate) {
+    if (!selectedDateInput) {
         alert("Please select a valid date.");
         return;
     }
 
     record.addedAt = new Date().toLocaleString();
-    record.followUpDate = selectedDate;
-    record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+    record.followUpDate = selectedDateInput;
+    record.followUpTime = selectedTimeInput ? formatTime12Hour(selectedTimeInput) : "N/A";
     record.sharedBy = dispatcherNickname;
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
