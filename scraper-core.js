@@ -918,9 +918,12 @@ window.logCallCount = function(phoneNum, cellElement) {
 
     showPremiumNotification(`✅ Call Count Logged for ${phoneNum}`, 2500);
 
-    // Color change update immediately across all rows
+    // Color change update immediately across all rows matching this phone number
     document.querySelectorAll('.phone-clickable-cell').forEach(el => {
-        el.classList.remove('active-called-cell');
+        let textSpan = el.querySelector('.clickable-phone-text');
+        if (textSpan && textSpan.textContent.trim() === phoneNum.trim()) {
+            el.classList.add('active-called-cell');
+        }
     });
     if (cellElement) {
         cellElement.classList.add('active-called-cell');
