@@ -17,8 +17,8 @@ const allowedUsers = {
     "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
-     "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
-     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
+    "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
+    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
@@ -30,7 +30,7 @@ let dispatcherNickname = "";
 
 // Unique persistent browser instance ID to prevent multi-tab bypass
 if (!localStorage.getItem("dl_browser_instance_id")) {
-    localStorage.setItem("dl_browser_instance_id", "inst_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5));
+    localStorage.setItem("dl_browser_instance_id", "inst_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now());
 }
 const browserInstanceId = localStorage.getItem("dl_browser_instance_id");
 
@@ -211,12 +211,13 @@ window.changeDispatcherName = function() {
         localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
         let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
-        updateActiveSessionNickname();
+        updateActiveSessionData();
     }
 };
 
 window.logoutUser = function() {
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}.json?_method=DELETE`);
+    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json?_method=DELETE`);
     localStorage.removeItem("dl_logged_client");
     window.location.reload();
 };
@@ -239,11 +240,10 @@ function initializeAccessControl() {
     }
 
     setupDispatcherIdentity();
-
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 5000);
+    setInterval(checkGlobalSessions, 4000);
 }
 
 if (document.readyState === 'loading') {
@@ -264,10 +264,11 @@ if (document.readyState === 'loading') {
     }, 300);
 }
 
-async function updateActiveSessionNickname() {
-    if (!window.sessionDbKey || !currentClient) return;
+async function updateActiveSessionData() {
+    if (!currentClient) return;
+    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
     try {
-        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}/nickname.json`, {
+        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}/nickname.json`, {
             method: 'PUT',
             body: JSON.stringify(dispatcherNickname)
         });
@@ -277,70 +278,57 @@ async function updateActiveSessionNickname() {
 }
 
 async function checkGlobalSessions() {
-    if (userLimit === 0 || currentClient === "unknown") return;
+    if (userLimit === 0 || !currentClient) return;
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     const loginTimeString = new Date().toLocaleTimeString();
+    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
     
     try {
         const res = await fetch(url);
         const data = await res.json() || {};
         
-        let activeTabs = Object.keys(data).map(key => ({ dbKey: key, instanceId: data[key].instanceId, nickname: data[key].nickname || "Unknown", timestamp: data[key].timestamp }));
-        
-        // Clean up dead sessions older than 15 seconds
-        for (let tab of activeTabs) {
-            if ((now - tab.timestamp) >= 15000 && tab.instanceId !== browserInstanceId) {
-                await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${tab.dbKey}.json`, { method: 'DELETE' });
-            }
-        }
-        
-        const cleanRes = await fetch(url);
-        const cleanData = await cleanRes.json() || {};
-        activeTabs = Object.keys(cleanData).map(key => ({ dbKey: key, instanceId: cleanData[key].instanceId, nickname: cleanData[key].nickname || "Unknown", timestamp: cleanData[key].timestamp }));
-        
-        const currentInstanceRecord = activeTabs.find(tab => tab.instanceId === browserInstanceId);
-        
-        // Count unique active browser instances (excluding current instance if not registered yet)
-        let uniqueInstances = {};
-        activeTabs.forEach(t => {
-            if (now - t.timestamp < 15000) {
-                uniqueInstances[t.instanceId] = true;
+        let activeSessionsMap = {};
+        Object.keys(data).forEach(key => {
+            let session = data[key];
+            if (session && session.timestamp && (now - session.timestamp < 12000)) {
+                activeSessionsMap[key] = session;
+            } else if (key !== safeInstanceKey) {
+                // Clean up expired dead sessions immediately
+                fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
             }
         });
-        let activeCount = Object.keys(uniqueInstances).length;
-        
-        if (!currentInstanceRecord && activeCount >= userLimit) {
+
+        let activeCount = Object.keys(activeSessionsMap).length;
+        let isCurrentRegistered = !!activeSessionsMap[safeInstanceKey];
+
+        // If this browser instance is not registered yet and active sessions have reached or exceeded the limit
+        if (!isCurrentRegistered && activeCount >= userLimit) {
             if (typeof scraping !== 'undefined' && scraping) {
                 stopScraping();
-                showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping paused safely.", 6000);
             }
+            showPremiumNotification(`⚠️ Global License Limit Exceeded! Max allowed devices/tabs: ${userLimit}`, 6000);
             return;
         }
-        
-        if (currentInstanceRecord) {
-            window.sessionDbKey = currentInstanceRecord.dbKey;
-            await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${currentInstanceRecord.dbKey}.json`, {
-                method: 'PATCH',
-                body: JSON.stringify({ timestamp: now, nickname: dispatcherNickname })
-            });
-        } else {
-            let postRes = await fetch(url, {
-                method: 'POST',
-                body: JSON.stringify({ instanceId: browserInstanceId, nickname: dispatcherNickname, timestamp: now, loginTime: loginTimeString })
-            });
-            let postData = await postRes.json();
-            if (postData && postData.name) {
-                window.sessionDbKey = postData.name;
-            }
-        }
+
+        // Register or send heartbeat update for current browser instance
+        await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                instanceId: browserInstanceId,
+                nickname: dispatcherNickname,
+                timestamp: now,
+                loginTime: loginTimeString
+            })
+        });
+
     } catch (e) {
         console.error("Session sync failed:", e);
     }
 }
 
 window.addEventListener('beforeunload', function () {
-    if (currentClient === "unknown" || !window.sessionDbKey) return;
+    if (!currentClient) return;
     if (typeof scraping !== 'undefined' && scraping && currentHistoryId) {
         let currentRangeStr = window.activeScrapeRange || "1 - 100";
         let backupObj = {
@@ -357,7 +345,8 @@ window.addEventListener('beforeunload', function () {
         else lsBackup.push(backupObj);
         localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
     }
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${window.sessionDbKey}.json?_method=DELETE`);
+    let safeInstanceKey = browserInstanceId.replace(/[.#$\/\[\]]/g, "_");
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeInstanceKey}.json?_method=DELETE`);
 });
 
 // ====== DUAL STORAGE HISTORY & RESPONSIVE UI FRAMEWORK ======
@@ -1084,7 +1073,7 @@ function renderAdminTabContent(tabName) {
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
             if (s && s.nickname && s.timestamp) {
-                let isOnline = (now - s.timestamp < 15000);
+                let isOnline = (now - s.timestamp < 12000);
                 if (isOnline) {
                     activeCount++;
                     let lastActiveTime = new Date(s.timestamp).toLocaleTimeString();
@@ -1219,7 +1208,7 @@ window.openShiftShareModal = async function() {
 
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp && (now - s.timestamp < 15000)) {
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < 12000)) {
                 if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
                     activeMembers.push(s.nickname);
                 }
@@ -1510,7 +1499,7 @@ window.openTeamShareModal = async function(recordsToShare) {
 
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp && (now - s.timestamp < 15000)) {
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < 12000)) {
                 if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
                     activeMembers.push(s.nickname);
                 }
@@ -1839,7 +1828,6 @@ function renderHistoryItems() {
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
-            // Compact button styling
             let resumeBtnStyle = recordsCount === 0 
                 ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
                 : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
@@ -2101,21 +2089,19 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sData = await sRes.json() || {};
             let now = Date.now();
             
-            let uniqueInstances = {};
+            let activeCount = 0;
             Object.keys(sData).forEach(k => {
-                let s = sData[k];
-                if (s && s.instanceId && (now - s.timestamp < 15000)) {
-                    uniqueInstances[s.instanceId] = true;
+                let session = sData[k];
+                if (session && session.timestamp && (now - session.timestamp < 12000)) {
+                    activeCount++;
                 }
             });
-            let activeTabsCount = Object.keys(uniqueInstances).length;
 
-            if (userLimit > 0 && activeTabsCount > userLimit) {
+            if (userLimit > 0 && activeCount > userLimit) {
                 if (statusBox) {
-                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded. Retrying automatically once slot frees up...</strong>`;
+                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeCount}/${userLimit}). Pausing scraping...</strong>`;
                 }
-                await new Promise(r => setTimeout(r, 5000));
-                continue;
+                return { status: "limit_exceeded" };
             }
 
             const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
@@ -2304,40 +2290,14 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     for (let mc = effectiveStart; mc <= end; mc++) {
         if (!scraping) break;
 
-        // Active limit verification right before processing each MC in the loop
-        try {
-            const sessionUrl = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
-            const sRes = await fetch(sessionUrl);
-            const sData = await sRes.json() || {};
-            let nowTime = Date.now();
-            
-            let uniqueInstances = {};
-            Object.keys(sData).forEach(k => {
-                let s = sData[k];
-                if (s && s.instanceId && (nowTime - s.timestamp < 15000)) {
-                    uniqueInstances[s.instanceId] = true;
-                }
-            });
-            let activeTabsCount = Object.keys(uniqueInstances).length;
-
-            if (userLimit > 0 && activeTabsCount > userLimit) {
-                if (statusBox) {
-                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeTabsCount}/${userLimit} active). Pausing scraping safely...</strong>`;
-                }
-                stopScraping();
-                showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping paused safely.", 6000);
-                break;
-            }
-        } catch (limitErr) {
-            console.error("Failed to verify session limit:", limitErr);
-        }
-
-        if (scrapedData.some(r => r.mc === mc)) {
-            totalProcessed++;
-            continue;
-        }
-
         let result = await processSingleMCWithDetailedError(mc, statusBox);
+        
+        if (result.status === "limit_exceeded") {
+            stopScraping();
+            showPremiumNotification("⚠️ Global License Limit Exceeded. Scraping stopped safely.", 6000);
+            break;
+        }
+
         totalProcessed++;
 
         if (result.status === "error") {
