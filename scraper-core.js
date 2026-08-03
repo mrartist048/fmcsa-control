@@ -28,13 +28,11 @@ let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
-// Bulletproof unique instance ID for strict tab, chrome profile, and laptop separation
 if (!window.name || !window.name.startsWith("dl_inst_")) {
     window.name = "dl_inst_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
 }
 const tabUniqueId = window.name;
 
-// US State Code to Full Name Mapping Dictionary
 const usStatesMap = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
     "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
@@ -111,7 +109,6 @@ function showPremiumNotification(message, duration = 4500) {
     }, duration);
 }
 
-// ====== LOGIN SCREEN UI & AUTHENTICATION ======
 function renderLoginScreen() {
     if (document.getElementById('dlLoginOverlay')) return;
 
@@ -172,7 +169,6 @@ window.processLogin = function() {
     initializeAccessControl();
 };
 
-// ====== DISPATCHER IDENTITY SETUP & SMART SHIFT DATE ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
@@ -370,7 +366,6 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
 });
 
-// ====== DUAL STORAGE HISTORY & RESPONSIVE UI FRAMEWORK ======
 let db;
 let currentHistoryId = null;
 const request = indexedDB.open("DispatchLinkHistoryDB", 1);
@@ -471,7 +466,6 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Phone Cell Styling */
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
             .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
@@ -677,7 +671,6 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// Scroll Navigation Helper Functions
 window.scrollToTopScreen = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     let startInput = document.getElementById('startMc');
@@ -694,7 +687,6 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH CLEAN PADDED COUNTS ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -821,7 +813,6 @@ function updateVisibleRecordCount() {
     if (badge) badge.innerText = visibleCount;
 }
 
-// ====== EMAIL PROPOSAL TEMPLATE PANEL ======
 function injectEmailProposalPanel() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('premiumProposalWrapper')) return;
@@ -896,7 +887,6 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL LOG & ADVANCED ADMIN PANEL ENGINE ======
 let activeCallPhone = null;
 
 window.logCallCount = function(phoneNum, cellElement) {
@@ -1342,7 +1332,6 @@ function buildPhoneCellMarkup(phoneNum) {
     `;
 }
 
-// ====== FOLLOW-UP ENGINE WITH CALENDAR & TIME PICKER MODAL ======
 let currentFollowUpFilterMode = 'today';
 let pendingFollowUpMC = null;
 let pendingFollowUpRowBtn = null;
@@ -1499,7 +1488,6 @@ window.downloadFollowUpsCSV = function() {
     triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
 };
 
-// ====== IN-TOOL ACTIVE LAPTOP TEAM SHARING ENGINE ======
 let pendingShareRecords = [];
 
 window.openTeamShareModal = async function(recordsToShare) {
@@ -1762,7 +1750,6 @@ window.toggleSelectAllFollowUps = function(masterCheckbox) {
     checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
 };
 
-// Remarks Handlers
 window.remarksFocus = function(index, textarea) {
     if (!textarea.value || textarea.value.trim() === "") {
         textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -2083,7 +2070,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH RETRY & LIMIT MONITORING ======
 let scraping = false; 
 let scrapedData = [];
 
@@ -2395,7 +2381,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
     if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
-    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn': document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block');
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
 
     if (statusBox) {
