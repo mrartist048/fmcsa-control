@@ -135,7 +135,7 @@ function renderLoginScreen() {
             
             <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
                 Need access? Contact Admin: <b>03037654849</b><br>
-    Email: <a href="mailto:info@dispatchlink.online" style="color: #6c757d; text-decoration: underline;">info@dispatchlink.online</a>
+                Email: <a href="mailto:info@dispatchlink.online" style="color: #6c757d; text-decoration: underline;">info@dispatchlink.online</a>
             </div>
         </div>
     `;
@@ -670,7 +670,6 @@ function injectHistoryUIFramework() {
         followTh.id = 'followUpHeaderCol';
         followTh.innerText = "Action";
 
-        // Correct Header Order: Insert Vehicles right after Power Units (index 8) or before Remarks
         let powerUnitsTh = tableHeader.children[8];
         if (powerUnitsTh && powerUnitsTh.nextSibling) {
             tableHeader.insertBefore(vehTh, powerUnitsTh.nextSibling);
@@ -717,7 +716,7 @@ function injectAdvancedFilterBar() {
                 </select>
             </div>
             <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">🚛 Vehicle Type ▼</button>
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
                 <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; min-width: 180px; max-height: 200px; overflow-y: auto; top: 100%; left: 0; margin-top: 4px;">
                     <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
@@ -808,32 +807,20 @@ function populateVehicleTypeCheckboxes() {
     let container = document.getElementById('vehicleCheckboxList');
     if (!container) return;
 
-    let availableTypes = new Set();
-    if (typeof scrapedData !== 'undefined' && scrapedData.length > 0) {
-        scrapedData.forEach(r => {
-            if (r.vehicleType && r.vehicleType !== 'N/A') {
-                let parts = r.vehicleType.split(',');
-                parts.forEach(p => availableTypes.add(p.trim()));
-            }
-        });
-    }
-
+    // Fixed distinct master list of available filter options as requested
+    let fixedTypes = ["Box Truck", "Power Only", "Trailers"];
     let checkedSet = new Set();
     container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedSet.add(cb.value));
 
     let html = "";
-    if (availableTypes.size === 0) {
-        html = `<div style="font-size: 11px; color: #888; font-style: italic;">No vehicle data loaded yet</div>`;
-    } else {
-        Array.from(availableTypes).sort().forEach(vType => {
-            let isChecked = checkedSet.has(vType) ? "checked" : "";
-            html += `
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;">
-                    <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer;"> ${vType}
-                </label>
-            `;
-        });
-    }
+    fixedTypes.forEach(vType => {
+        let isChecked = checkedSet.has(vType) ? "checked" : "";
+        html += `
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;">
+                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer;"> ${vType}
+            </label>
+        `;
+    });
     container.innerHTML = html;
 }
 
@@ -868,7 +855,13 @@ window.applyAdvancedFilters = function() {
 
         let matchesVehicle = true;
         if (selectedVehicles.length > 0) {
-            matchesVehicle = selectedVehicles.some(v => vehicleText.includes(v));
+            // Strict matching: Check if vehicleText contains exact requested selected type token securely
+            matchesVehicle = selectedVehicles.some(sel => {
+                if (sel === "box truck") return vehicleText.includes("box truck");
+                if (sel === "power only") return vehicleText.includes("power only");
+                if (sel === "trailers") return vehicleText.includes("trailers");
+                return vehicleText.includes(sel);
+            });
         }
 
         row.style.display = (matchesState && matchesSearch && matchesVehicle) ? "" : "none";
@@ -2271,25 +2264,21 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                         let badgeElements = brokerEl.querySelectorAll('a, div, span');
                         badgeElements.forEach(el => {
                             let t = el.textContent.replace(/\s+/g, ' ').trim();
+                            let matchNum = t.match(/\d+/);
+                            let countNum = matchNum ? matchNum[0] : "";
                             
-                            // Check for Tractors -> Power Only
+                            // Check for Tractors -> Power Only + count
                             if (t.toLowerCase().includes("tractor")) {
-                                let matchNum = t.match(/\d+/);
-                                let countNum = matchNum ? matchNum[0] : "";
                                 let formattedName = countNum ? `Power Only ${countNum}` : "Power Only";
                                 vehicleMap["Power Only"] = formattedName;
                             }
-                            // Check for Trucks -> Box truck
+                            // Check for Trucks -> Box Truck + count
                             else if (t.toLowerCase().includes("truck")) {
-                                let matchNum = t.match(/\d+/);
-                                let countNum = matchNum ? matchNum[0] : "";
-                                let formattedName = countNum ? `Box truck ${countNum}` : "Box truck";
-                                vehicleMap["Box truck"] = formattedName;
+                                let formattedName = countNum ? `Box Truck ${countNum}` : "Box Truck";
+                                vehicleMap["Box Truck"] = formattedName;
                             }
-                            // Check for Trailers -> Trailers
+                            // Check for Trailers -> Trailers + count
                             else if (t.toLowerCase().includes("trailer")) {
-                                let matchNum = t.match(/\d+/);
-                                let countNum = matchNum ? matchNum[0] : "";
                                 let formattedName = countNum ? `Trailers ${countNum}` : "Trailers";
                                 vehicleMap["Trailers"] = formattedName;
                             }
@@ -2297,7 +2286,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
                         let uniqueVehicleList = Object.values(vehicleMap);
                         if (uniqueVehicleList.length > 0) {
-                            record.vehicleType = uniqueVehicleList.join(", ");
+                            record.vehicleType = uniqueVehicleList.join(" | ");
                         }
                     }
                 } catch (bErr) {
