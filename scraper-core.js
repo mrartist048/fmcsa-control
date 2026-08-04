@@ -699,7 +699,7 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH STATE, SEARCH & PERFECT LEFT-ALIGNED CHECKBOX DROPDOWN ======
+// ====== ADVANCED FILTER BAR WITH LEFT-ALIGNED VEHICLE CHECKBOXES ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -717,7 +717,7 @@ function injectAdvancedFilterBar() {
             </div>
             <div style="position: relative; display: inline-block;">
                 <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; min-width: 180px; max-height: 200px; overflow-y: auto; top: 100%; left: 0; margin-top: 4px; text-align: left;">
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
                     <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
@@ -815,9 +815,9 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333; text-align: left; width: 100%;">
+            <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 12px; margin-bottom: 8px; cursor: pointer; color: #333; text-align: left; width: 100%;">
                 <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer; margin: 0; flex-shrink: 0;"> 
-                <span style="text-align: left; flex: 1;">${vType}</span>
+                <span style="text-align: left; flex: 1; white-space: nowrap;">${vType}</span>
             </label>
         `;
     });
