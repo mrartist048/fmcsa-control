@@ -28,13 +28,11 @@ let currentClient = localStorage.getItem("dl_logged_client") || "";
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
-// Bulletproof unique instance ID for strict tab, chrome profile, and laptop separation
 if (!window.name || !window.name.startsWith("dl_inst_")) {
     window.name = "dl_inst_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
 }
 const tabUniqueId = window.name;
 
-// US State Code to Full Name Mapping Dictionary
 const usStatesMap = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
     "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
@@ -111,7 +109,6 @@ function showPremiumNotification(message, duration = 4500) {
     }, duration);
 }
 
-// ====== LOGIN SCREEN UI & AUTHENTICATION ======
 function renderLoginScreen() {
     if (document.getElementById('dlLoginOverlay')) return;
 
@@ -173,7 +170,6 @@ window.processLogin = function() {
     initializeAccessControl();
 };
 
-// ====== DISPATCHER IDENTITY SETUP & SMART SHIFT DATE ======
 function setupDispatcherIdentity() {
     dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
     if (!dispatcherNickname) {
@@ -371,7 +367,6 @@ window.addEventListener('beforeunload', function () {
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
 });
 
-// ====== DUAL STORAGE HISTORY & RESPONSIVE UI FRAMEWORK ======
 let db;
 let currentHistoryId = null;
 const request = indexedDB.open("DispatchLinkHistoryDB", 1);
@@ -472,7 +467,6 @@ function injectHistoryUIFramework() {
             .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
             .premium-followup-btn:hover { background: #e0a800; }
             
-            /* Phone Cell Styling */
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
             .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
@@ -678,7 +672,6 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// Scroll Navigation Helper Functions
 window.scrollToTopScreen = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     let startInput = document.getElementById('startMc');
@@ -695,7 +688,7 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH CLEAN PADDED COUNTS ======
+// ====== ADVANCED FILTER BAR WITH STATE, SEARCH & VEHICLE TYPE CHECKBOX DROPDOWN ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -711,6 +704,13 @@ function injectAdvancedFilterBar() {
                     <option value="">All States</option>
                 </select>
             </div>
+            <div style="position: relative; display: inline-block;">
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">🚛 Vehicle Type ▼</button>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; min-width: 180px; max-height: 200px; overflow-y: auto; top: 100%; left: 0; margin-top: 4px;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
+                    <div id="vehicleCheckboxList"></div>
+                </div>
+            </div>
             <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
                 <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
                 <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
@@ -723,7 +723,24 @@ function injectAdvancedFilterBar() {
     `;
     table.parentNode.insertBefore(filterDiv, table);
     populateStateDropdown();
+    populateVehicleTypeCheckboxes();
+
+    document.addEventListener('click', function(e) {
+        let dropdown = document.getElementById('vehicleTypeDropdownContent');
+        let btn = document.querySelector('button[onclick*="toggleVehicleDropdown"]');
+        if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
 }
+
+window.toggleVehicleDropdown = function(e) {
+    e.stopPropagation();
+    let dropdown = document.getElementById('vehicleTypeDropdownContent');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
+};
 
 function populateStateDropdown() {
     let select = document.getElementById('stateDropdownSelect');
@@ -775,9 +792,48 @@ function populateStateDropdown() {
     updateVisibleRecordCount();
 }
 
+function populateVehicleTypeCheckboxes() {
+    let container = document.getElementById('vehicleCheckboxList');
+    if (!container) return;
+
+    let availableTypes = new Set();
+    if (typeof scrapedData !== 'undefined' && scrapedData.length > 0) {
+        scrapedData.forEach(r => {
+            if (r.vehicleType && r.vehicleType !== 'N/A') {
+                let parts = r.vehicleType.split(',');
+                parts.forEach(p => availableTypes.add(p.trim()));
+            }
+        });
+    }
+
+    let checkedSet = new Set();
+    container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedSet.add(cb.value));
+
+    let html = "";
+    if (availableTypes.size === 0) {
+        html = `<div style="font-size: 11px; color: #888; font-style: italic;">No vehicle data loaded yet</div>`;
+    } else {
+        Array.from(availableTypes).sort().forEach(vType => {
+            let isChecked = checkedSet.has(vType) ? "checked" : "";
+            html += `
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;">
+                    <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer;"> ${vType}
+                </label>
+            `;
+        });
+    }
+    container.innerHTML = html;
+}
+
 window.applyAdvancedFilters = function() {
     let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
     let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
+    
+    let selectedVehicles = [];
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+        selectedVehicles.push(cb.value.toLowerCase());
+    });
+
     let rows = document.querySelectorAll('#resultsTable tr');
 
     rows.forEach(row => {
@@ -785,6 +841,7 @@ window.applyAdvancedFilters = function() {
         let nameText = (row.cells[2]?.textContent || "").toLowerCase();
         let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
         let addressText = (row.cells[6]?.textContent || "").toUpperCase();
+        let vehicleText = (row.cells[9]?.textContent || "").toLowerCase();
 
         let matchesState = true;
         if (selectedState !== "") {
@@ -797,7 +854,12 @@ window.applyAdvancedFilters = function() {
             matchesSearch = mcText.includes(searchQuery) || nameText.includes(searchQuery) || phoneText.includes(searchQuery);
         }
 
-        row.style.display = (matchesState && matchesSearch) ? "" : "none";
+        let matchesVehicle = true;
+        if (selectedVehicles.length > 0) {
+            matchesVehicle = selectedVehicles.some(v => vehicleText.includes(v));
+        }
+
+        row.style.display = (matchesState && matchesSearch && matchesVehicle) ? "" : "none";
     });
     updateVisibleRecordCount();
 };
@@ -807,6 +869,7 @@ window.resetAdvancedFilters = function() {
     let srchInput = document.getElementById('universalSearchInput');
     if (stSel) stSel.value = "";
     if (srchInput) srchInput.value = "";
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
     applyAdvancedFilters();
 };
 
@@ -822,7 +885,6 @@ function updateVisibleRecordCount() {
     if (badge) badge.innerText = visibleCount;
 }
 
-// ====== EMAIL PROPOSAL TEMPLATE PANEL ======
 function injectEmailProposalPanel() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('premiumProposalWrapper')) return;
@@ -897,7 +959,6 @@ function buildEmailCellMarkup(emailAddress, companyName) {
     `;
 }
 
-// ====== PHONE CALL LOG & ADVANCED ADMIN PANEL ENGINE ======
 let activeCallPhone = null;
 
 window.logCallCount = function(phoneNum, cellElement) {
@@ -1343,7 +1404,6 @@ function buildPhoneCellMarkup(phoneNum) {
     `;
 }
 
-// ====== FOLLOW-UP ENGINE WITH CALENDAR & TIME PICKER MODAL ======
 let currentFollowUpFilterMode = 'today';
 let pendingFollowUpIndex = null;
 let pendingFollowUpRowBtn = null;
@@ -1498,7 +1558,6 @@ window.downloadFollowUpsCSV = function() {
     triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
 };
 
-// ====== IN-TOOL ACTIVE LAPTOP TEAM SHARING ENGINE ======
 let pendingShareRecords = [];
 
 window.openTeamShareModal = async function(recordsToShare) {
@@ -1761,7 +1820,6 @@ window.toggleSelectAllFollowUps = function(masterCheckbox) {
     checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
 };
 
-// Remarks Handlers
 window.remarksFocus = function(index, textarea) {
     if (!textarea.value || textarea.value.trim() === "") {
         textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -1931,6 +1989,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
+                <td><b>${record.vehicleType || 'N/A'}</b></td>
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
@@ -1938,6 +1997,7 @@ window.loadHistorySheetToTable = async function(id) {
             </tr>`;
         }
         populateStateDropdown();
+        populateVehicleTypeCheckboxes();
         toggleHistoryDrawer(); 
     };
 };
@@ -1989,12 +2049,15 @@ window.resumeHistorySheet = async function(id) {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
+                <td><b>${record.vehicleType || 'N/A'}</b></td>
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
                 <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
+        populateStateDropdown();
+        populateVehicleTypeCheckboxes();
         toggleHistoryDrawer();
         
         let nextStartMc = startRange;
@@ -2082,7 +2145,6 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
     };
 }
 
-// ====== STABLE SEQUENTIAL PROCESSING ENGINE WITH RETRY & LIMIT MONITORING ======
 let scraping = false; 
 let scrapedData = [];
 
@@ -2183,7 +2245,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // BrokerSnapshot se Trucks aur Trailers data fetch karne ka logic
             if (record.usdot !== 'N/A') {
                 try {
                     const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
@@ -2198,7 +2259,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                         let badgeElements = brokerEl.querySelectorAll('a, div, span');
                         badgeElements.forEach(el => {
                             let t = el.textContent.replace(/\s+/g, ' ').trim();
-                            if (t.startsWith("Trucks") || t.startsWith("Trailers")) {
+                            if (t.startsWith("Trucks") || t.startsWith("Trailers") || t.startsWith("Tractors")) {
                                 if (!extractedVehicles.includes(t)) {
                                     extractedVehicles.push(t);
                                 }
@@ -2377,6 +2438,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <td>${record.address}</td>
                     ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
+                    <td><b>${record.vehicleType || 'N/A'}</b></td>
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
@@ -2415,6 +2477,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
             `;
         }
         populateStateDropdown();
+        populateVehicleTypeCheckboxes();
         applyAdvancedFilters();
 
         await new Promise(r => setTimeout(r, 350));
