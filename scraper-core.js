@@ -657,15 +657,27 @@ function injectHistoryUIFramework() {
 
     let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
+        let vehTh = document.createElement('th');
+        vehTh.id = 'vehicleTypeHeaderCol';
+        vehTh.innerText = "Vehicles";
+        
         let remTh = document.createElement('th');
         remTh.id = 'remarksHeaderCol';
         remTh.className = 'remarks-cell-container';
         remTh.innerText = "Remarks";
-        tableHeader.appendChild(remTh);
 
         let followTh = document.createElement('th');
         followTh.id = 'followUpHeaderCol';
         followTh.innerText = "Action";
+
+        // Correct Header Order: Insert Vehicles right after Power Units (index 8) or before Remarks
+        let powerUnitsTh = tableHeader.children[8];
+        if (powerUnitsTh && powerUnitsTh.nextSibling) {
+            tableHeader.insertBefore(vehTh, powerUnitsTh.nextSibling);
+        } else {
+            tableHeader.appendChild(vehTh);
+        }
+        tableHeader.appendChild(remTh);
         tableHeader.appendChild(followTh);
     }
 
@@ -2255,19 +2267,37 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                         let brokerEl = document.createElement('html');
                         brokerEl.innerHTML = brokerHtml;
                         
-                        let extractedVehicles = [];
+                        let vehicleMap = {};
                         let badgeElements = brokerEl.querySelectorAll('a, div, span');
                         badgeElements.forEach(el => {
                             let t = el.textContent.replace(/\s+/g, ' ').trim();
-                            if (t.startsWith("Trucks") || t.startsWith("Trailers") || t.startsWith("Tractors")) {
-                                if (!extractedVehicles.includes(t)) {
-                                    extractedVehicles.push(t);
-                                }
+                            
+                            // Check for Tractors -> Power Only
+                            if (t.toLowerCase().includes("tractor")) {
+                                let matchNum = t.match(/\d+/);
+                                let countNum = matchNum ? matchNum[0] : "";
+                                let formattedName = countNum ? `Power Only ${countNum}` : "Power Only";
+                                vehicleMap["Power Only"] = formattedName;
+                            }
+                            // Check for Trucks -> Box truck
+                            else if (t.toLowerCase().includes("truck")) {
+                                let matchNum = t.match(/\d+/);
+                                let countNum = matchNum ? matchNum[0] : "";
+                                let formattedName = countNum ? `Box truck ${countNum}` : "Box truck";
+                                vehicleMap["Box truck"] = formattedName;
+                            }
+                            // Check for Trailers -> Trailers
+                            else if (t.toLowerCase().includes("trailer")) {
+                                let matchNum = t.match(/\d+/);
+                                let countNum = matchNum ? matchNum[0] : "";
+                                let formattedName = countNum ? `Trailers ${countNum}` : "Trailers";
+                                vehicleMap["Trailers"] = formattedName;
                             }
                         });
 
-                        if (extractedVehicles.length > 0) {
-                            record.vehicleType = extractedVehicles.join(", ");
+                        let uniqueVehicleList = Object.values(vehicleMap);
+                        if (uniqueVehicleList.length > 0) {
+                            record.vehicleType = uniqueVehicleList.join(", ");
                         }
                     }
                 } catch (bErr) {
