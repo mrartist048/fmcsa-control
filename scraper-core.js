@@ -699,7 +699,7 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH STATE, SEARCH & VEHICLE TYPE CHECKBOX DROPDOWN ======
+// ====== ADVANCED FILTER BAR WITH STATE, SEARCH & PERFECT LEFT-ALIGNED CHECKBOX DROPDOWN ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -717,8 +717,8 @@ function injectAdvancedFilterBar() {
             </div>
             <div style="position: relative; display: inline-block;">
                 <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; min-width: 180px; max-height: 200px; overflow-y: auto; top: 100%; left: 0; margin-top: 4px;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; min-width: 180px; max-height: 200px; overflow-y: auto; top: 100%; left: 0; margin-top: 4px; text-align: left;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
             </div>
@@ -815,8 +815,9 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;">
-                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer;"> ${vType}
+            <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333; text-align: left; width: 100%;">
+                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer; margin: 0; flex-shrink: 0;"> 
+                <span style="text-align: left; flex: 1;">${vType}</span>
             </label>
         `;
     });
@@ -1992,7 +1993,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
-                <td><b>${record.vehicleType || 'N/A'}</b></td>
+                <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
@@ -2052,7 +2053,7 @@ window.resumeHistorySheet = async function(id) {
                 <td>${record.address}</td> 
                 ${emailCellHTML}
                 <td>${record.powerUnits}</td>
-                <td><b>${record.vehicleType || 'N/A'}</b></td>
+                <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
@@ -2451,7 +2452,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <td>${record.address}</td>
                     ${emailCellMarkup}
                     <td>${record.powerUnits}</td>
-                    <td><b>${record.vehicleType || 'N/A'}</b></td>
+                    <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
                     <td class="remarks-cell-container">
                         <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                     </td>
