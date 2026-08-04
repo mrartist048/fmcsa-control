@@ -137,7 +137,8 @@ function renderLoginScreen() {
             <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
             
             <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
-                Need access? Contact Admin: <b>03037654849</b>
+                Need access? Contact Admin: <b>03037654849</b><br>
+    Email: <a href="mailto:info@dispatchlink.online" style="color: #6c757d; text-decoration: underline;">info@dispatchlink.online</a>
             </div>
         </div>
     `;
