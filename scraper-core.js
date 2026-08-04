@@ -537,7 +537,7 @@ function injectHistoryUIFramework() {
         mainHeading.style.position = 'relative';
         let creditTag = document.createElement('span');
         creditTag.id = 'devCreditTag';
-        creditTag.innerHTML = "Created by <b>Mr. Nauman (Ph: 03037654849)</b>";
+        creditTag.innerHTML = "Created by <b>Mr. Nauman (Ph: 03037654849)</b><br> Email: <a href="mailto:admin@dispatchlink.online" style="color: #6c757d; text-decoration: underline;">admin@dispatchlink.online</a>";
         creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #6c757d; font-family: sans-serif; font-weight: normal;";
         mainHeading.appendChild(creditTag);
     }
