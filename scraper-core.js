@@ -854,7 +854,7 @@ window.applyAdvancedFilters = function() {
 
         let matchesVehicle = true;
         if (selectedVehicles.length > 0) {
-            matchesVehicle = selectedVehicles.every(sel => {
+            matchesVehicle = selectedVehicles.some(sel => {
                 if (sel === "box truck") return vehicleText.includes("box truck");
                 if (sel === "power only") return vehicleText.includes("power only");
                 if (sel === "trailers") return vehicleText.includes("trailers");
@@ -2258,33 +2258,29 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                         let brokerEl = document.createElement('html');
                         brokerEl.innerHTML = brokerHtml;
                         
-                        let vehicleMap = {};
-                        let badgeElements = brokerEl.querySelectorAll('a, div, span');
-                        badgeElements.forEach(el => {
-                            let t = el.textContent.replace(/\s+/g, ' ').trim();
-                            let matchNum = t.match(/\d+/);
-                            let countNum = matchNum ? matchNum[0] : "";
+                        let vehicleList = [];
+                        let textNodes = brokerEl.querySelectorAll('div, span, a, td, th, p');
+                        
+                        textNodes.forEach(node => {
+                            let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
                             
-                            // Check for Tractors -> Power Only + count
-                            if (t.toLowerCase().includes("tractor")) {
-                                let formattedName = countNum ? `Power Only ${countNum}` : "Power Only";
-                                vehicleMap["Power Only"] = formattedName;
-                            }
-                            // Check for Trucks -> Box Truck + count
-                            else if (t.toLowerCase().includes("truck")) {
-                                let formattedName = countNum ? `Box Truck ${countNum}` : "Box Truck";
-                                vehicleMap["Box Truck"] = formattedName;
-                            }
-                            // Check for Trailers -> Trailers + count
-                            else if (t.toLowerCase().includes("trailer")) {
-                                let formattedName = countNum ? `Trailers ${countNum}` : "Trailers";
-                                vehicleMap["Trailers"] = formattedName;
+                            if (/^Tractors\s+\d+$/i.test(cleanText)) {
+                                let num = cleanText.match(/\d+/)[0];
+                                let formatted = `Power Only ${num}`;
+                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                            } else if (/^Trucks\s+\d+$/i.test(cleanText)) {
+                                let num = cleanText.match(/\d+/)[0];
+                                let formatted = `Box Truck ${num}`;
+                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                            } else if (/^Trailers\s+\d+$/i.test(cleanText)) {
+                                let num = cleanText.match(/\d+/)[0];
+                                let formatted = `Trailers ${num}`;
+                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
                             }
                         });
 
-                        let uniqueVehicleList = Object.values(vehicleMap);
-                        if (uniqueVehicleList.length > 0) {
-                            record.vehicleType = uniqueVehicleList.join(" | ");
+                        if (vehicleList.length > 0) {
+                            record.vehicleType = vehicleList.join(" | ");
                         }
                     }
                 } catch (bErr) {
