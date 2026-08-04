@@ -807,7 +807,6 @@ function populateVehicleTypeCheckboxes() {
     let container = document.getElementById('vehicleCheckboxList');
     if (!container) return;
 
-    // Fixed distinct master list of available filter options as requested
     let fixedTypes = ["Box Truck", "Power Only", "Trailers"];
     let checkedSet = new Set();
     container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedSet.add(cb.value));
@@ -855,8 +854,7 @@ window.applyAdvancedFilters = function() {
 
         let matchesVehicle = true;
         if (selectedVehicles.length > 0) {
-            // Strict matching: Check if vehicleText contains exact requested selected type token securely
-            matchesVehicle = selectedVehicles.some(sel => {
+            matchesVehicle = selectedVehicles.every(sel => {
                 if (sel === "box truck") return vehicleText.includes("box truck");
                 if (sel === "power only") return vehicleText.includes("power only");
                 if (sel === "trailers") return vehicleText.includes("trailers");
