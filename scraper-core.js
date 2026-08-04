@@ -1798,10 +1798,10 @@ window.syncRemarksData = function(index, textarea) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Vehicle Type,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
     recordsData.forEach(r => {
         let safeRemarks = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.vehicleType || 'N/A'}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -2144,7 +2144,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "not_found" };
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -2183,7 +2183,36 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
+            // BrokerSnapshot se Trucks aur Trailers data fetch karne ka logic
             if (record.usdot !== 'N/A') {
+                try {
+                    const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
+                    const brokerRes = await fetch(brokerSnapshotUrl);
+                    
+                    if (brokerRes.ok) {
+                        const brokerHtml = await brokerRes.text();
+                        let brokerEl = document.createElement('html');
+                        brokerEl.innerHTML = brokerHtml;
+                        
+                        let extractedVehicles = [];
+                        let badgeElements = brokerEl.querySelectorAll('a, div, span');
+                        badgeElements.forEach(el => {
+                            let t = el.textContent.replace(/\s+/g, ' ').trim();
+                            if (t.startsWith("Trucks") || t.startsWith("Trailers")) {
+                                if (!extractedVehicles.includes(t)) {
+                                    extractedVehicles.push(t);
+                                }
+                            }
+                        });
+
+                        if (extractedVehicles.length > 0) {
+                            record.vehicleType = extractedVehicles.join(", ");
+                        }
+                    }
+                } catch (bErr) {
+                    console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
+                }
+
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsResponse = await fetch(smsUrl);
@@ -2417,4 +2446,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
