@@ -699,7 +699,7 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH LEFT-ALIGNED VEHICLE CHECKBOXES ======
+// ====== ADVANCED FILTER BAR WITH STRICT LEFT-ALIGNED VEHICLE CHECKBOXES ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -815,9 +815,9 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; font-size: 12px; margin-bottom: 8px; cursor: pointer; color: #333; text-align: left; width: 100%;">
-                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer; margin: 0; flex-shrink: 0;"> 
-                <span style="text-align: left; flex: 1; white-space: nowrap;">${vType}</span>
+            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important; float: none !important;">
+                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; float: none !important; display: inline-block !important;"> 
+                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important;">${vType}</span>
             </label>
         `;
     });
