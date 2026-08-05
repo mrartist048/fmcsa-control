@@ -434,7 +434,8 @@ function injectHistoryUIFramework() {
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
             table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
-            table.table th, table.table td { padding: 12px 10px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
+           table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
+table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
             .remarks-input-field { 
