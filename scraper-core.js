@@ -434,8 +434,8 @@ function injectHistoryUIFramework() {
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
             table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
-           table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
-table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
+            table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
             .remarks-input-field { 
@@ -700,7 +700,6 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH BACKEND SAFER CATEGORY SCRAPING/FETCHING ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -709,43 +708,25 @@ function injectAdvancedFilterBar() {
     filterDiv.id = 'advancedFilterWrapper';
     filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
     filterDiv.innerHTML = `
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
                 <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
             </div>
-            
             <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleDropdownMenu(event, 'vehicleTypeDropdownContent')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Vehicles ▼</button>
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
                 <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter Vehicle:</div>
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
             </div>
-
-            <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleDropdownMenu(event, 'operationDropdownContent')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Operation ▼</button>
-                <div id="operationDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 180px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Carrier Operation:</div>
-                    <div id="operationCheckboxList"></div>
-                </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
+                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
             </div>
-
-            <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleDropdownMenu(event, 'cargoDropdownContent')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Cargo ▼</button>
-                <div id="cargoDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 190px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Cargo Carried:</div>
-                    <div id="cargoCheckboxList"></div>
-                </div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 180px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍:</span>
-                <input type="text" id="universalSearchInput" placeholder="Search MC, Company, Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
-            </div>
-            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
         <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
             📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
@@ -754,25 +735,22 @@ function injectAdvancedFilterBar() {
     table.parentNode.insertBefore(filterDiv, table);
     populateStateDropdown();
     populateVehicleTypeCheckboxes();
-    populateOperationAndCargoCheckboxes();
 
     document.addEventListener('click', function(e) {
-        ['vehicleTypeDropdownContent', 'operationDropdownContent', 'cargoDropdownContent'].forEach(id => {
-            let dropdown = document.getElementById(id);
-            let btn = document.querySelector(`button[onclick*="${id}"]`);
-            if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
-                dropdown.style.display = 'none';
-            }
-        });
+        let dropdown = document.getElementById('vehicleTypeDropdownContent');
+        let btn = document.querySelector('button[onclick*="toggleVehicleDropdown"]');
+        if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
     });
 }
 
-window.toggleDropdownMenu = function(e, dropdownId) {
+window.toggleVehicleDropdown = function(e) {
     e.stopPropagation();
-    ['vehicleTypeDropdownContent', 'operationDropdownContent', 'cargoDropdownContent'].forEach(id => {
-        let el = document.getElementById(id);
-        if (el) el.style.display = (id === dropdownId && el.style.display !== 'block') ? 'block' : 'none';
-    });
+    let dropdown = document.getElementById('vehicleTypeDropdownContent');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
 };
 
 function populateStateDropdown() {
@@ -837,54 +815,13 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important;">
-                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; width: 14px !important; height: 14px !important;"> 
-                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
+            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important; float: none !important;">
+                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; float: none !important; display: inline-block !important; width: 14px !important; height: 14px !important;"> 
+                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
             </label>
         `;
     });
     container.innerHTML = html;
-}
-
-function populateOperationAndCargoCheckboxes() {
-    let opContainer = document.getElementById('operationCheckboxList');
-    let cargoContainer = document.getElementById('cargoCheckboxList');
-
-    if (opContainer) {
-        let operations = ["Auth. For Hire", "Exempt For Hire", "Private (Property)", "Private Pass. (Business)", "Interstate", "Intrastate Only"];
-        let checkedOps = new Set();
-        opContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedOps.add(cb.value));
-        
-        let opHtml = "";
-        operations.forEach(op => {
-            let isChecked = checkedOps.has(op) ? "checked" : "";
-            opHtml += `
-                <label style="display: flex !important; align-items: center !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 6px !important; cursor: pointer !important; color: #333 !important;">
-                    <input type="checkbox" value="${op}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; width: 14px !important; height: 14px !important;"> 
-                    <span>${op}</span>
-                </label>
-            `;
-        });
-        opContainer.innerHTML = opHtml;
-    }
-
-    if (cargoContainer) {
-        let cargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Machinery, Large Objects", "Liquids/Gases", "Refrigerated Food", "Chemicals", "Grain, Feed, Hay", "Livestock"];
-        let checkedCargoes = new Set();
-        cargoContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedCargoes.add(cb.value));
-
-        let cargoHtml = "";
-        cargoes.forEach(cargo => {
-            let isChecked = checkedCargoes.has(cargo) ? "checked" : "";
-            cargoHtml += `
-                <label style="display: flex !important; align-items: center !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 6px !important; cursor: pointer !important; color: #333 !important;">
-                    <input type="checkbox" value="${cargo}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; width: 14px !important; height: 14px !important;"> 
-                    <span>${cargo}</span>
-                </label>
-            `;
-        });
-        cargoContainer.innerHTML = cargoHtml;
-    }
 }
 
 window.applyAdvancedFilters = function() {
@@ -892,30 +829,18 @@ window.applyAdvancedFilters = function() {
     let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
     
     let selectedVehicles = [];
-    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => selectedVehicles.push(cb.value.toLowerCase()));
-
-    let selectedOps = [];
-    document.querySelectorAll('#operationCheckboxList input[type="checkbox"]:checked').forEach(cb => selectedOps.push(cb.value.toLowerCase()));
-
-    let selectedCargoes = [];
-    document.querySelectorAll('#cargoCheckboxList input[type="checkbox"]:checked').forEach(cb => selectedCargoes.push(cb.value.toLowerCase()));
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+        selectedVehicles.push(cb.value.toLowerCase());
+    });
 
     let rows = document.querySelectorAll('#resultsTable tr');
 
-    rows.forEach((row, index) => {
-        let record = scrapedData[index];
-        if (!record) {
-            row.style.display = "none";
-            return;
-        }
-
-        let mcText = (record.mc || "").toString().toLowerCase();
-        let nameText = (record.name || "").toLowerCase();
-        let phoneText = (record.phone || "").toLowerCase();
-        let addressText = (record.address || "").toUpperCase();
-        let vehicleText = (record.vehicleType || "").toLowerCase();
-        let backendOps = (record.carrierOperation || "").toLowerCase();
-        let backendCargo = (record.cargoCarried || "").toLowerCase();
+    rows.forEach(row => {
+        let mcText = (row.cells[0]?.textContent || "").toLowerCase();
+        let nameText = (row.cells[2]?.textContent || "").toLowerCase();
+        let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
+        let addressText = (row.cells[6]?.textContent || "").toUpperCase();
+        let vehicleText = (row.cells[9]?.textContent || "").toLowerCase();
 
         let matchesState = true;
         if (selectedState !== "") {
@@ -930,20 +855,15 @@ window.applyAdvancedFilters = function() {
 
         let matchesVehicle = true;
         if (selectedVehicles.length > 0) {
-            matchesVehicle = selectedVehicles.some(sel => vehicleText.includes(sel));
+            matchesVehicle = selectedVehicles.some(sel => {
+                if (sel === "box truck") return vehicleText.includes("box truck");
+                if (sel === "power only") return vehicleText.includes("power only");
+                if (sel === "trailers") return vehicleText.includes("trailers");
+                return vehicleText.includes(sel);
+            });
         }
 
-        let matchesOps = true;
-        if (selectedOps.length > 0) {
-            matchesOps = selectedOps.some(sel => backendOps.includes(sel));
-        }
-
-        let matchesCargo = true;
-        if (selectedCargoes.length > 0) {
-            matchesCargo = selectedCargoes.some(sel => backendCargo.includes(sel));
-        }
-
-        row.style.display = (matchesState && matchesSearch && matchesVehicle && matchesOps && matchesCargo) ? "" : "none";
+        row.style.display = (matchesState && matchesSearch && matchesVehicle) ? "" : "none";
     });
     updateVisibleRecordCount();
 };
@@ -953,7 +873,7 @@ window.resetAdvancedFilters = function() {
     let srchInput = document.getElementById('universalSearchInput');
     if (stSel) stSel.value = "";
     if (srchInput) srchInput.value = "";
-    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"], #operationCheckboxList input[type="checkbox"], #cargoCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
     applyAdvancedFilters();
 };
 
@@ -1129,7 +1049,7 @@ async function renderAdvancedAdminModal() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 620px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: white; width: 660px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
@@ -1149,7 +1069,9 @@ async function renderAdvancedAdminModal() {
             </div>
 
             <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
-                <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export CSV Report</button>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export All Reports CSV</button>
+                </div>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
             </div>
         </div>
@@ -1168,14 +1090,14 @@ async function fetchAndRenderAdminData() {
     try {
         let [sessionsRes, reportsRes] = await Promise.all([
             fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
-            fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`)
+            fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`)
         ]);
 
         let sessionsData = await sessionsRes.json() || {};
-        let reportsData = await reportsRes.json() || [];
+        let allReportsGrouped = await reportsRes.json() || {};
 
         window.cachedAdminSessions = sessionsData;
-        window.cachedAdminReports = Array.isArray(reportsData) ? reportsData : [];
+        window.cachedAdminReportsGrouped = allReportsGrouped;
         
         let activeTab = window.currentActiveAdminTab || 'online';
         renderAdminTabContent(activeTab);
@@ -1230,7 +1152,7 @@ function renderAdminTabContent(tabName) {
     if (!bodyContainer) return;
 
     let sessionsData = window.cachedAdminSessions || {};
-    let reportsList = window.cachedAdminReports || [];
+    let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let now = Date.now();
 
     if (tabName === 'online') {
@@ -1267,13 +1189,17 @@ function renderAdminTabContent(tabName) {
 
     } else if (tabName === 'leaderboard') {
         let perfMap = {};
-        reportsList.forEach(rep => {
-            let name = rep.sender || "Unknown";
-            if (!perfMap[name]) {
-                perfMap[name] = { totalCalls: 0, shiftsCount: 0 };
+        Object.keys(allReportsGrouped).forEach(agentName => {
+            let repList = allReportsGrouped[agentName];
+            if (Array.isArray(repList)) {
+                repList.forEach(rep => {
+                    if (!perfMap[agentName]) {
+                        perfMap[agentName] = { totalCalls: 0, shiftsCount: 0 };
+                    }
+                    perfMap[agentName].totalCalls += rep.totalCalls || 0;
+                    perfMap[agentName].shiftsCount += 1;
+                });
             }
-            perfMap[name].totalCalls += rep.totalCalls || 0;
-            perfMap[name].shiftsCount += 1;
         });
 
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
@@ -1305,25 +1231,53 @@ function renderAdminTabContent(tabName) {
         bodyContainer.innerHTML = leaderHtml;
 
     } else if (tabName === 'reports') {
-        let reportsHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
+        let agentNames = Object.keys(allReportsGrouped);
+        let reportsHtml = `<div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">`;
         
-        if (reportsList.length === 0) {
+        if (agentNames.length === 0) {
             reportsHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No shift reports received yet.</div>`;
         } else {
-            reportsList.slice().reverse().forEach(rep => {
+            agentNames.forEach(agent => {
+                let reportsList = Array.isArray(allReportsGrouped[agent]) ? allReportsGrouped[agent] : [];
+                let totalAgentCalls = reportsList.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
+                let collapseId = `agent_report_box_${agent.replace(/\s+/g, '_')}`;
+
                 reportsHtml += `
-                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #17a2b8; padding: 12px 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
-                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 6px;">
-                            <span>👤 Agent: ${rep.sender}</span>
-                            <span style="color: #6c757d; font-weight: normal; font-size: 12px;">📅 Shift: ${rep.date}</span>
+                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #002d62; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); overflow: hidden;">
+                        <div onclick="toggleAgentReportAccordion('${collapseId}')" style="background: #f8f9fa; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 16px;">👤</span>
+                                <div>
+                                    <b style="color: #002d62; font-size: 14px;">${agent}</b>
+                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Total Shifts: ${reportsList.length} | Total Calls: ${totalAgentCalls}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button onclick="event.stopPropagation(); downloadSingleAgentReportCSV('${agent}')" style="background: #28a745; color: white; border: none; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Download Agent CSV">📥 Download CSV</button>
+                                <span style="font-size: 12px; font-weight: bold; color: #002d62;">▼ Click to Expand</span>
+                            </div>
                         </div>
-                        <div style="font-size: 11px; color: #888; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
-                        <div style="font-size: 12px; background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                            <span>Total Calls Logged:</span>
-                            <b style="color: #002d62; font-size: 14px;">${rep.totalCalls} Calls</b>
-                        </div>
-                    </div>
+                        <div id="${collapseId}" style="display: none; padding: 12px 16px; border-top: 1px solid #eee; background: #fafbfc; display: flex; flex-direction: column; gap: 8px;">
                 `;
+
+                if (reportsList.length === 0) {
+                    reportsHtml += `<div style="font-size: 12px; color: #6c757d; font-style: italic;">No logs found for this agent.</div>`;
+                } else {
+                    reportsList.slice().reverse().forEach(rep => {
+                        reportsHtml += `
+                            <div style="background: white; border: 1px solid #e9ecef; padding: 10px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 12px; font-weight: bold; color: #333;">📅 Shift Date: ${rep.date}</div>
+                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Submitted: ${rep.timestamp}</div>
+                                </div>
+                                <div style="background: #e2eafc; color: #002d62; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                    ${rep.totalCalls} Calls
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                reportsHtml += `</div></div>`;
             });
         }
         reportsHtml += `</div>`;
@@ -1331,19 +1285,49 @@ function renderAdminTabContent(tabName) {
     }
 };
 
-window.downloadAdminReportCSV = function() {
-    let reports = window.cachedAdminReports || [];
-    if (reports.length === 0) return alert("No reports available to export.");
+window.toggleAgentReportAccordion = function(elementId) {
+    let el = document.getElementById(elementId);
+    if (el) {
+        el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+    }
+};
 
-    let csv = "Dispatcher Name,Shift Date,Submitted Timestamp,Total Calls\n";
-    reports.forEach(r => {
-        csv += `"${r.sender}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+window.downloadSingleAgentReportCSV = function(agentName) {
+    let allGroups = window.cachedAdminReportsGrouped || {};
+    let agentReports = allGroups[agentName];
+    if (!agentReports || !Array.isArray(agentReports) || agentReports.length === 0) {
+        return alert(`No reports found for agent ${agentName}`);
+    }
+
+    let csv = "Agent Name,Shift Date,Submitted Timestamp,Total Calls\n";
+    agentReports.forEach(r => {
+        csv += `"${agentName}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
     });
 
     let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Team_Performance_Report_${getCurrentShiftDateKey()}.csv`;
+    link.download = `Shift_Report_${agentName}_${getCurrentShiftDateKey()}.csv`;
+    link.click();
+};
+
+window.downloadAdminReportCSV = function() {
+    let allGroups = window.cachedAdminReportsGrouped || {};
+    let agentNames = Object.keys(allGroups);
+    if (agentNames.length === 0) return alert("No reports available to export.");
+
+    let csv = "Agent Name,Shift Date,Submitted Timestamp,Total Calls\n";
+    agentNames.forEach(agent => {
+        let reportsList = Array.isArray(allGroups[agent]) ? allGroups[agent] : [];
+        reportsList.forEach(r => {
+            csv += `"${agent}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+        });
+    });
+
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `All_Agents_Team_Performance_${getCurrentShiftDateKey()}.csv`;
     link.click();
 };
 
@@ -1424,12 +1408,12 @@ window.confirmSendShiftReport = async function() {
     };
 
     try {
-        let reportUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${targetName}.json`;
+        let reportUrl = `${FIREBASE_DB_URL}shift_reports/${currentClient}/${dispatcherNickname}.json`;
         let res = await fetch(reportUrl);
         let reportsList = await res.json() || [];
         if (!Array.isArray(reportsList)) reportsList = [];
 
-        reportsList = reportsList.filter(r => !(r.sender === dispatcherNickname && r.date === shiftDateStr));
+        reportsList = reportsList.filter(r => r.date !== shiftDateStr);
         reportsList.push(reportData);
 
         await fetch(reportUrl, {
@@ -1437,7 +1421,7 @@ window.confirmSendShiftReport = async function() {
             body: JSON.stringify(reportsList)
         });
 
-        showPremiumNotification(`✅ Shift report successfully sent to ${targetName}!`, 4000);
+        showPremiumNotification(`✅ Shift report successfully sent!`, 4000);
         document.getElementById('dlCallingDetailModal').remove();
     } catch (e) {
         console.error("Failed to send shift report:", e);
@@ -1971,7 +1955,7 @@ function renderHistoryItems() {
     const tx = db.transaction("history", "readonly");
     const store = tx.objectStore("history");
     const getAll = store.getAll();
-
+    
     getAll.onsuccess = function() {
         let data = getAll.result || [];
         if (data.length === 0) {
@@ -2082,7 +2066,6 @@ window.loadHistorySheetToTable = async function(id) {
         }
         populateStateDropdown();
         populateVehicleTypeCheckboxes();
-        populateOperationAndCargoCheckboxes();
         toggleHistoryDrawer(); 
     };
 };
@@ -2143,7 +2126,6 @@ window.resumeHistorySheet = async function(id) {
         }
         populateStateDropdown();
         populateVehicleTypeCheckboxes();
-        populateOperationAndCargoCheckboxes();
         toggleHistoryDrawer();
         
         let nextStartMc = startRange;
@@ -2292,7 +2274,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "not_found" };
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', carrierOperation: '', cargoCarried: '', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -2326,24 +2308,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                     if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
                 }
             }
-
-            // Extract Carrier Operation and Cargo Carried dynamically from safer backend HTML text
-            let opList = [];
-            let cargoList = [];
-            let allTextOnPage = el.textContent || "";
-            
-            let possibleOps = ["Auth. For Hire", "Exempt For Hire", "Private (Property)", "Private Pass. (Business)", "Interstate", "Intrastate Only"];
-            possibleOps.forEach(op => {
-                if (allTextOnPage.includes(op)) opList.push(op);
-            });
-
-            let possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Machinery, Large Objects", "Liquids/Gases", "Refrigerated Food", "Chemicals", "Grain, Feed, Hay", "Livestock"];
-            possibleCargoes.forEach(cargo => {
-                if (allTextOnPage.includes(cargo)) cargoList.push(cargo);
-            });
-
-            record.carrierOperation = opList.join(", ");
-            record.cargoCarried = cargoList.join(", ");
 
             if (record.status !== "AUTHORIZED") { 
                 return { status: "filtered_out" }; 
@@ -2592,7 +2556,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         }
         populateStateDropdown();
         populateVehicleTypeCheckboxes();
-        populateOperationAndCargoCheckboxes();
         applyAdvancedFilters();
 
         await new Promise(r => setTimeout(r, 350));
@@ -2613,7 +2576,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     if(scrapedData.length > 0) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
-        updateRealTimeHealth(scrapedData, true);
+        updateRealTimeHistory(scrapedData, true);
     }
 }
 
