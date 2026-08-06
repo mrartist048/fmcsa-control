@@ -316,8 +316,6 @@ async function checkGlobalSessions() {
             let session = data[key];
             if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
                 activeSessionsMap[key] = session;
-            } else if (key !== safeTabKey) {
-                // Keep session record in database for offline tracking, but mark expired if needed or just let checkGlobalSessions inspect timestamps
             }
         });
 
@@ -1066,19 +1064,9 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <!-- GLOBAL DATE RANGE & PRESET FILTER BAR -->
-            <div style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <span style="font-size: 12px; font-weight: bold; color: #002d62;">📅 Range Filter:</span>
-                    <button onclick="setAdminDateFilterPreset('today')" id="adminPresetToday" style="background: #002d62; color: white; border: none; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Today</button>
-                    <button onclick="setAdminDateFilterPreset('week')" id="adminPresetWeek" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Last 7 Days</button>
-                    <button onclick="setAdminDateFilterPreset('month')" id="adminPresetMonth" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">This Month</button>
-                    <button onclick="setAdminDateFilterPreset('all')" id="adminPresetAll" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">All Time</button>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #333;">
-                    <span>From:</span> <input type="date" id="adminCustomStartDate" onchange="onCustomDateRangeChanged()" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
-                    <span>To:</span> <input type="date" id="adminCustomEndDate" onchange="onCustomDateRangeChanged()" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
-                </div>
+            <!-- FILTER BAR CONTAINER (DYNAMICALLY SHOWN/HIDDEN) -->
+            <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+                <!-- DYNAMIC CONTENT INSERTED BY JS DEPENDING ON TAB -->
             </div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1087,7 +1075,7 @@ async function renderAdvancedAdminModal() {
 
             <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export Filtered Reports CSV</button>
+                    <button onclick="downloadAdminReportCSV()" id="adminExportCsvBtn" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export Filtered Reports CSV</button>
                 </div>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
             </div>
@@ -1102,6 +1090,7 @@ async function renderAdvancedAdminModal() {
 window.adminDateFilterMode = 'today'; 
 window.adminStartDateStr = new Date().toISOString().split('T')[0];
 window.adminEndDateStr = new Date().toISOString().split('T')[0];
+window.adminUsersViewMode = 'all'; // 'all', 'online', 'offline'
 
 window.setAdminDateFilterPreset = function(preset, doRender = true) {
     window.adminDateFilterMode = preset;
@@ -1180,6 +1169,31 @@ window.onCustomDateRangeChanged = function() {
     }
 };
 
+window.setAdminUsersViewMode = function(mode) {
+    window.adminUsersViewMode = mode;
+    
+    let btnAll = document.getElementById('userFilterAll');
+    let btnOnline = document.getElementById('userFilterOnline');
+    let btnOffline = document.getElementById('userFilterOffline');
+
+    [btnAll, btnOnline, btnOffline].forEach(b => {
+        if (b) {
+            b.style.background = "#e2eafc";
+            b.style.color = "#002d62";
+            b.style.border = "1px solid #b6ccfe";
+        }
+    });
+
+    let activeB = mode === 'all' ? btnAll : mode === 'online' ? btnOnline : btnOffline;
+    if (activeB) {
+        activeB.style.background = "#002d62";
+        activeB.style.color = "white";
+        activeB.style.border = "none";
+    }
+
+    renderAdminTabContent('online');
+};
+
 async function fetchAndRenderAdminData() {
     let bodyContainer = document.getElementById('adminReportsModalBody');
     if (bodyContainer) {
@@ -1243,6 +1257,57 @@ window.switchAdminTab = function(tabName) {
         activeBtn.style.border = "none";
     }
 
+    let filterBarContainer = document.getElementById('adminFilterBarContainer');
+    let exportCsvBtn = document.getElementById('adminExportCsvBtn');
+
+    if (tabName === 'online') {
+        if (exportCsvBtn) exportCsvBtn.style.display = 'none';
+        if (filterBarContainer) {
+            filterBarContainer.style.display = 'flex';
+            let allBg = window.adminUsersViewMode === 'all' ? '#002d62' : '#e2eafc';
+            let allCol = window.adminUsersViewMode === 'all' ? 'white' : '#002d62';
+            let allBrd = window.adminUsersViewMode === 'all' ? 'none' : '1px solid #b6ccfe';
+
+            let onBg = window.adminUsersViewMode === 'online' ? '#002d62' : '#e2eafc';
+            let onCol = window.adminUsersViewMode === 'online' ? 'white' : '#002d62';
+            let onBrd = window.adminUsersViewMode === 'online' ? 'none' : '1px solid #b6ccfe';
+
+            let offBg = window.adminUsersViewMode === 'offline' ? '#002d62' : '#e2eafc';
+            let offCol = window.adminUsersViewMode === 'offline' ? 'white' : '#002d62';
+            let offBrd = window.adminUsersViewMode === 'offline' ? 'none' : '1px solid #b6ccfe';
+
+            filterBarContainer.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 6px; width: 100%; justify-content: space-between;">
+                    <span style="font-size: 12px; font-weight: bold; color: #002d62;">👤 Filter Users:</span>
+                    <div style="display: flex; gap: 6px;">
+                        <button onclick="setAdminUsersViewMode('all')" id="userFilterAll" style="background: ${allBg}; color: ${allCol}; border: ${allBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All Users</button>
+                        <button onclick="setAdminUsersViewMode('online')" id="userFilterOnline" style="background: ${onBg}; color: ${onCol}; border: ${onBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🟢 Online Users</button>
+                        <button onclick="setAdminUsersViewMode('offline')" id="userFilterOffline" style="background: ${offBg}; color: ${offCol}; border: ${offBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">⚪ Offline Users</button>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        if (exportCsvBtn) exportCsvBtn.style.display = 'flex';
+        if (filterBarContainer) {
+            filterBarContainer.style.display = 'flex';
+            filterBarContainer.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 12px; font-weight: bold; color: #002d62;">📅 Range Filter:</span>
+                    <button onclick="setAdminDateFilterPreset('today')" id="adminPresetToday" style="background: #002d62; color: white; border: none; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Today</button>
+                    <button onclick="setAdminDateFilterPreset('week')" id="adminPresetWeek" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Last 7 Days</button>
+                    <button onclick="setAdminDateFilterPreset('month')" id="adminPresetMonth" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">This Month</button>
+                    <button onclick="setAdminDateFilterPreset('all')" id="adminPresetAll" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">All Time</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #333;">
+                    <span>From:</span> <input type="date" id="adminCustomStartDate" onchange="onCustomDateRangeChanged()" value="${window.adminStartDateStr}" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
+                    <span>To:</span> <input type="date" id="adminCustomEndDate" onchange="onCustomDateRangeChanged()" value="${window.adminEndDateStr}" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+            `;
+            setAdminDateFilterPreset(window.adminDateFilterMode, false);
+        }
+    }
+
     renderAdminTabContent(tabName);
 };
 
@@ -1270,40 +1335,45 @@ function renderAdminTabContent(tabName) {
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
         let userListArray = Array.from(allKnownUsers);
+        let displayedCount = 0;
 
-        if (userListArray.length === 0) {
-            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users registered yet.</div>`;
-        } else {
-            userListArray.forEach(name => {
-                let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
-                let sessionObj = userSessionKey ? sessionsData[userSessionKey] : null;
-                
-                let isOnline = false;
-                if (sessionObj && sessionObj.timestamp && (now - sessionObj.timestamp < offlineThreshold)) {
-                    isOnline = true;
-                }
+        userListArray.forEach(name => {
+            let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
+            let sessionObj = userSessionKey ? sessionsData[userSessionKey] : null;
+            
+            let isOnline = false;
+            if (sessionObj && sessionObj.timestamp && (now - sessionObj.timestamp < offlineThreshold)) {
+                isOnline = true;
+            }
 
-                let badgeHtml = isOnline 
-                    ? `<span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">🟢 Online</span>`
-                    : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
-                
-                let borderColor = isOnline ? "#28a745" : "#6c757d";
-                let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
+            if (window.adminUsersViewMode === 'online' && !isOnline) return;
+            if (window.adminUsersViewMode === 'offline' && isOnline) return;
 
-                usersHtml += `
-                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid ${borderColor}; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
-                        <div>
-                            <div style="font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 8px;">
-                                <span>${name}</span> ${badgeHtml}
-                            </div>
-                            <div style="color: #666; font-size: 11px; margin-top: 4px;">${loginInfo}</div>
+            displayedCount++;
+            let badgeHtml = isOnline 
+                ? `<span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">🟢 Online</span>`
+                : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
+            
+            let borderColor = isOnline ? "#28a745" : "#6c757d";
+            let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
+
+            usersHtml += `
+                <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid ${borderColor}; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                    <div>
+                        <div style="font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 8px;">
+                            <span>${name}</span> ${badgeHtml}
                         </div>
-                        <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee; text-align: right;">
-                            Last Seen: <br><b>${sessionObj && sessionObj.timestamp ? new Date(sessionObj.timestamp).toLocaleTimeString() : 'Never'}</b>
-                        </div>
+                        <div style="color: #666; font-size: 11px; margin-top: 4px;">${loginInfo}</div>
                     </div>
-                `;
-            });
+                    <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee; text-align: right;">
+                        Last Seen: <br><b>${sessionObj && sessionObj.timestamp ? new Date(sessionObj.timestamp).toLocaleTimeString() : 'Never'}</b>
+                    </div>
+                </div>
+            `;
+        });
+
+        if (displayedCount === 0) {
+            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users found for view mode "${window.adminUsersViewMode}".</div>`;
         }
         usersHtml += `</div>`;
         bodyContainer.innerHTML = usersHtml;
