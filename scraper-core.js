@@ -635,6 +635,52 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
+    // ====== CALL DISPOSITION REVIEW MODAL (REFERENCE IMAGE MATCH) ======
+    if (!document.getElementById('dlDispositionModal')) {
+        let dModal = document.createElement('div');
+        dModal.id = 'dlDispositionModal';
+        dModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 100000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
+        dModal.innerHTML = `
+            <div style="background: #ffffff; width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box;">
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center;">Give Review of previous call</h3>
+                <p style="font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 15px;">Select call status for <b id="dispTargetPhoneNum" style="color: #002d62;"></b></p>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div onclick="submitCallDisposition('Hung up')" style="background: #ff5252; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(255,82,82,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span>📞</span><span>Hung up</span></div>
+                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                    </div>
+
+                    <div onclick="submitCallDisposition('Voicemail')" style="background: #9c27b0; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(156,39,176,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span>📭</span><span>Voicemail</span></div>
+                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                    </div>
+
+                    <div onclick="submitCallDisposition('Not interested')" style="background: #ff9800; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(255,152,0,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span>👎</span><span>Not interested</span></div>
+                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                    </div>
+
+                    <div onclick="submitCallDisposition('Do not Call')" style="background: #2196f3; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(33,150,243,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span>🚫</span><span>Do not Call</span></div>
+                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                    </div>
+
+                    <div onclick="submitCallDisposition('Follow up')" style="background: #4caf50; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(76,175,80,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span>📅</span><span>Follow up</span></div>
+                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                    </div>
+
+                    <div onclick="submitCallDisposition('Sale Closed')" style="background: #009688; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(0,150,136,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span>🤝</span><span>Sale Closed</span></div>
+                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dModal);
+    }
+
     document.addEventListener('click', function(event) {
         let hDrawer = document.getElementById('dlHistoryDrawer');
         let fDrawer = document.getElementById('dlFollowUpDrawer');
@@ -651,6 +697,14 @@ function injectHistoryUIFramework() {
             if (!fDrawer.contains(event.target) && (!fBtn || !fBtn.contains(event.target))) {
                 fDrawer.style.right = "-420px";
             }
+        }
+
+        // Trigger Review Modal if clicking anywhere outside when there's a pending call review
+        let dModal = document.getElementById('dlDispositionModal');
+        if (dModal && dModal.style.display === 'flex') return; // already open
+
+        if (pendingReviewPhone && !event.target.closest('.phone-clickable-cell') && !event.target.closest('#dlDispositionModal')) {
+            openDispositionModal(pendingReviewPhone);
         }
     });
 
@@ -964,8 +1018,10 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 }
 
 let activeCallPhone = null;
+let pendingReviewPhone = null;
+let activeCallCellElement = null;
 
-window.logCallCount = async function(phoneNum, cellElement) {
+window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispositionStatus) {
     if (!phoneNum || phoneNum === 'N/A') return;
     
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
@@ -976,13 +1032,13 @@ window.logCallCount = async function(phoneNum, cellElement) {
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
         date: new Date().toLocaleString(),
-        status: 'Called'
+        status: dispositionStatus // e.g. "Hung up", "Voicemail", "Sale Closed", etc.
     };
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Live sync to database so Admin Panel sees it instantly on refresh
+    // Live sync to database so Admin Panel sees it instantly
     try {
         let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
         await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
@@ -993,18 +1049,35 @@ window.logCallCount = async function(phoneNum, cellElement) {
         console.error("Failed to sync call log to DB:", e);
     }
 
-    showPremiumNotification(`✅ Call Count Logged for ${phoneNum}`, 2500);
+    showPremiumNotification(`✅ Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
 
-    document.querySelectorAll('.phone-clickable-cell').forEach(el => {
-        el.classList.remove('active-called-cell');
-    });
     if (cellElement) {
+        document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
         cellElement.classList.add('active-called-cell');
     }
 
     let downBtn = document.getElementById('dlScrollDownBtn');
     if (downBtn) downBtn.style.display = 'none';
 }
+
+window.openDispositionModal = function(phoneNum) {
+    pendingReviewPhone = phoneNum;
+    let dispModal = document.getElementById('dlDispositionModal');
+    let phoneSpan = document.getElementById('dispTargetPhoneNum');
+    if (phoneSpan) phoneSpan.innerText = phoneNum;
+    if (dispModal) dispModal.style.display = 'flex';
+};
+
+window.submitCallDisposition = function(statusType) {
+    let dispModal = document.getElementById('dlDispositionModal');
+    if (dispModal) dispModal.style.display = 'none';
+
+    if (pendingReviewPhone) {
+        logCallCountWithDisposition(pendingReviewPhone, activeCallCellElement, statusType);
+        pendingReviewPhone = null;
+        activeCallCellElement = null;
+    }
+};
 
 window.openCallingDetailModal = function() {
     let existing = document.getElementById('dlCallingDetailModal');
@@ -1060,7 +1133,7 @@ async function renderAdvancedAdminModal() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 680px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: white; width: 780px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
@@ -1419,7 +1492,7 @@ function renderAdminTabContent(tabName) {
 
             if (filteredLogs.length > 0) {
                 if (!perfMap[agentName]) {
-                    perfMap[agentName] = { totalCalls: 0, shiftsCount: 1 };
+                    perfMap[agentName] = { totalCalls: 0 };
                 }
                 perfMap[agentName].totalCalls = filteredLogs.length;
             } else {
@@ -1427,7 +1500,7 @@ function renderAdminTabContent(tabName) {
                 let filteredReps = repList.filter(r => r.date >= startDate && r.date <= endDate);
                 if (filteredReps.length > 0) {
                     if (!perfMap[agentName]) {
-                        perfMap[agentName] = { totalCalls: 0, shiftsCount: filteredReps.length };
+                        perfMap[agentName] = { totalCalls: 0 };
                     }
                     perfMap[agentName].totalCalls = filteredReps.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
                 }
@@ -1478,7 +1551,7 @@ function renderAdminTabContent(tabName) {
 
         let reportsHtml = `
             <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
-                📅 Showing Shift Reports from <b>${startDate}</b> to <b>${endDate}</b> (Real-Time Auto-Updated)
+                📅 Shift Reports & Pickup Ratio Breakdown from <b>${startDate}</b> to <b>${endDate}</b>
             </div>
             <div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
         `;
@@ -1508,28 +1581,31 @@ function renderAdminTabContent(tabName) {
                 combinedShiftsMap[r.date] = {
                     date: r.date,
                     timestamp: r.timestamp || "Submitted Shift",
-                    totalCalls: r.totalCalls || 0
+                    totalCalls: r.totalCalls || 0,
+                    logs: r.logs || []
                 };
             });
 
-            let callsGroupedByDate = {};
+            let logsGroupedByDate = {};
             filteredLogs.forEach(l => {
                 let d = l.shiftDate;
-                if (!callsGroupedByDate[d]) callsGroupedByDate[d] = 0;
-                callsGroupedByDate[d]++;
+                if (!logsGroupedByDate[d]) logsGroupedByDate[d] = [];
+                logsGroupedByDate[d].push(l);
             });
 
-            Object.keys(callsGroupedByDate).forEach(d => {
-                let liveCount = callsGroupedByDate[d];
+            Object.keys(logsGroupedByDate).forEach(d => {
+                let dayLogs = logsGroupedByDate[d];
                 if (!combinedShiftsMap[d]) {
                     combinedShiftsMap[d] = {
                         date: d,
                         timestamp: "Live Active Shift",
-                        totalCalls: liveCount
+                        totalCalls: dayLogs.length,
+                        logs: dayLogs
                     };
                 } else {
-                    if (liveCount > combinedShiftsMap[d].totalCalls) {
-                        combinedShiftsMap[d].totalCalls = liveCount;
+                    if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
+                        combinedShiftsMap[d].totalCalls = dayLogs.length;
+                        combinedShiftsMap[d].logs = dayLogs;
                     }
                 }
             });
@@ -1548,7 +1624,7 @@ function renderAdminTabContent(tabName) {
                                 <span style="font-size: 16px;">👤</span>
                                 <div>
                                     <b style="color: #002d62; font-size: 14px;">${agent}</b>
-                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Filtered Shifts: ${finalAgentShifts.length} | Filtered Calls: ${totalAgentCalls}</div>
+                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts: ${finalAgentShifts.length} | Total Calls: ${totalAgentCalls}</div>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
@@ -1560,14 +1636,33 @@ function renderAdminTabContent(tabName) {
                 `;
 
                 finalAgentShifts.sort((a,b) => b.date.localeCompare(a.date)).forEach(rep => {
+                    let logsArr = rep.logs || [];
+                    let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+                    
+                    logsArr.forEach(l => {
+                        let st = l.status || "Hung up";
+                        if (counts[st] !== undefined) counts[st]++;
+                        else counts["Hung up"]++;
+                    });
+
+                    // Pickup ratio calculation: (Follow up + Sale Closed) out of total calls (or as requested)
+                    let totalC = logsArr.length > 0 ? logsArr.length : rep.totalCalls;
+                    let connectedCalls = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+                    let pickupRatio = totalC > 0 ? Math.round((connectedCalls / totalC) * 100) : 0;
+
                     reportsHtml += `
-                        <div style="background: white; border: 1px solid #e9ecef; padding: 10px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="background: white; border: 1px solid #e9ecef; padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div>
-                                <div style="font-size: 12px; font-weight: bold; color: #333;">📅 Shift Date: ${rep.date}</div>
-                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Status: ${rep.timestamp}</div>
+                                <div style="font-size: 12px; font-weight: bold; color: #002d62;">📅 Shift Date: ${rep.date} (${rep.timestamp})</div>
                             </div>
-                            <div style="background: #e2eafc; color: #002d62; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
-                                ${rep.totalCalls} Calls
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; flex-wrap: wrap;">
+                                <span style="background: #ffebee; color: #c62828; padding: 3px 6px; border-radius: 3px; font-weight: bold;">Hung up: ${counts["Hung up"]}</span>
+                                <span style="background: #f3e5f5; color: #6a1b9a; padding: 3px 6px; border-radius: 3px; font-weight: bold;">Voicemail: ${counts["Voicemail"]}</span>
+                                <span style="background: #fff3e0; color: #ef6c00; padding: 3px 6px; border-radius: 3px; font-weight: bold;">Not interested: ${counts["Not interested"]}</span>
+                                <span style="background: #e3f2fd; color: #1565c0; padding: 3px 6px; border-radius: 3px; font-weight: bold;">Do not Call: ${counts["Do not Call"]}</span>
+                                <span style="background: #e8f5e9; color: #2e7d32; padding: 3px 6px; border-radius: 3px; font-weight: bold;">Follow up: ${counts["Follow up"]}</span>
+                                <span style="background: #e0f2f1; color: #00695c; padding: 3px 6px; border-radius: 3px; font-weight: bold;">Sale Closed: ${counts["Sale Closed"]}</span>
+                                <span style="background: #002d62; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;">Pickup Ratio: ${pickupRatio}%</span>
                             </div>
                         </div>
                     `;
@@ -1608,22 +1703,23 @@ window.downloadSingleAgentReportCSV = function(agentName) {
 
     let combinedShiftsMap = {};
     filteredReports.forEach(r => {
-        combinedShiftsMap[r.date] = { date: r.date, timestamp: r.timestamp || "Submitted", totalCalls: r.totalCalls || 0 };
+        combinedShiftsMap[r.date] = { date: r.date, timestamp: r.timestamp || "Submitted", totalCalls: r.totalCalls || 0, logs: r.logs || [] };
     });
 
-    let callsGroupedByDate = {};
+    let logsGroupedByDate = {};
     filteredLogs.forEach(l => {
         let d = l.shiftDate;
-        if (!callsGroupedByDate[d]) callsGroupedByDate[d] = 0;
-        callsGroupedByDate[d]++;
+        if (!logsGroupedByDate[d]) logsGroupedByDate[d] = [];
+        logsGroupedByDate[d].push(l);
     });
 
-    Object.keys(callsGroupedByDate).forEach(d => {
-        let liveCount = callsGroupedByDate[d];
+    Object.keys(logsGroupedByDate).forEach(d => {
+        let dayLogs = logsGroupedByDate[d];
         if (!combinedShiftsMap[d]) {
-            combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: liveCount };
-        } else if (liveCount > combinedShiftsMap[d].totalCalls) {
-            combinedShiftsMap[d].totalCalls = liveCount;
+            combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: dayLogs.length, logs: dayLogs };
+        } else if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
+            combinedShiftsMap[d].totalCalls = dayLogs.length;
+            combinedShiftsMap[d].logs = dayLogs;
         }
     });
 
@@ -1632,9 +1728,20 @@ window.downloadSingleAgentReportCSV = function(agentName) {
         return alert(`No reports found for agent ${agentName}`);
     }
 
-    let csv = "Agent Name,Shift Date,Status Timestamp,Total Calls\n";
+    let csv = "Agent Name,Shift Date,Status Timestamp,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
     finalRows.forEach(r => {
-        csv += `"${agentName}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+        let logsArr = r.logs || [];
+        let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+        logsArr.forEach(l => {
+            let st = l.status || "Hung up";
+            if (counts[st] !== undefined) counts[st]++;
+            else counts["Hung up"]++;
+        });
+        let totalC = logsArr.length > 0 ? logsArr.length : r.totalCalls;
+        let connectedCalls = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+        let pickupRatio = totalC > 0 ? Math.round((connectedCalls / totalC) * 100) : 0;
+
+        csv += `"${agentName}","${r.date}","${r.timestamp}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${pickupRatio}%"\n`;
     });
 
     let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1662,7 +1769,7 @@ window.downloadAdminReportCSV = function() {
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
 
-    let csv = "Agent Name,Shift Date,Status Timestamp,Total Calls\n";
+    let csv = "Agent Name,Shift Date,Status Timestamp,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
     let totalExportedRows = 0;
 
     allKnownUsers.forEach(agent => {
@@ -1677,27 +1784,39 @@ window.downloadAdminReportCSV = function() {
 
         let combinedShiftsMap = {};
         filteredReports.forEach(r => {
-            combinedShiftsMap[r.date] = { date: r.date, timestamp: r.timestamp || "Submitted", totalCalls: r.totalCalls || 0 };
+            combinedShiftsMap[r.date] = { date: r.date, timestamp: r.timestamp || "Submitted", totalCalls: r.totalCalls || 0, logs: r.logs || [] };
         });
 
-        let callsGroupedByDate = {};
+        let logsGroupedByDate = {};
         filteredLogs.forEach(l => {
             let d = l.shiftDate;
-            if (!callsGroupedByDate[d]) callsGroupedByDate[d] = 0;
-            callsGroupedByDate[d]++;
+            if (!logsGroupedByDate[d]) logsGroupedByDate[d] = [];
+            logsGroupedByDate[d].push(l);
         });
 
-        Object.keys(callsGroupedByDate).forEach(d => {
-            let liveCount = callsGroupedByDate[d];
+        Object.keys(logsGroupedByDate).forEach(d => {
+            let dayLogs = logsGroupedByDate[d];
             if (!combinedShiftsMap[d]) {
-                combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: liveCount };
-            } else if (liveCount > combinedShiftsMap[d].totalCalls) {
-                combinedShiftsMap[d].totalCalls = liveCount;
+                combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: dayLogs.length, logs: dayLogs };
+            } else if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
+                combinedShiftsMap[d].totalCalls = dayLogs.length;
+                combinedShiftsMap[d].logs = dayLogs;
             }
         });
 
         Object.values(combinedShiftsMap).forEach(r => {
-            csv += `"${agent}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+            let logsArr = r.logs || [];
+            let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+            logsArr.forEach(l => {
+                let st = l.status || "Hung up";
+                if (counts[st] !== undefined) counts[st]++;
+                else counts["Hung up"]++;
+            });
+            let totalC = logsArr.length > 0 ? logsArr.length : r.totalCalls;
+            let connectedCalls = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+            let pickupRatio = totalC > 0 ? Math.round((connectedCalls / totalC) * 100) : 0;
+
+            csv += `"${agent}","${r.date}","${r.timestamp}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${pickupRatio}%"\n`;
             totalExportedRows++;
         });
     });
@@ -1824,6 +1943,8 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     if (!phoneNum || phoneNum === 'N/A') return;
     
     activeCallPhone = phoneNum;
+    activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
+
     navigator.clipboard.writeText(phoneNum).then(() => {
         let badge = document.createElement('span');
         badge.className = 'phone-copy-badge';
@@ -1831,10 +1952,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        let clickableCell = containerElement.closest('td').querySelector('.phone-clickable-cell');
-        if (clickableCell) {
-            logCallCount(phoneNum, clickableCell);
-        }
+        openDispositionModal(phoneNum);
     });
 };
 
@@ -1842,8 +1960,10 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return;
 
     activeCallPhone = phoneNum;
+    activeCallCellElement = cellElement;
+
     navigator.clipboard.writeText(phoneNum).then(() => {
-        logCallCount(phoneNum, cellElement);
+        openDispositionModal(phoneNum);
     });
 };
 
@@ -1851,7 +1971,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
