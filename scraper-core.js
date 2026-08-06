@@ -1468,26 +1468,77 @@ function renderAdminTabContent(tabName) {
         bodyContainer.innerHTML = leaderHtml;
 
     } else if (tabName === 'reports') {
-        let agentNames = Object.keys(allReportsGrouped);
+        let allKnownUsers = new Set();
+        Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
+        Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
+        Object.keys(sessionsData).forEach(k => {
+            if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
+        });
+        if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
+
         let reportsHtml = `
             <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
-                📅 Showing Shift Reports from <b>${startDate}</b> to <b>${endDate}</b>
+                📅 Showing Shift Reports from <b>${startDate}</b> to <b>${endDate}</b> (Real-Time Auto-Updated)
             </div>
             <div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
         `;
         
         let totalVisibleAgentsWithReports = 0;
 
-        agentNames.forEach(agent => {
+        allKnownUsers.forEach(agent => {
+            let agentDbLogs = dbCallLogs[agent];
+            if (!Array.isArray(agentDbLogs)) {
+                let localLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${agent}`)) || [];
+                agentDbLogs = localLogs;
+            }
+
+            let filteredLogs = agentDbLogs.filter(l => {
+                let lDate = l.shiftDate || "";
+                return (lDate >= startDate && lDate <= endDate);
+            });
+
             let reportsList = Array.isArray(allReportsGrouped[agent]) ? allReportsGrouped[agent] : [];
             let filteredReports = reportsList.filter(rep => {
                 let repDate = rep.date || "";
                 return (repDate >= startDate && repDate <= endDate);
             });
 
-            if (filteredReports.length > 0) {
+            let combinedShiftsMap = {};
+            filteredReports.forEach(r => {
+                combinedShiftsMap[r.date] = {
+                    date: r.date,
+                    timestamp: r.timestamp || "Submitted Shift",
+                    totalCalls: r.totalCalls || 0
+                };
+            });
+
+            let callsGroupedByDate = {};
+            filteredLogs.forEach(l => {
+                let d = l.shiftDate;
+                if (!callsGroupedByDate[d]) callsGroupedByDate[d] = 0;
+                callsGroupedByDate[d]++;
+            });
+
+            Object.keys(callsGroupedByDate).forEach(d => {
+                let liveCount = callsGroupedByDate[d];
+                if (!combinedShiftsMap[d]) {
+                    combinedShiftsMap[d] = {
+                        date: d,
+                        timestamp: "Live Active Shift",
+                        totalCalls: liveCount
+                    };
+                } else {
+                    if (liveCount > combinedShiftsMap[d].totalCalls) {
+                        combinedShiftsMap[d].totalCalls = liveCount;
+                    }
+                }
+            });
+
+            let finalAgentShifts = Object.values(combinedShiftsMap);
+
+            if (finalAgentShifts.length > 0) {
                 totalVisibleAgentsWithReports++;
-                let totalAgentCalls = filteredReports.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
+                let totalAgentCalls = finalAgentShifts.reduce((sum, r) => sum + r.totalCalls, 0);
                 let collapseId = `agent_report_box_${agent.replace(/\s+/g, '_')}`;
 
                 reportsHtml += `
@@ -1497,7 +1548,7 @@ function renderAdminTabContent(tabName) {
                                 <span style="font-size: 16px;">👤</span>
                                 <div>
                                     <b style="color: #002d62; font-size: 14px;">${agent}</b>
-                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Filtered Shifts: ${filteredReports.length} | Filtered Calls: ${totalAgentCalls}</div>
+                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Filtered Shifts: ${finalAgentShifts.length} | Filtered Calls: ${totalAgentCalls}</div>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
@@ -1505,15 +1556,15 @@ function renderAdminTabContent(tabName) {
                                 <span style="font-size: 12px; font-weight: bold; color: #002d62;">▼ Click to Expand</span>
                             </div>
                         </div>
-                        <div id="${collapseId}" style="display: none; padding: 12px 16px; border-top: 1px solid #eee; background: #fafbfc; display: flex; flex-direction: column; gap: 8px;">
+                        <div id="${collapseId}" style="display: none; padding: 12px 16px; border-top: 1px solid #eee; background: #fafbfc; flex-direction: column; gap: 8px;">
                 `;
 
-                filteredReports.slice().reverse().forEach(rep => {
+                finalAgentShifts.sort((a,b) => b.date.localeCompare(a.date)).forEach(rep => {
                     reportsHtml += `
                         <div style="background: white; border: 1px solid #e9ecef; padding: 10px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <div style="font-size: 12px; font-weight: bold; color: #333;">📅 Shift Date: ${rep.date}</div>
-                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Submitted: ${rep.timestamp}</div>
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Status: ${rep.timestamp}</div>
                             </div>
                             <div style="background: #e2eafc; color: #002d62; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
                                 ${rep.totalCalls} Calls
@@ -1542,21 +1593,47 @@ window.toggleAgentReportAccordion = function(elementId) {
 
 window.downloadSingleAgentReportCSV = function(agentName) {
     let allGroups = window.cachedAdminReportsGrouped || {};
-    let agentReports = allGroups[agentName];
-    if (!agentReports || !Array.isArray(agentReports) || agentReports.length === 0) {
-        return alert(`No reports found for agent ${agentName}`);
+    let dbCallLogs = window.cachedAdminDbCallLogs || {};
+    let agentReports = allGroups[agentName] || [];
+    let agentDbLogs = dbCallLogs[agentName];
+    if (!Array.isArray(agentDbLogs)) {
+        agentDbLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${agentName}`)) || [];
     }
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
 
-    let filtered = agentReports.filter(r => r.date >= startDate && r.date <= endDate);
-    if (filtered.length === 0) {
-        return alert(`No reports found for ${agentName} in the selected date range (${startDate} to ${endDate}).`);
+    let filteredLogs = agentDbLogs.filter(l => l.shiftDate >= startDate && l.shiftDate <= endDate);
+    let filteredReports = agentReports.filter(r => r.date >= startDate && r.date <= endDate);
+
+    let combinedShiftsMap = {};
+    filteredReports.forEach(r => {
+        combinedShiftsMap[r.date] = { date: r.date, timestamp: r.timestamp || "Submitted", totalCalls: r.totalCalls || 0 };
+    });
+
+    let callsGroupedByDate = {};
+    filteredLogs.forEach(l => {
+        let d = l.shiftDate;
+        if (!callsGroupedByDate[d]) callsGroupedByDate[d] = 0;
+        callsGroupedByDate[d]++;
+    });
+
+    Object.keys(callsGroupedByDate).forEach(d => {
+        let liveCount = callsGroupedByDate[d];
+        if (!combinedShiftsMap[d]) {
+            combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: liveCount };
+        } else if (liveCount > combinedShiftsMap[d].totalCalls) {
+            combinedShiftsMap[d].totalCalls = liveCount;
+        }
+    });
+
+    let finalRows = Object.values(combinedShiftsMap);
+    if (finalRows.length === 0) {
+        return alert(`No reports found for agent ${agentName}`);
     }
 
-    let csv = "Agent Name,Shift Date,Submitted Timestamp,Total Calls\n";
-    filtered.forEach(r => {
+    let csv = "Agent Name,Shift Date,Status Timestamp,Total Calls\n";
+    finalRows.forEach(r => {
         csv += `"${agentName}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
     });
 
@@ -1569,23 +1646,59 @@ window.downloadSingleAgentReportCSV = function(agentName) {
 
 window.downloadAdminReportCSV = function() {
     let allGroups = window.cachedAdminReportsGrouped || {};
-    let agentNames = Object.keys(allGroups);
-    if (agentNames.length === 0) return alert("No reports available to export.");
+    let dbCallLogs = window.cachedAdminDbCallLogs || {};
+    let sessionsData = window.cachedAdminSessions || {};
+    
+    let allKnownUsers = new Set();
+    Object.keys(allGroups).forEach(name => allKnownUsers.add(name));
+    Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
+    Object.keys(sessionsData).forEach(k => {
+        if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
+    });
+    if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
+
+    if (allKnownUsers.size === 0) return alert("No reports available to export.");
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
 
-    let csv = "Agent Name,Shift Date,Submitted Timestamp,Total Calls\n";
+    let csv = "Agent Name,Shift Date,Status Timestamp,Total Calls\n";
     let totalExportedRows = 0;
 
-    agentNames.forEach(agent => {
-        let reportsList = Array.isArray(allGroups[agent]) ? allGroups[agent] : [];
-        reportsList.forEach(r => {
-            let rDate = r.date || "";
-            if (rDate >= startDate && rDate <= endDate) {
-                csv += `"${agent}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
-                totalExportedRows++;
+    allKnownUsers.forEach(agent => {
+        let agentDbLogs = dbCallLogs[agent];
+        if (!Array.isArray(agentDbLogs)) {
+            agentDbLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${agent}`)) || [];
+        }
+
+        let filteredLogs = agentDbLogs.filter(l => l.shiftDate >= startDate && l.shiftDate <= endDate);
+        let agentReports = allGroups[agent] || [];
+        let filteredReports = agentReports.filter(r => r.date >= startDate && r.date <= endDate);
+
+        let combinedShiftsMap = {};
+        filteredReports.forEach(r => {
+            combinedShiftsMap[r.date] = { date: r.date, timestamp: r.timestamp || "Submitted", totalCalls: r.totalCalls || 0 };
+        });
+
+        let callsGroupedByDate = {};
+        filteredLogs.forEach(l => {
+            let d = l.shiftDate;
+            if (!callsGroupedByDate[d]) callsGroupedByDate[d] = 0;
+            callsGroupedByDate[d]++;
+        });
+
+        Object.keys(callsGroupedByDate).forEach(d => {
+            let liveCount = callsGroupedByDate[d];
+            if (!combinedShiftsMap[d]) {
+                combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: liveCount };
+            } else if (liveCount > combinedShiftsMap[d].totalCalls) {
+                combinedShiftsMap[d].totalCalls = liveCount;
             }
+        });
+
+        Object.values(combinedShiftsMap).forEach(r => {
+            csv += `"${agent}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+            totalExportedRows++;
         });
     });
 
