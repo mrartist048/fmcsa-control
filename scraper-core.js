@@ -700,7 +700,7 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH BULLETPROOF LEFT-ALIGNED CHECKBOX TEXT ======
+// ====== ADVANCED FILTER BAR WITH SAFER CATEGORIES & BULLETPROOF DROPDOWNS ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -709,25 +709,43 @@ function injectAdvancedFilterBar() {
     filterDiv.id = 'advancedFilterWrapper';
     filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
     filterDiv.innerHTML = `
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
                 <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
             </div>
+            
             <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
+                <button type="button" onclick="toggleDropdownMenu(event, 'vehicleTypeDropdownContent')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Vehicles ▼</button>
                 <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
-                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+
+            <div style="position: relative; display: inline-block;">
+                <button type="button" onclick="toggleDropdownMenu(event, 'operationDropdownContent')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Operation ▼</button>
+                <div id="operationDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 180px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Carrier Operation:</div>
+                    <div id="operationCheckboxList"></div>
+                </div>
             </div>
-            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
+
+            <div style="position: relative; display: inline-block;">
+                <button type="button" onclick="toggleDropdownMenu(event, 'cargoDropdownContent')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Cargo ▼</button>
+                <div id="cargoDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 190px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Cargo Carried:</div>
+                    <div id="cargoCheckboxList"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 180px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍:</span>
+                <input type="text" id="universalSearchInput" placeholder="Search MC, Company, Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+            </div>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
         <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
             📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
@@ -736,22 +754,25 @@ function injectAdvancedFilterBar() {
     table.parentNode.insertBefore(filterDiv, table);
     populateStateDropdown();
     populateVehicleTypeCheckboxes();
+    populateOperationAndCargoCheckboxes();
 
     document.addEventListener('click', function(e) {
-        let dropdown = document.getElementById('vehicleTypeDropdownContent');
-        let btn = document.querySelector('button[onclick*="toggleVehicleDropdown"]');
-        if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
-            dropdown.style.display = 'none';
-        }
+        ['vehicleTypeDropdownContent', 'operationDropdownContent', 'cargoDropdownContent'].forEach(id => {
+            let dropdown = document.getElementById(id);
+            let btn = document.querySelector(`button[onclick*="${id}"]`);
+            if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
     });
 }
 
-window.toggleVehicleDropdown = function(e) {
+window.toggleDropdownMenu = function(e, dropdownId) {
     e.stopPropagation();
-    let dropdown = document.getElementById('vehicleTypeDropdownContent');
-    if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-    }
+    ['vehicleTypeDropdownContent', 'operationDropdownContent', 'cargoDropdownContent'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) el.style.display = (id === dropdownId && el.style.display !== 'block') ? 'block' : 'none';
+    });
 };
 
 function populateStateDropdown() {
@@ -816,13 +837,54 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important; float: none !important;">
-                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; float: none !important; display: inline-block !important; width: 14px !important; height: 14px !important;"> 
-                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
+            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important;">
+                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; width: 14px !important; height: 14px !important;"> 
+                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
             </label>
         `;
     });
     container.innerHTML = html;
+}
+
+function populateOperationAndCargoCheckboxes() {
+    let opContainer = document.getElementById('operationCheckboxList');
+    let cargoContainer = document.getElementById('cargoCheckboxList');
+
+    if (opContainer) {
+        let operations = ["Auth. For Hire", "Exempt For Hire", "Private (Property)", "Private Pass. (Business)", "Interstate", "Intrastate Only"];
+        let checkedOps = new Set();
+        opContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedOps.add(cb.value));
+        
+        let opHtml = "";
+        operations.forEach(op => {
+            let isChecked = checkedOps.has(op) ? "checked" : "";
+            opHtml += `
+                <label style="display: flex !important; align-items: center !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 6px !important; cursor: pointer !important; color: #333 !important;">
+                    <input type="checkbox" value="${op}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; width: 14px !important; height: 14px !important;"> 
+                    <span>${op}</span>
+                </label>
+            `;
+        });
+        opContainer.innerHTML = opHtml;
+    }
+
+    if (cargoContainer) {
+        let cargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Machinery, Large Objects", "Liquids/Gases", "Refrigerated Food", "Chemicals", "Grain, Feed, Hay", "Livestock"];
+        let checkedCargoes = new Set();
+        cargoContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedCargoes.add(cb.value));
+
+        let cargoHtml = "";
+        cargoes.forEach(cargo => {
+            let isChecked = checkedCargoes.has(cargo) ? "checked" : "";
+            cargoHtml += `
+                <label style="display: flex !important; align-items: center !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 6px !important; cursor: pointer !important; color: #333 !important;">
+                    <input type="checkbox" value="${cargo}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; width: 14px !important; height: 14px !important;"> 
+                    <span>${cargo}</span>
+                </label>
+            `;
+        });
+        cargoContainer.innerHTML = cargoHtml;
+    }
 }
 
 window.applyAdvancedFilters = function() {
@@ -830,15 +892,20 @@ window.applyAdvancedFilters = function() {
     let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
     
     let selectedVehicles = [];
-    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
-        selectedVehicles.push(cb.value.toLowerCase());
-    });
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => selectedVehicles.push(cb.value.toLowerCase()));
+
+    let selectedOps = [];
+    document.querySelectorAll('#operationCheckboxList input[type="checkbox"]:checked').forEach(cb => selectedOps.push(cb.value.toLowerCase()));
+
+    let selectedCargoes = [];
+    document.querySelectorAll('#cargoCheckboxList input[type="checkbox"]:checked').forEach(cb => selectedCargoes.push(cb.value.toLowerCase()));
 
     let rows = document.querySelectorAll('#resultsTable tr');
 
     rows.forEach(row => {
         let mcText = (row.cells[0]?.textContent || "").toLowerCase();
         let nameText = (row.cells[2]?.textContent || "").toLowerCase();
+        let entityText = (row.cells[3]?.textContent || "").toLowerCase();
         let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
         let addressText = (row.cells[6]?.textContent || "").toUpperCase();
         let vehicleText = (row.cells[9]?.textContent || "").toLowerCase();
@@ -856,15 +923,20 @@ window.applyAdvancedFilters = function() {
 
         let matchesVehicle = true;
         if (selectedVehicles.length > 0) {
-            matchesVehicle = selectedVehicles.some(sel => {
-                if (sel === "box truck") return vehicleText.includes("box truck");
-                if (sel === "power only") return vehicleText.includes("power only");
-                if (sel === "trailers") return vehicleText.includes("trailers");
-                return vehicleText.includes(sel);
-            });
+            matchesVehicle = selectedVehicles.some(sel => vehicleText.includes(sel));
         }
 
-        row.style.display = (matchesState && matchesSearch && matchesVehicle) ? "" : "none";
+        let matchesOps = true;
+        if (selectedOps.length > 0) {
+            matchesOps = selectedOps.some(sel => entityText.includes(sel));
+        }
+
+        let matchesCargo = true;
+        if (selectedCargoes.length > 0) {
+            matchesCargo = selectedCargoes.some(sel => entityText.includes(sel) || nameText.includes(sel));
+        }
+
+        row.style.display = (matchesState && matchesSearch && matchesVehicle && matchesOps && matchesCargo) ? "" : "none";
     });
     updateVisibleRecordCount();
 };
@@ -874,7 +946,7 @@ window.resetAdvancedFilters = function() {
     let srchInput = document.getElementById('universalSearchInput');
     if (stSel) stSel.value = "";
     if (srchInput) srchInput.value = "";
-    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"], #operationCheckboxList input[type="checkbox"], #cargoCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
     applyAdvancedFilters();
 };
 
@@ -2003,6 +2075,7 @@ window.loadHistorySheetToTable = async function(id) {
         }
         populateStateDropdown();
         populateVehicleTypeCheckboxes();
+        populateOperationAndCargoCheckboxes();
         toggleHistoryDrawer(); 
     };
 };
@@ -2063,6 +2136,7 @@ window.resumeHistorySheet = async function(id) {
         }
         populateStateDropdown();
         populateVehicleTypeCheckboxes();
+        populateOperationAndCargoCheckboxes();
         toggleHistoryDrawer();
         
         let nextStartMc = startRange;
@@ -2493,6 +2567,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         }
         populateStateDropdown();
         populateVehicleTypeCheckboxes();
+        populateOperationAndCargoCheckboxes();
         applyAdvancedFilters();
 
         await new Promise(r => setTimeout(r, 350));
@@ -2524,5 +2599,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
