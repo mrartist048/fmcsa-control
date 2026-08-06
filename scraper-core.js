@@ -1049,7 +1049,7 @@ async function renderAdvancedAdminModal() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 660px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: white; width: 680px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
@@ -1064,13 +1064,28 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
+            <!-- GLOBAL DATE RANGE & PRESET FILTER BAR -->
+            <div style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 12px; font-weight: bold; color: #002d62;">📅 Range Filter:</span>
+                    <button onclick="setAdminDateFilterPreset('today')" id="adminPresetToday" style="background: #002d62; color: white; border: none; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Today</button>
+                    <button onclick="setAdminDateFilterPreset('week')" id="adminPresetWeek" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Last 7 Days</button>
+                    <button onclick="setAdminDateFilterPreset('month')" id="adminPresetMonth" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">This Month</button>
+                    <button onclick="setAdminDateFilterPreset('all')" id="adminPresetAll" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">All Time</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #333;">
+                    <span>From:</span> <input type="date" id="adminCustomStartDate" onchange="onCustomDateRangeChanged()" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
+                    <span>To:</span> <input type="date" id="adminCustomEndDate" onchange="onCustomDateRangeChanged()" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+            </div>
+
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
                 Loading live team status and reports...
             </div>
 
             <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
                 <div style="display: flex; gap: 8px;">
-                    <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export All Reports CSV</button>
+                    <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export Filtered Reports CSV</button>
                 </div>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
             </div>
@@ -1078,8 +1093,93 @@ async function renderAdvancedAdminModal() {
     `;
     document.body.appendChild(modal);
 
+    // Initialize default date range filter to 'today'
+    setAdminDateFilterPreset('today', false);
     await fetchAndRenderAdminData();
 }
+
+// Date Range Filter State Variables for Admin Panel
+window.adminDateFilterMode = 'today'; // 'today', 'week', 'month', 'all', 'custom'
+window.adminStartDateStr = new Date().toISOString().split('T')[0];
+window.adminEndDateStr = new Date().toISOString().split('T')[0];
+
+window.setAdminDateFilterPreset = function(preset, doRender = true) {
+    window.adminDateFilterMode = preset;
+    let today = new Date();
+    let todayStr = today.toISOString().split('T')[0];
+
+    let btnToday = document.getElementById('adminPresetToday');
+    let btnWeek = document.getElementById('adminPresetWeek');
+    let btnMonth = document.getElementById('adminPresetMonth');
+    let btnAll = document.getElementById('adminPresetAll');
+
+    [btnToday, btnWeek, btnMonth, btnAll].forEach(b => {
+        if (b) {
+            b.style.background = "#e2eafc";
+            b.style.color = "#002d62";
+            b.style.border = "1px solid #b6ccfe";
+        }
+    });
+
+    let activeBtn = preset === 'today' ? btnToday : preset === 'week' ? btnWeek : preset === 'month' ? btnMonth : btnAll;
+    if (activeBtn) {
+        activeBtn.style.background = "#002d62";
+        activeBtn.style.color = "white";
+        activeBtn.style.border = "none";
+    }
+
+    if (preset === 'today') {
+        window.adminStartDateStr = todayStr;
+        window.adminEndDateStr = todayStr;
+    } else if (preset === 'week') {
+        let pastWeek = new Date();
+        pastWeek.setDate(today.getDate() - 6);
+        window.adminStartDateStr = pastWeek.toISOString().split('T')[0];
+        window.adminEndDateStr = todayStr;
+    } else if (preset === 'month') {
+        let firstDayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        window.adminStartDateStr = firstDayMonth.toISOString().split('T')[0];
+        window.adminEndDateStr = todayStr;
+    } else if (preset === 'all') {
+        window.adminStartDateStr = "2020-01-01";
+        window.adminEndDateStr = "2030-12-31";
+    }
+
+    let startInput = document.getElementById('adminCustomStartDate');
+    let endInput = document.getElementById('adminCustomEndDate');
+    if (startInput) startInput.value = window.adminStartDateStr;
+    if (endInput) endInput.value = window.adminEndDateStr;
+
+    if (doRender && window.cachedAdminReportsGrouped) {
+        renderAdminTabContent(window.currentActiveAdminTab || 'online');
+    }
+};
+
+window.onCustomDateRangeChanged = function() {
+    let startInput = document.getElementById('adminCustomStartDate');
+    let endInput = document.getElementById('adminCustomEndDate');
+    if (!startInput || !endInput) return;
+
+    if (startInput.value && endInput.value) {
+        window.adminDateFilterMode = 'custom';
+        window.adminStartDateStr = startInput.value;
+        window.adminEndDateStr = endInput.value;
+
+        // Reset preset buttons styling
+        ['adminPresetToday', 'adminPresetWeek', 'adminPresetMonth', 'adminPresetAll'].forEach(id => {
+            let b = document.getElementById(id);
+            if (b) {
+                b.style.background = "#e2eafc";
+                b.style.color = "#002d62";
+                b.style.border = "1px solid #b6ccfe";
+            }
+        });
+
+        if (window.cachedAdminReportsGrouped) {
+            renderAdminTabContent(window.currentActiveAdminTab || 'online');
+        }
+    }
+};
 
 async function fetchAndRenderAdminData() {
     let bodyContainer = document.getElementById('adminReportsModalBody');
@@ -1155,6 +1255,9 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let now = Date.now();
 
+    let startDate = window.adminStartDateStr || "2020-01-01";
+    let endDate = window.adminEndDateStr || "2030-12-31";
+
     if (tabName === 'online') {
         let activeUsersHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
         let activeCount = 0;
@@ -1193,20 +1296,28 @@ function renderAdminTabContent(tabName) {
             let repList = allReportsGrouped[agentName];
             if (Array.isArray(repList)) {
                 repList.forEach(rep => {
-                    if (!perfMap[agentName]) {
-                        perfMap[agentName] = { totalCalls: 0, shiftsCount: 0 };
+                    let repDate = rep.date || "";
+                    if (repDate >= startDate && repDate <= endDate) {
+                        if (!perfMap[agentName]) {
+                            perfMap[agentName] = { totalCalls: 0, shiftsCount: 0 };
+                        }
+                        perfMap[agentName].totalCalls += rep.totalCalls || 0;
+                        perfMap[agentName].shiftsCount += 1;
                     }
-                    perfMap[agentName].totalCalls += rep.totalCalls || 0;
-                    perfMap[agentName].shiftsCount += 1;
                 });
             }
         });
 
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
-        let leaderHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
+        let leaderHtml = `
+            <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
+                📅 Showing Performance from <b>${startDate}</b> to <b>${endDate}</b>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+        `;
 
         if (sortedLeaderboard.length === 0) {
-            leaderHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No team calling performance data available yet.</div>`;
+            leaderHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No calling performance data available for the selected date range.</div>`;
         } else {
             sortedLeaderboard.forEach((name, idx) => {
                 let stats = perfMap[name];
@@ -1217,7 +1328,7 @@ function renderAdminTabContent(tabName) {
                             <span style="font-size: 20px; width: 25px; text-align: center;">${medal}</span>
                             <div>
                                 <b style="color: #002d62; font-size: 15px;">${name}</b>
-                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Total Shifts Logged: ${stats.shiftsCount}</div>
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts in Range: ${stats.shiftsCount}</div>
                             </div>
                         </div>
                         <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">
@@ -1232,14 +1343,25 @@ function renderAdminTabContent(tabName) {
 
     } else if (tabName === 'reports') {
         let agentNames = Object.keys(allReportsGrouped);
-        let reportsHtml = `<div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">`;
+        let reportsHtml = `
+            <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
+                📅 Showing Shift Reports from <b>${startDate}</b> to <b>${endDate}</b>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
+        `;
         
-        if (agentNames.length === 0) {
-            reportsHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No shift reports received yet.</div>`;
-        } else {
-            agentNames.forEach(agent => {
-                let reportsList = Array.isArray(allReportsGrouped[agent]) ? allReportsGrouped[agent] : [];
-                let totalAgentCalls = reportsList.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
+        let totalVisibleAgentsWithReports = 0;
+
+        agentNames.forEach(agent => {
+            let reportsList = Array.isArray(allReportsGrouped[agent]) ? allReportsGrouped[agent] : [];
+            let filteredReports = reportsList.filter(rep => {
+                let repDate = rep.date || "";
+                return (repDate >= startDate && repDate <= endDate);
+            });
+
+            if (filteredReports.length > 0) {
+                totalVisibleAgentsWithReports++;
+                let totalAgentCalls = filteredReports.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
                 let collapseId = `agent_report_box_${agent.replace(/\s+/g, '_')}`;
 
                 reportsHtml += `
@@ -1249,7 +1371,7 @@ function renderAdminTabContent(tabName) {
                                 <span style="font-size: 16px;">👤</span>
                                 <div>
                                     <b style="color: #002d62; font-size: 14px;">${agent}</b>
-                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Total Shifts: ${reportsList.length} | Total Calls: ${totalAgentCalls}</div>
+                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Filtered Shifts: ${filteredReports.length} | Filtered Calls: ${totalAgentCalls}</div>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
@@ -1260,25 +1382,25 @@ function renderAdminTabContent(tabName) {
                         <div id="${collapseId}" style="display: none; padding: 12px 16px; border-top: 1px solid #eee; background: #fafbfc; display: flex; flex-direction: column; gap: 8px;">
                 `;
 
-                if (reportsList.length === 0) {
-                    reportsHtml += `<div style="font-size: 12px; color: #6c757d; font-style: italic;">No logs found for this agent.</div>`;
-                } else {
-                    reportsList.slice().reverse().forEach(rep => {
-                        reportsHtml += `
-                            <div style="background: white; border: 1px solid #e9ecef; padding: 10px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <div style="font-size: 12px; font-weight: bold; color: #333;">📅 Shift Date: ${rep.date}</div>
-                                    <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Submitted: ${rep.timestamp}</div>
-                                </div>
-                                <div style="background: #e2eafc; color: #002d62; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
-                                    ${rep.totalCalls} Calls
-                                </div>
+                filteredReports.slice().reverse().forEach(rep => {
+                    reportsHtml += `
+                        <div style="background: white; border: 1px solid #e9ecef; padding: 10px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 12px; font-weight: bold; color: #333;">📅 Shift Date: ${rep.date}</div>
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Submitted: ${rep.timestamp}</div>
                             </div>
-                        `;
-                    });
-                }
+                            <div style="background: #e2eafc; color: #002d62; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                ${rep.totalCalls} Calls
+                            </div>
+                        </div>
+                    `;
+                });
                 reportsHtml += `</div></div>`;
-            });
+            }
+        });
+
+        if (totalVisibleAgentsWithReports === 0) {
+            reportsHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No shift reports found for the selected date range.</div>`;
         }
         reportsHtml += `</div>`;
         bodyContainer.innerHTML = reportsHtml;
@@ -1299,15 +1421,23 @@ window.downloadSingleAgentReportCSV = function(agentName) {
         return alert(`No reports found for agent ${agentName}`);
     }
 
+    let startDate = window.adminStartDateStr || "2020-01-01";
+    let endDate = window.adminEndDateStr || "2030-12-31";
+
+    let filtered = agentReports.filter(r => r.date >= startDate && r.date <= endDate);
+    if (filtered.length === 0) {
+        return alert(`No reports found for ${agentName} in the selected date range (${startDate} to ${endDate}).`);
+    }
+
     let csv = "Agent Name,Shift Date,Submitted Timestamp,Total Calls\n";
-    agentReports.forEach(r => {
+    filtered.forEach(r => {
         csv += `"${agentName}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
     });
 
     let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Shift_Report_${agentName}_${getCurrentShiftDateKey()}.csv`;
+    link.download = `Shift_Report_${agentName}_${startDate}_to_${endDate}.csv`;
     link.click();
 };
 
@@ -1316,18 +1446,31 @@ window.downloadAdminReportCSV = function() {
     let agentNames = Object.keys(allGroups);
     if (agentNames.length === 0) return alert("No reports available to export.");
 
+    let startDate = window.adminStartDateStr || "2020-01-01";
+    let endDate = window.adminEndDateStr || "2030-12-31";
+
     let csv = "Agent Name,Shift Date,Submitted Timestamp,Total Calls\n";
+    let totalExportedRows = 0;
+
     agentNames.forEach(agent => {
         let reportsList = Array.isArray(allGroups[agent]) ? allGroups[agent] : [];
         reportsList.forEach(r => {
-            csv += `"${agent}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+            let rDate = r.date || "";
+            if (rDate >= startDate && rDate <= endDate) {
+                csv += `"${agent}","${r.date}","${r.timestamp}",${r.totalCalls}\n`;
+                totalExportedRows++;
+            }
         });
     });
+
+    if (totalExportedRows === 0) {
+        return alert(`No shift reports found for export between ${startDate} and ${endDate}.`);
+    }
 
     let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     let link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `All_Agents_Team_Performance_${getCurrentShiftDateKey()}.csv`;
+    link.download = `All_Agents_Team_Performance_${startDate}_to_${endDate}.csv`;
     link.click();
 };
 
