@@ -310,9 +310,12 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
+        // 3 minutes (180000ms) threshold for offline delay
+        const offlineThreshold = 180000;
+
         Object.keys(data).forEach(key => {
             let session = data[key];
-            if (session && session.timestamp && (now - session.timestamp < 12000)) {
+            if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
                 activeSessionsMap[key] = session;
             } else if (key !== safeTabKey) {
                 fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
@@ -1093,13 +1096,11 @@ async function renderAdvancedAdminModal() {
     `;
     document.body.appendChild(modal);
 
-    // Initialize default date range filter to 'today'
     setAdminDateFilterPreset('today', false);
     await fetchAndRenderAdminData();
 }
 
-// Date Range Filter State Variables for Admin Panel
-window.adminDateFilterMode = 'today'; // 'today', 'week', 'month', 'all', 'custom'
+window.adminDateFilterMode = 'today'; 
 window.adminStartDateStr = new Date().toISOString().split('T')[0];
 window.adminEndDateStr = new Date().toISOString().split('T')[0];
 
@@ -1165,7 +1166,6 @@ window.onCustomDateRangeChanged = function() {
         window.adminStartDateStr = startInput.value;
         window.adminEndDateStr = endInput.value;
 
-        // Reset preset buttons styling
         ['adminPresetToday', 'adminPresetWeek', 'adminPresetMonth', 'adminPresetAll'].forEach(id => {
             let b = document.getElementById(id);
             if (b) {
@@ -1254,6 +1254,8 @@ function renderAdminTabContent(tabName) {
     let sessionsData = window.cachedAdminSessions || {};
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let now = Date.now();
+    // 3 minutes (180000ms) threshold for offline delay checking in UI
+    const offlineThreshold = 180000;
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1265,7 +1267,7 @@ function renderAdminTabContent(tabName) {
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
             if (s && s.nickname && s.timestamp) {
-                let isOnline = (now - s.timestamp < 12000);
+                let isOnline = (now - s.timestamp < offlineThreshold);
                 if (isOnline) {
                     activeCount++;
                     let lastActiveTime = new Date(s.timestamp).toLocaleTimeString();
@@ -1499,10 +1501,11 @@ window.openShiftShareModal = async function() {
         
         let activeMembers = [];
         let now = Date.now();
+        const offlineThreshold = 180000;
 
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp && (now - s.timestamp < 12000)) {
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < offlineThreshold)) {
                 if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
                     activeMembers.push(s.nickname);
                 }
@@ -1788,10 +1791,11 @@ window.openTeamShareModal = async function(recordsToShare) {
         
         let activeMembers = [];
         let now = Date.now();
+        const offlineThreshold = 180000;
 
         Object.keys(sessionsData).forEach(key => {
             let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp && (now - s.timestamp < 12000)) {
+            if (s && s.nickname && s.timestamp && (now - s.timestamp < offlineThreshold)) {
                 if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
                     activeMembers.push(s.nickname);
                 }
@@ -2383,11 +2387,12 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
+            const offlineThreshold = 180000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
                 let session = sData[k];
-                if (session && session.timestamp && (now - session.timestamp < 12000)) {
+                if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
                     activeCount++;
                 }
             });
