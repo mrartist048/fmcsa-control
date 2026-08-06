@@ -700,7 +700,7 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== ADVANCED FILTER BAR WITH SAFER CATEGORIES & BULLETPROOF DROPDOWNS ======
+// ====== ADVANCED FILTER BAR WITH BACKEND SAFER CATEGORY SCRAPING/FETCHING ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -902,13 +902,20 @@ window.applyAdvancedFilters = function() {
 
     let rows = document.querySelectorAll('#resultsTable tr');
 
-    rows.forEach(row => {
-        let mcText = (row.cells[0]?.textContent || "").toLowerCase();
-        let nameText = (row.cells[2]?.textContent || "").toLowerCase();
-        let entityText = (row.cells[3]?.textContent || "").toLowerCase();
-        let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
-        let addressText = (row.cells[6]?.textContent || "").toUpperCase();
-        let vehicleText = (row.cells[9]?.textContent || "").toLowerCase();
+    rows.forEach((row, index) => {
+        let record = scrapedData[index];
+        if (!record) {
+            row.style.display = "none";
+            return;
+        }
+
+        let mcText = (record.mc || "").toString().toLowerCase();
+        let nameText = (record.name || "").toLowerCase();
+        let phoneText = (record.phone || "").toLowerCase();
+        let addressText = (record.address || "").toUpperCase();
+        let vehicleText = (record.vehicleType || "").toLowerCase();
+        let backendOps = (record.carrierOperation || "").toLowerCase();
+        let backendCargo = (record.cargoCarried || "").toLowerCase();
 
         let matchesState = true;
         if (selectedState !== "") {
@@ -928,12 +935,12 @@ window.applyAdvancedFilters = function() {
 
         let matchesOps = true;
         if (selectedOps.length > 0) {
-            matchesOps = selectedOps.some(sel => entityText.includes(sel));
+            matchesOps = selectedOps.some(sel => backendOps.includes(sel));
         }
 
         let matchesCargo = true;
         if (selectedCargoes.length > 0) {
-            matchesCargo = selectedCargoes.some(sel => entityText.includes(sel) || nameText.includes(sel));
+            matchesCargo = selectedCargoes.some(sel => backendCargo.includes(sel));
         }
 
         row.style.display = (matchesState && matchesSearch && matchesVehicle && matchesOps && matchesCargo) ? "" : "none";
@@ -2285,7 +2292,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "not_found" };
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', carrierOperation: '', cargoCarried: '', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -2319,6 +2326,24 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                     if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
                 }
             }
+
+            // Extract Carrier Operation and Cargo Carried dynamically from safer backend HTML text
+            let opList = [];
+            let cargoList = [];
+            let allTextOnPage = el.textContent || "";
+            
+            let possibleOps = ["Auth. For Hire", "Exempt For Hire", "Private (Property)", "Private Pass. (Business)", "Interstate", "Intrastate Only"];
+            possibleOps.forEach(op => {
+                if (allTextOnPage.includes(op)) opList.push(op);
+            });
+
+            let possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Machinery, Large Objects", "Liquids/Gases", "Refrigerated Food", "Chemicals", "Grain, Feed, Hay", "Livestock"];
+            possibleCargoes.forEach(cargo => {
+                if (allTextOnPage.includes(cargo)) cargoList.push(cargo);
+            });
+
+            record.carrierOperation = opList.join(", ");
+            record.cargoCarried = cargoList.join(", ");
 
             if (record.status !== "AUTHORIZED") { 
                 return { status: "filtered_out" }; 
@@ -2588,7 +2613,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     if(scrapedData.length > 0) {
         document.getElementById('downloadBtn').style.display = 'inline-block';
-        updateRealTimeHistory(scrapedData, true);
+        updateRealTimeHealth(scrapedData, true);
     }
 }
 
