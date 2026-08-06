@@ -55,16 +55,16 @@ function showLimitExceededModal(message) {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 99999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: var(--dl-card-bg, #ffffff); color: var(--dl-text-color, #333); padding: 35px 30px; border-radius: 12px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
+        <div style="background: #ffffff; padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
             <div style="font-size: 42px; margin-bottom: 10px;">⚠️</div>
             <h2 style="color: #dc3545; margin-top: 0; margin-bottom: 10px; font-size: 22px;">License Limit Exceeded!</h2>
-            <p style="font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+            <p style="color: #444; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
                 ${message}
             </p>
-            <div style="background: var(--dl-sub-bg, #f8f9fa); padding: 12px; border-radius: 6px; border: 1px solid var(--dl-border-color, #ddd); font-size: 12px; margin-bottom: 20px;">
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
                 Need to increase your active device/tab limit? <br>Contact Admin: <b>03037654849</b>
             </div>
-            <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%;">OK, Understood</button>
+            <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -82,14 +82,14 @@ function showPremiumNotification(message, duration = 4500) {
         position: fixed;
         top: -100px;
         right: 20px;
-        background: #001a3a;
+        background: #002d62;
         color: #ffffff;
         padding: 14px 22px;
-        border-radius: 8px;
+        border-radius: 6px;
         font-family: sans-serif;
         font-size: 13px;
         font-weight: bold;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
         border-left: 5px solid #17a2b8;
         z-index: 1000000;
         transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
@@ -114,28 +114,28 @@ function renderLoginScreen() {
 
     let overlay = document.createElement('div');
     overlay.id = 'dlLoginOverlay';
-    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000f24; z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #001a3a; z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     overlay.innerHTML = `
-        <div style="background: #001a3a; padding: 40px 30px; border-radius: 12px; width: 380px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-            <h2 style="color: #ffffff; margin-bottom: 5px; font-size: 26px; letter-spacing: 0.5px;">Dispatch Link</h2>
-            <p style="color: #8ab4f8; font-size: 12px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px;">Secure Dispatcher CRM Portal</p>
+        <div style="background: #ffffff; padding: 35px 30px; border-radius: 8px; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+            <h2 style="color: #002d62; margin-bottom: 5px; font-size: 24px;">Dispatch Link</h2>
+            <p style="color: #6c757d; font-size: 12px; margin-bottom: 25px;">Secure Dispatcher CRM Portal</p>
             
             <div style="margin-bottom: 15px; text-align: left;">
-                <label style="font-size: 12px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 5px;">Username</label>
-                <input type="text" id="dlLoginUser" placeholder="Enter your username" style="width: 100%; padding: 12px; font-size: 13px; background: #000f24; border: 1px solid #1e3a8a; color: #fff; border-radius: 6px; box-sizing: border-box; outline: none;">
+                <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Username</label>
+                <input type="text" id="dlLoginUser" placeholder="Enter your username" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
             </div>
 
             <div style="margin-bottom: 20px; text-align: left;">
-                <label style="font-size: 12px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 5px;">Password</label>
-                <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 12px; font-size: 13px; background: #000f24; border: 1px solid #1e3a8a; color: #fff; border-radius: 6px; box-sizing: border-box; outline: none;">
+                <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Password</label>
+                <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
             </div>
 
-            <button onclick="processLogin()" style="width: 100%; background: #2563eb; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">Login to Portal</button>
-            <div id="dlLoginError" style="color: #f87171; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
+            <button onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
+            <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
             
-            <div style="margin-top: 25px; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+            <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
                 Need access? Contact Admin: <b>03037654849</b><br>
-                Email: <a href="mailto:info@dispatchlink.online" style="color: #8ab4f8; text-decoration: underline;">info@dispatchlink.online</a>
+                Email: <a href="mailto:info@dispatchlink.online" style="color: #6c757d; text-decoration: underline;">info@dispatchlink.online</a>
             </div>
         </div>
     `;
@@ -204,65 +204,24 @@ function injectNicknameProfileUI() {
     let heading = document.querySelector('h1, h2, .heading') || document.body;
     let panel = document.createElement('div');
     panel.id = 'dlNickProfilePanel';
-    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 16px; font-family: sans-serif; flex-wrap: wrap; gap: 10px;";
+    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 12px; font-family: sans-serif;";
     
     panel.innerHTML = `
-        <div style="font-size: 13px; color: var(--dl-text-main, #ffffff); font-weight: bold; background: var(--dl-badge-bg, #001a3a); padding: 8px 14px; border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--dl-border-color, #1e3a8a);">
-            👤 User: <span style="color:#4ade80;" id="dlDispCurrentName">${dispatcherNickname}</span> 
-            <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:4px; color:#38bdf8; text-decoration:none;">[✏️ Change]</a> 
-            <a href="#" onclick="logoutUser(); return false;" style="margin-left:8px; color:#f87171; text-decoration:none;">[🚪 Logout]</a>
+        <div style="font-size: 12px; color: #002d62; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;">
+            👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> 
+            <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> 
+            <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button onclick="toggleDarkMode()" id="dlDarkModeToggleBtn" style="background: var(--dl-btn-bg, #001a3a); color: var(--dl-btn-text, #fff); border: 1px solid var(--dl-border-color, #1e3a8a); padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s;" title="Toggle Dark/Light Mode">
-                🌙 Theme
-            </button>
-            <button onclick="openCallingDetailModal()" style="background: #d97706; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); transition: 0.2s;">
+        <div style="display: flex; gap: 8px;">
+            <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
                 📊 Calling Detail
             </button>
-            <button onclick="openAdminPanelPrompt()" style="background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); transition: 0.2s;">
+            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
                 👑 Admin Panel
             </button>
         </div>
     `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
-    applyStoredThemePreference();
-}
-
-window.toggleDarkMode = function() {
-    let currentTheme = localStorage.getItem(`dl_theme_${currentClient}`) || 'dark';
-    let newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem(`dl_theme_${currentClient}`, newTheme);
-    applyStoredThemePreference();
-};
-
-function applyStoredThemePreference() {
-    let theme = localStorage.getItem(`dl_theme_${currentClient}`) || 'dark';
-    let root = document.documentElement;
-    let toggleBtn = document.getElementById('dlDarkModeToggleBtn');
-
-    if (theme === 'light') {
-        root.style.setProperty('--dl-bg-color', '#f4f7fe');
-        root.style.setProperty('--dl-card-bg', '#ffffff');
-        root.style.setProperty('--dl-text-main', '#001a3a');
-        root.style.setProperty('--dl-text-color', '#333333');
-        root.style.setProperty('--dl-border-color', '#b6ccfe');
-        root.style.setProperty('--dl-sub-bg', '#f8f9fa');
-        root.style.setProperty('--dl-badge-bg', '#e2eafc');
-        root.style.setProperty('--dl-btn-bg', '#ffffff');
-        root.style.setProperty('--dl-btn-text', '#002d62');
-        if (toggleBtn) toggleBtn.innerHTML = "🌙 Dark Mode";
-    } else {
-        root.style.setProperty('--dl-bg-color', '#000f24');
-        root.style.setProperty('--dl-card-bg', '#001a3a');
-        root.style.setProperty('--dl-text-main', '#ffffff');
-        root.style.setProperty('--dl-text-color', '#f1f5f9');
-        root.style.setProperty('--dl-border-color', '#1e3a8a');
-        root.style.setProperty('--dl-sub-bg', '#000f24');
-        root.style.setProperty('--dl-badge-bg', '#002d62');
-        root.style.setProperty('--dl-btn-bg', '#001a3a');
-        root.style.setProperty('--dl-btn-text', '#ffffff');
-        if (toggleBtn) toggleBtn.innerHTML = "☀️ Light Mode";
-    }
 }
 
 window.changeDispatcherName = function() {
@@ -465,45 +424,31 @@ function injectHistoryUIFramework() {
         }
     }
     if (brandHeading) {
-        brandHeading.innerHTML = "Dispatch Link <span style='font-size:14px; color:#94a3b8; font-weight:normal;'>| Lead Processor & CRM</span>";
+        brandHeading.innerHTML = "Dispatch Link <span style='font-size:14px; color:#6c757d; font-weight:normal;'>| Lead Processor & CRM</span>";
     }
 
     if (!document.getElementById('dlResponsiveTheme')) {
         let styleTag = document.createElement('style');
         styleTag.id = 'dlResponsiveTheme';
         styleTag.innerHTML = `
-            :root {
-                --dl-bg-color: #000f24;
-                --dl-card-bg: #001a3a;
-                --dl-text-main: #ffffff;
-                --dl-text-color: #f1f5f9;
-                --dl-border-color: #1e3a8a;
-                --dl-sub-bg: #000f24;
-                --dl-badge-bg: #002d62;
-                --dl-btn-bg: #001a3a;
-                --dl-btn-text: #ffffff;
-            }
-            body { background-color: var(--dl-bg-color, #000f24) !important; color: var(--dl-text-color, #f1f5f9) !important; }
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
-            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid var(--dl-border-color, #1e3a8a) !important; border-radius: 8px !important; background: var(--dl-card-bg, #001a3a); }
-            table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; color: var(--dl-text-color, #f1f5f9) !important; }
-            table.table th { background: var(--dl-card-bg, #001a3a) !important; color: var(--dl-text-main, #fff) !important; border-bottom: 2px solid var(--dl-border-color, #1e3a8a) !important; }
-            table.table td { border-bottom: 1px solid var(--dl-border-color, #1e3a8a) !important; }
-            table.table th, table.table td { padding: 12px 10px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
-            table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
+            table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
+           table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
+table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
             .remarks-input-field { 
                 width: 100% !important; 
                 height: 38px !important; 
-                border: 1px solid var(--dl-border-color, #1e3a8a) !important; 
+                border: 1px solid #b6ccfe !important; 
                 border-radius: 6px !important; 
                 padding: 6px 10px !important; 
                 font-size: 12px !important; 
                 line-height: 1.4 !important;
                 box-sizing: border-box !important; 
-                color: var(--dl-text-color, #222) !important; 
-                background: var(--dl-sub-bg, #fafafa) !important; 
+                color: #222 !important; 
+                background: #fafafa !important; 
                 resize: none !important;
                 font-family: monospace !important;
                 overflow: hidden !important;
@@ -511,30 +456,30 @@ function injectHistoryUIFramework() {
             }
             .remarks-input-field:focus { 
                 height: 120px !important; 
-                border-color: #38bdf8 !important; 
-                background: var(--dl-card-bg, #ffffff) !important; 
+                border-color: #002d62 !important; 
+                background: #ffffff !important; 
                 outline: none !important; 
                 overflow-y: auto !important;
-                box-shadow: 0 4px 15px rgba(56,189,248,0.2) !important; 
+                box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
             }
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            .premium-pitch-btn { display: inline-block; background: #0284c7; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 4px; border: none; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
-            .premium-pitch-btn:hover { background: #0369a1; }
-            .premium-followup-btn { display: inline-block; background: #eab308; color: #1e293b; text-decoration: none; font-size: 11px; font-weight: bold; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
-            .premium-followup-btn:hover { background: #ca8a04; }
+            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
+            .premium-pitch-btn:hover { background: #138496; }
+            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
+            .premium-followup-btn:hover { background: #e0a800; }
             
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
             .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
-            .phone-clickable-cell:hover { background-color: rgba(56,189,248,0.15) !important; }
-            .phone-clickable-cell:hover .clickable-phone-text { color: #38bdf8 !important; }
-            .phone-clickable-cell.active-called-cell { background-color: rgba(34,197,94,0.2) !important; border: 1px solid #22c55e !important; }
-            .phone-clickable-cell.active-called-cell .clickable-phone-text { color: #4ade80 !important; font-weight: 900 !important; }
+            .phone-clickable-cell:hover { background-color: #001a3a !important; }
+            .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
+            .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
+            .phone-clickable-cell.active-called-cell .clickable-phone-text { color: #0c5460 !important; font-weight: 900 !important; }
             .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
             .phone-icon-span { font-size: 14px; line-height: 1; }
-            .clickable-phone-text { color: var(--dl-text-main, #ffffff); font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
-            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: var(--dl-badge-bg, #002d62); padding: 3px 5px; border-radius: 3px; border: 1px solid var(--dl-border-color, #1e3a8a); color: #fff; }
+            .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
+            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; }
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
-            .phone-copy-badge { position: absolute; background: #22c55e; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
+            .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -544,8 +489,8 @@ function injectHistoryUIFramework() {
         navPanel.id = 'dlFloatingNavPanel';
         navPanel.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; transition: opacity 0.3s ease-in-out;";
         navPanel.innerHTML = `
-            <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #2563eb; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(37,99,235,0.4); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
-            <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #0284c7; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(2,132,199,0.4); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
+            <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
+            <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
         `;
         document.body.appendChild(navPanel);
 
@@ -588,7 +533,7 @@ function injectHistoryUIFramework() {
         let creditTag = document.createElement('span');
         creditTag.id = 'devCreditTag';
         creditTag.innerHTML = "Created by <b>Mr. Nauman (Ph: 03037654849)</b>";
-        creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #94a3b8; font-family: sans-serif; font-weight: normal;";
+        creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #6c757d; font-family: sans-serif; font-weight: normal;";
         mainHeading.appendChild(creditTag);
     }
 
@@ -597,14 +542,14 @@ function injectHistoryUIFramework() {
         let historyBtn = document.createElement('button');
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
-        historyBtn.style.cssText = "background: #2563eb; color: white; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 6px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle; box-shadow: 0 4px 12px rgba(37,99,235,0.25);";
+        historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
         historyBtn.onclick = (e) => { e.stopPropagation(); toggleHistoryDrawer(); };
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
 
         let followUpBtn = document.createElement('button');
         followUpBtn.id = 'openFollowUpDrawerBtn';
         followUpBtn.innerHTML = "📅 View Follow-Ups";
-        followUpBtn.style.cssText = "background: #0284c7; color: white; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 6px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle; box-shadow: 0 4px 12px rgba(2,132,199,0.25);";
+        followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
         followUpBtn.onclick = (e) => { e.stopPropagation(); toggleFollowUpDrawer(); };
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
@@ -612,11 +557,11 @@ function injectHistoryUIFramework() {
     if (!document.getElementById('dlHistoryDrawer')) {
         let drawer = document.createElement('div');
         drawer.id = 'dlHistoryDrawer';
-        drawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); box-shadow: -5px 0 25px rgba(0,0,0,0.5); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column; border-left: 1px solid var(--dl-border-color, #1e3a8a);";
+        drawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         drawer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 15px;">
-                <h3 style="color: var(--dl-text-main, #ffffff); margin: 0; font-size: 18px;">Saved Sheets History</h3>
-                <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94a3b8; font-weight: bold;">&times;</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="color: #002d62; margin: 0; font-size: 18px;">Saved Sheets History</h3>
+                <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
             <div id="drawerHistoryList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
         `;
@@ -626,22 +571,22 @@ function injectHistoryUIFramework() {
     if (!document.getElementById('dlFollowUpDrawer')) {
         let fDrawer = document.createElement('div');
         fDrawer.id = 'dlFollowUpDrawer';
-        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); box-shadow: -5px 0 25px rgba(0,0,0,0.5); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column; border-left: 1px solid var(--dl-border-color, #1e3a8a);";
+        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         fDrawer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 12px;">
-                <h3 style="color: var(--dl-text-main, #ffffff); margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
-                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94a3b8; font-weight: bold;">&times;</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
+                <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
+                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
             </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #0284c7; color: white; border: none; padding: 8px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">📅 Today</button>
-                <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: var(--dl-sub-bg, #000f24); color: var(--dl-text-main, #fff); border: 1px solid var(--dl-border-color, #1e3a8a); padding: 8px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">📋 All</button>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
+                <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
             </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
-                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 10px; font-size: 12px; background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: var(--dl-text-color, #fff); border-radius: 6px; box-sizing: border-box; outline: none;" oninput="renderFollowUpItems()">
-                <button onclick="clearFollowUpFilters()" style="background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: var(--dl-text-main, #fff); padding: 9px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;" title="Clear Filters">🔄</button>
+            <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
+                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
+                <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
             </div>
-            <div style="margin-bottom: 15px;">
-                <button onclick="downloadFollowUpsCSV()" style="background: #22c55e; color: white; border: none; padding: 10px; font-weight: bold; font-size: 13px; border-radius: 6px; cursor: pointer; width: 100%; box-shadow: 0 4px 12px rgba(34,197,94,0.25);">📥 Download Follow-Ups Sheet</button>
+            <div style="margin-bottom: 12px;">
+                <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
             </div>
             <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
         `;
@@ -651,21 +596,21 @@ function injectHistoryUIFramework() {
     if (!document.getElementById('dlDatePickerModal')) {
         let modal = document.createElement('div');
         modal.id = 'dlDatePickerModal';
-        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
+        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         modal.innerHTML = `
-            <div style="background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); padding: 30px; border-radius: 12px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid var(--dl-border-color, #1e3a8a);">
-                <h3 style="color: var(--dl-text-main, #ffffff); margin-top: 0; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">⏰ Schedule Follow-Up</h3>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 12px; font-weight: bold; color: var(--dl-text-main, #cbd5e1); margin-bottom: 6px;">Select Date:</label>
-                    <input type="date" id="dlModalDateInput" style="width: 100%; padding: 10px; font-size: 13px; background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: #fff; border-radius: 6px; box-sizing: border-box; outline: none;">
+            <div style="background: white; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">⏰ Schedule Follow-Up</h3>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Date:</label>
+                    <input type="date" id="dlModalDateInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 12px; font-weight: bold; color: var(--dl-text-main, #cbd5e1); margin-bottom: 6px;">Select Time:</label>
-                    <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 10px; font-size: 13px; background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: #fff; border-radius: 6px; box-sizing: border-box; outline: none;">
+                <div style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Time:</label>
+                    <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="closeFollowUpModal()" style="background: #475569; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmFollowUpSchedule()" style="background: #22c55e; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 12px rgba(34,197,94,0.3);">Confirm Schedule</button>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
                 </div>
             </div>
         `;
@@ -675,15 +620,15 @@ function injectHistoryUIFramework() {
     if (!document.getElementById('dlTeamSelectModal')) {
         let tModal = document.createElement('div');
         tModal.id = 'dlTeamSelectModal';
-        tModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
+        tModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         tModal.innerHTML = `
-            <div style="background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); padding: 30px; border-radius: 12px; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid var(--dl-border-color, #1e3a8a);">
-                <h3 style="color: var(--dl-text-main, #ffffff); margin-top: 0; margin-bottom: 10px; font-size: 18px; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">👥 Share with Active Team Member</h3>
-                <p style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">Select an active online laptop/user from your account group:</p>
-                <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--dl-border-color, #1e3a8a); padding: 10px; border-radius: 6px; background: var(--dl-sub-bg, #000f24);"></div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="closeTeamSelectModal()" style="background: #475569; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmTeamShareAction()" style="background: #2563eb; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">Share Now</button>
+            <div style="background: white; padding: 25px; border-radius: 8px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">👥 Share with Active Team Member</h3>
+                <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select an active online laptop/user from your account group:</p>
+                <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;"></div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button onclick="closeTeamSelectModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmTeamShareAction()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Share Now</button>
                 </div>
             </div>
         `;
@@ -755,35 +700,36 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
+// ====== ADVANCED FILTER BAR WITH BULLETPROOF LEFT-ALIGNED CHECKBOX TEXT ======
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
 
     let filterDiv = document.createElement('div');
     filterDiv.id = 'advancedFilterWrapper';
-    filterDiv.style.cssText = "background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); padding: 15px; margin: 15px 0; border: 1px solid var(--dl-border-color, #1e3a8a); border-radius: 8px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.2);";
+    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
     filterDiv.innerHTML = `
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 13px; font-weight: bold; color: var(--dl-text-main, #ffffff);">📍 State:</span>
-                <select id="stateDropdownSelect" style="padding: 8px 12px; font-size: 12px; border: 1px solid var(--dl-border-color, #1e3a8a); border-radius: 6px; background: var(--dl-sub-bg, #000f24); color: var(--dl-text-main, #fff); font-weight: bold; font-family: monospace; outline: none;" onchange="applyAdvancedFilters()">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
+                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
             </div>
             <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); padding: 8px 14px; font-size: 12px; border-radius: 6px; color: var(--dl-text-main, #fff); font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: var(--dl-card-bg, #001a3a); border: 1px solid var(--dl-border-color, #1e3a8a); box-shadow: 0 10px 30px rgba(0,0,0,0.5); padding: 12px; border-radius: 8px; z-index: 1000; width: 190px; top: 100%; left: 0; margin-top: 6px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #94a3b8; margin-bottom: 8px; border-bottom: 1px solid var(--dl-border-color, #1e3a8a); padding-bottom: 6px; text-align: left;">Filter by Vehicle:</div>
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 240px;">
-                <span style="font-size: 13px; font-weight: bold; color: var(--dl-text-main, #ffffff);">🔍 Search:</span>
-                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 8px 12px; font-size: 12px; background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: var(--dl-text-color, #fff); border-radius: 6px; outline: none;" oninput="applyAdvancedFilters()">
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
+                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
             </div>
-            <button onclick="resetAdvancedFilters()" style="background: #2563eb; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s;">🔄 Reset</button>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
-        <div style="background: #2563eb; color: white; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 8px rgba(37,99,235,0.3);">
+        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
             📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
         </div>
     `;
@@ -870,9 +816,9 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: var(--dl-text-color, #cbd5e1) !important; text-align: left !important; width: 100% !important; float: none !important;">
+            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important; float: none !important;">
                 <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; float: none !important; display: inline-block !important; width: 14px !important; height: 14px !important;"> 
-                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important; color: var(--dl-text-color, #cbd5e1) !important; font-size: 12px !important;">${vType}</span>
+                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
             </label>
         `;
     });
@@ -953,16 +899,16 @@ function injectEmailProposalPanel() {
 
     let proposalPanel = document.createElement('div');
     proposalPanel.id = 'premiumProposalWrapper';
-    proposalPanel.style.cssText = "background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); padding: 15px; margin: 15px 0; border: 1px solid var(--dl-border-color, #1e3a8a); border-radius: 8px; font-family: sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.2);";
+    proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif;";
     proposalPanel.innerHTML = `
         <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 13px; color: var(--dl-text-main, #ffffff);">📋 Setup Email Proposal Template</strong>
-            <span style="font-size: 12px; font-weight: bold; color: #38bdf8;">⚙️ Click to Edit</span>
+            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
+            <span style="font-size: 12px; font-weight: bold;">⚙️ Click to Edit</span>
         </div>
-        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed var(--dl-border-color, #1e3a8a); padding-top: 12px;">
-            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 10px; font-size: 13px; background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: var(--dl-text-color, #fff); border-radius: 6px; outline: none;"></div>
-            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 90px; font-size: 13px; background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); color: var(--dl-text-color, #fff); border-radius: 6px; outline: none; padding: 10px;">${savedBody}</textarea></div>
-            <button onclick="saveProposalTemplateSettings()" style="background: #2563eb; color: white; border: none; padding: 8px 16px; font-size: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">💾 Save Template</button>
+        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
+            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px;"></div>
+            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px;">${savedBody}</textarea></div>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
         </div>
     `;
     table.parentNode.insertBefore(proposalPanel, table);
@@ -1006,12 +952,12 @@ window.copyEmailToClipboard = function(element, emailAddress) {
 };
 
 function buildEmailCellMarkup(emailAddress, companyName) {
-    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #64748b;">N/A</td>`;
+    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
     let escapedName = companyName.replace(/'/g, "\\'");
     return `
         <td style="position: relative; vertical-align: middle;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #38bdf8; font-weight: bold; cursor: pointer;">${emailAddress}</span>
+                <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${emailAddress}</span>
                 <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📤 Send</a>
             </div>
         </td>
@@ -1062,22 +1008,22 @@ window.openCallingDetailModal = function() {
 
     let modal = document.createElement('div');
     modal.id = 'dlCallingDetailModal';
-    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); width: 380px; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid var(--dl-border-color, #1e3a8a);">
-            <div style="background: #2563eb; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: white; width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+            <div style="background: #ff9800; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
                 <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
-            <div style="padding: 24px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 15px; border-bottom: 1px solid var(--dl-border-color, #1e3a8a); padding-bottom: 12px;">
-                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #4ade80; font-size: 18px;">${totalCallsCount}</span>
+            <div style="padding: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #002d62; font-size: 16px;">${totalCallsCount}</span>
                 </div>
                 
-                <div style="margin-top: 25px; display: flex; gap: 10px;">
-                    <button onclick="openShiftShareModal()" style="background: #2563eb; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">📤 Share Shift Report</button>
-                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #475569; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
+                <div style="margin-top: 20px; display: flex; gap: 8px;">
+                    <button onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
                 </div>
             </div>
         </div>
@@ -1101,31 +1047,31 @@ async function renderAdvancedAdminModal() {
 
     let modal = document.createElement('div');
     modal.id = 'dlAdminReportsModal';
-    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: var(--dl-card-bg, #001a3a); color: var(--dl-text-color, #fff); width: 640px; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--dl-border-color, #1e3a8a);">
-            <div style="background: #000f24; color: white; padding: 18px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--dl-border-color, #1e3a8a);">
-                <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="background: white; width: 620px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+            <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
-                    <button onclick="refreshAdminModalData()" id="adminRefreshBtn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Refresh Data">🔄 Refresh</button>
+                    <button onclick="refreshAdminModalData()" id="adminRefreshBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Refresh Data">🔄 Refresh</button>
                 </div>
                 <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             
-            <div style="display: flex; background: #000f24; border-bottom: 1px solid var(--dl-border-color, #1e3a8a); padding: 12px 18px; gap: 10px;">
-                <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #2563eb; color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
-                <button onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: var(--dl-sub-bg, #001a3a); color: var(--dl-text-main, #fff); border: 1px solid var(--dl-border-color, #1e3a8a); padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
-                <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: var(--dl-sub-bg, #001a3a); color: var(--dl-text-main, #fff); border: 1px solid var(--dl-border-color, #1e3a8a); padding: 10px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
+            <div style="display: flex; background: #f1f3f4; border-bottom: 1px solid #ddd; padding: 10px 15px; gap: 8px;">
+                <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
+                <button onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
+                <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #94a3b8; background: var(--dl-sub-bg, #000f24);">
+            <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
                 Loading live team status and reports...
             </div>
 
-            <div style="background: var(--dl-card-bg, #001a3a); padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--dl-border-color, #1e3a8a);">
-                <button onclick="downloadAdminReportCSV()" style="background: #22c55e; color: white; border: none; padding: 10px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(34,197,94,0.3);">📥 Export CSV Report</button>
-                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #475569; color: white; border: none; padding: 10px 20px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
+            <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
+                <button onclick="downloadAdminReportCSV()" style="background: #28a745; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">📥 Export CSV Report</button>
+                <button onclick="document.getElementById('dlAdminReportsModal').remove()" style="background: #6c757d; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Close Panel</button>
             </div>
         </div>
     `;
@@ -1137,7 +1083,7 @@ async function renderAdvancedAdminModal() {
 async function fetchAndRenderAdminData() {
     let bodyContainer = document.getElementById('adminReportsModalBody');
     if (bodyContainer) {
-        bodyContainer.innerHTML = `<p style="color: #94a3b8; font-style: italic; padding: 30px;">Refreshing live team status and reports...</p>`;
+        bodyContainer.innerHTML = `<p style="color: #6c757d; font-style: italic; padding: 30px;">Refreshing live team status and reports...</p>`;
     }
 
     try {
@@ -1156,7 +1102,7 @@ async function fetchAndRenderAdminData() {
         renderAdminTabContent(activeTab);
     } catch (e) {
         console.error("Failed to load admin monitoring dashboard:", e);
-        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #f87171;">Failed to load data from database.</p>`;
+        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load data from database.</p>`;
     }
 }
 
@@ -1184,15 +1130,15 @@ window.switchAdminTab = function(tabName) {
 
     [btnOnline, btnLeaderboard, btnReports].forEach(b => {
         if (b) {
-            b.style.background = "var(--dl-sub-bg, #001a3a)";
-            b.style.color = "var(--dl-text-main, #fff)";
-            b.style.border = "1px solid var(--dl-border-color, #1e3a8a)";
+            b.style.background = "#e2eafc";
+            b.style.color = "#002d62";
+            b.style.border = "1px solid #b6ccfe";
         }
     });
 
     let activeBtn = tabName === 'online' ? btnOnline : tabName === 'leaderboard' ? btnLeaderboard : btnReports;
     if (activeBtn) {
-        activeBtn.style.background = "#2563eb";
+        activeBtn.style.background = "#002d62";
         activeBtn.style.color = "white";
         activeBtn.style.border = "none";
     }
@@ -1209,7 +1155,7 @@ function renderAdminTabContent(tabName) {
     let now = Date.now();
 
     if (tabName === 'online') {
-        let activeUsersHtml = `<div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">`;
+        let activeUsersHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
         let activeCount = 0;
 
         Object.keys(sessionsData).forEach(key => {
@@ -1220,14 +1166,14 @@ function renderAdminTabContent(tabName) {
                     activeCount++;
                     let lastActiveTime = new Date(s.timestamp).toLocaleTimeString();
                     activeUsersHtml += `
-                        <div style="background: var(--dl-card-bg, #001a3a); border: 1px solid var(--dl-border-color, #1e3a8a); border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #28a745; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                             <div>
-                                <div style="font-size: 15px; font-weight: bold; color: var(--dl-text-main, #ffffff); display: flex; align-items: center; gap: 8px;">
-                                    🟢 <span>${s.nickname}</span> <span style="font-size: 10px; background: rgba(34,197,94,0.2); color: #4ade80; padding: 2px 8px; border-radius: 4px; border: 1px solid #22c55e;">Online</span>
+                                <div style="font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 6px;">
+                                    🟢 <span>${s.nickname}</span> <span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px;">Online</span>
                                 </div>
-                                <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;">Login Time: <b>${s.loginTime || 'N/A'}</b></div>
+                                <div style="color: #666; font-size: 11px; margin-top: 4px;">Login Time: <b>${s.loginTime || 'N/A'}</b></div>
                             </div>
-                            <div style="color: #cbd5e1; font-size: 11px; background: var(--dl-sub-bg, #000f24); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--dl-border-color, #1e3a8a);">Last Heartbeat: <br><b>${lastActiveTime}</b></div>
+                            <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee;">Last Heartbeat: <br><b>${lastActiveTime}</b></div>
                         </div>
                     `;
                 }
@@ -1235,7 +1181,7 @@ function renderAdminTabContent(tabName) {
         });
 
         if (activeCount === 0) {
-            activeUsersHtml += `<div style="text-align: center; color: #94a3b8; font-size: 13px; font-style: italic; padding: 30px;">No dispatchers currently online.</div>`;
+            activeUsersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No dispatchers currently online.</div>`;
         }
         activeUsersHtml += `</div>`;
         bodyContainer.innerHTML = activeUsersHtml;
@@ -1252,24 +1198,24 @@ function renderAdminTabContent(tabName) {
         });
 
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
-        let leaderHtml = `<div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">`;
+        let leaderHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
 
         if (sortedLeaderboard.length === 0) {
-            leaderHtml += `<div style="text-align: center; color: #94a3b8; font-size: 13px; font-style: italic; padding: 30px;">No team calling performance data available yet.</div>`;
+            leaderHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No team calling performance data available yet.</div>`;
         } else {
             sortedLeaderboard.forEach((name, idx) => {
                 let stats = perfMap[name];
                 let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `<b>#${idx+1}</b>`;
                 leaderHtml += `
-                    <div style="background: var(--dl-card-bg, #001a3a); border: 1px solid var(--dl-border-color, #1e3a8a); border-left: 4px solid #eab308; padding: 14px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                        <div style="display: flex; align-items: center; gap: 14px;">
-                            <span style="font-size: 22px; width: 30px; text-align: center;">${medal}</span>
+                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #ff9800; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 20px; width: 25px; text-align: center;">${medal}</span>
                             <div>
-                                <b style="color: var(--dl-text-main, #ffffff); font-size: 16px;">${name}</b>
-                                <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">Total Shifts Logged: ${stats.shiftsCount}</div>
+                                <b style="color: #002d62; font-size: 15px;">${name}</b>
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Total Shifts Logged: ${stats.shiftsCount}</div>
                             </div>
                         </div>
-                        <div style="background: #2563eb; color: white; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
+                        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">
                             Total Calls: ${stats.totalCalls}
                         </div>
                     </div>
@@ -1280,22 +1226,22 @@ function renderAdminTabContent(tabName) {
         bodyContainer.innerHTML = leaderHtml;
 
     } else if (tabName === 'reports') {
-        let reportsHtml = `<div style="display: flex; flex-direction: column; gap: 12px; text-align: left;">`;
+        let reportsHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
         
         if (reportsList.length === 0) {
-            reportsHtml += `<div style="text-align: center; color: #94a3b8; font-size: 13px; font-style: italic; padding: 30px;">No shift reports received yet.</div>`;
+            reportsHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No shift reports received yet.</div>`;
         } else {
             reportsList.slice().reverse().forEach(rep => {
                 reportsHtml += `
-                    <div style="background: var(--dl-card-bg, #001a3a); border: 1px solid var(--dl-border-color, #1e3a8a); border-left: 4px solid #0284c7; padding: 14px 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                        <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: var(--dl-text-main, #ffffff); margin-bottom: 6px;">
+                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #17a2b8; padding: 12px 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 6px;">
                             <span>👤 Agent: ${rep.sender}</span>
-                            <span style="color: #94a3b8; font-weight: normal; font-size: 12px;">📅 Shift: ${rep.date}</span>
+                            <span style="color: #6c757d; font-weight: normal; font-size: 12px;">📅 Shift: ${rep.date}</span>
                         </div>
-                        <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px;">Submitted At: ${rep.timestamp}</div>
-                        <div style="font-size: 12px; background: var(--dl-sub-bg, #000f24); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--dl-border-color, #1e3a8a); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 11px; color: #888; margin-bottom: 8px;">Submitted At: ${rep.timestamp}</div>
+                        <div style="font-size: 12px; background: #f8f9fa; padding: 8px 12px; border-radius: 4px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                             <span>Total Calls Logged:</span>
-                            <b style="color: #38bdf8; font-size: 15px;">${rep.totalCalls} Calls</b>
+                            <b style="color: #002d62; font-size: 14px;">${rep.totalCalls} Calls</b>
                         </div>
                     </div>
                 `;
@@ -1327,16 +1273,16 @@ window.openShiftShareModal = async function() {
     if (!modalBody) return;
 
     modalBody.innerHTML = `
-        <div style="background: #2563eb; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px;">📤 Share Shift Report</h3>
             <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
         </div>
-        <div style="padding: 24px;">
-            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">Select manager or team member to send shift report:</p>
-            <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--dl-border-color, #1e3a8a); padding: 10px; border-radius: 6px; background: var(--dl-sub-bg, #000f24);">Loading active members...</div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="openCallingDetailModal()" style="background: #475569; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;">Back</button>
-                <button onclick="confirmSendShiftReport()" style="background: #22c55e; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 12px rgba(34,197,94,0.3);">Send Report</button>
+        <div style="padding: 20px;">
+            <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select manager or team member to send shift report:</p>
+            <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;">Loading active members...</div>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button onclick="openCallingDetailModal()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Back</button>
+                <button onclick="confirmSendShiftReport()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Send Report</button>
             </div>
         </div>
     `;
@@ -1359,7 +1305,7 @@ window.openShiftShareModal = async function() {
 
         let radioListDiv = document.getElementById('dlShiftMembersRadioList');
         if (activeMembers.length === 0) {
-            radioListDiv.innerHTML = `<div style="text-align: center; color: #f87171; font-size: 12px; padding: 15px; font-weight: bold;">No other online members/managers found.</div>`;
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other online members/managers found.</div>`;
             return;
         }
 
@@ -1367,7 +1313,7 @@ window.openShiftShareModal = async function() {
         activeMembers.forEach((name, idx) => {
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
-                <label style="display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid var(--dl-border-color, #1e3a8a); cursor: pointer; font-size: 13px; color: var(--dl-text-color, #fff);">
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
                     <input type="radio" name="shiftTargetRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
                     <span>💻 <b>${name}</b> (Online)</span>
                 </label>
@@ -1449,7 +1395,7 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
 };
 
 function buildPhoneCellMarkup(phoneNum) {
-    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #64748b; text-align: center;">N/A</td>`;
+    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
             <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call & Log Count">
@@ -1524,7 +1470,7 @@ window.confirmFollowUpSchedule = function() {
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
-        if (row) row.style.background = "rgba(34,197,94,0.15)";
+        if (row) row.style.background = "#d4edda";
     }
 
     closeFollowUpModal();
@@ -1572,19 +1518,19 @@ function updateFollowUpFilterButtonsUI() {
     if (!btnToday || !btnAll) return;
 
     if (currentFollowUpFilterMode === 'today') {
-        btnToday.style.background = "#0284c7";
+        btnToday.style.background = "#17a2b8";
         btnToday.style.color = "white";
         btnToday.style.border = "none";
-        btnAll.style.background = "var(--dl-sub-bg, #001a3a)";
-        btnAll.style.color = "var(--dl-text-main, #fff)";
-        btnAll.style.border = "1px solid var(--dl-border-color, #1e3a8a)";
+        btnAll.style.background = "#e2eafc";
+        btnAll.style.color = "#002d62";
+        btnAll.style.border = "1px solid #b6ccfe";
     } else {
-        btnAll.style.background = "#0284c7";
+        btnAll.style.background = "#17a2b8";
         btnAll.style.color = "white";
         btnAll.style.border = "none";
-        btnToday.style.background = "var(--dl-sub-bg, #001a3a)";
-        btnToday.style.color = "var(--dl-text-main, #fff)";
-        btnToday.style.border = "1px solid var(--dl-border-color, #1e3a8a)";
+        btnToday.style.background = "#e2eafc";
+        btnToday.style.color = "#002d62";
+        btnToday.style.border = "1px solid #b6ccfe";
     }
 }
 
@@ -1625,7 +1571,7 @@ window.openTeamShareModal = async function(recordsToShare) {
 
     let radioListDiv = document.getElementById('dlTeamMembersRadioList');
     if (!radioListDiv) return;
-    radioListDiv.innerHTML = `<div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 15px;">Loading active online laptops...</div>`;
+    radioListDiv.innerHTML = `<div style="text-align: center; color: #6c757d; font-size: 12px; padding: 15px;">Loading active online laptops...</div>`;
 
     let tModal = document.getElementById('dlTeamSelectModal');
     if (tModal) tModal.style.display = 'flex';
@@ -1647,7 +1593,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         });
 
         if (activeMembers.length === 0) {
-            radioListDiv.innerHTML = `<div style="text-align: center; color: #f87171; font-size: 12px; padding: 15px; font-weight: bold;">No other active team members online right now.</div>`;
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other active team members online right now.</div>`;
             return;
         }
 
@@ -1655,7 +1601,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         activeMembers.forEach((name, idx) => {
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
-                <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--dl-border-color, #1e3a8a); cursor: pointer; font-size: 13px; color: var(--dl-text-color, #fff);">
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
                     <input type="radio" name="teamMemberRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
                     <span>💻 <b>${name}</b> (Online)</span>
                 </label>
@@ -1664,7 +1610,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         radioListDiv.innerHTML = html;
     } catch (e) {
         console.error("Failed to fetch active sessions:", e);
-        radioListDiv.innerHTML = `<div style="text-align: center; color: #f87171; font-size: 12px; padding: 15px;">Error loading active laptops.</div>`;
+        radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px;">Error loading active laptops.</div>`;
     }
 };
 
@@ -1776,7 +1722,7 @@ function renderFollowUpItems() {
     let todayDateStr = new Date().toISOString().split('T')[0];
 
     if (data.length === 0) {
-        listContainer.innerHTML = `<p style="color: #94a3b8; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
         return;
     }
 
@@ -1801,33 +1747,33 @@ function renderFollowUpItems() {
         }
 
         matchCount++;
-        let senderTag = item.sharedBy ? `<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
+        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
 
         itemsHTML += `
-            <div style="background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); border-left: 4px solid #0284c7; padding: 14px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); font-family:sans-serif;">
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; font-weight: bold; margin-bottom: 6px;">
+            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
                     <span>Saved: ${item.addedAt}</span>
-                    <span style="background: rgba(37,99,235,0.2); color: #38bdf8; padding: 2px 8px; border-radius: 4px; border: 1px solid #2563eb;">📅 ${fuDate} @ ${fuTime}</span>
+                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <div style="font-size: 14px; font-weight: bold; color: var(--dl-text-main, #ffffff);">${item.name}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
                     ${senderTag}
                 </div>
-                <div style="font-size: 12px; color:var(--dl-text-color, #cbd5e1);"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
-                <div style="font-size: 12px; color:var(--dl-text-color, #cbd5e1); margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
-                <div style="font-size: 12px; color: #cbd5e1; background: var(--dl-card-bg, #001a3a); padding: 8px; margin-top: 8px; border-radius: 4px; border: 1px solid var(--dl-border-color, #1e3a8a); font-style:italic;">
+                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
-                <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px;">
-                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #0284c7; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
-                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
+                <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
                 </div>
             </div>
         `;
     });
 
     if (matchCount === 0) {
-        listContainer.innerHTML = `<p style="color: #94a3b8; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
+        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
     } else {
         listContainer.innerHTML = itemsHTML;
     }
@@ -1835,12 +1781,12 @@ function renderFollowUpItems() {
     if (!document.getElementById('dlBulkFollowUpActionBar')) {
         let actionBar = document.createElement('div');
         actionBar.id = 'dlBulkFollowUpActionBar';
-        actionBar.style.cssText = "display: flex; gap: 8px; margin-bottom: 12px; align-items: center; background: var(--dl-sub-bg, #000f24); padding: 8px 12px; border: 1px solid var(--dl-border-color, #1e3a8a); border-radius: 6px; font-size: 11px;";
+        actionBar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; align-items: center; background: #e2eafc; padding: 6px; border-radius: 4px; font-size: 11px;";
         actionBar.innerHTML = `
-            <label style="cursor: pointer; font-weight: bold; color: var(--dl-text-main, #ffffff); display: flex; align-items: center; gap: 6px;">
+            <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
                 <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
             </label>
-            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #2563eb; color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; flex: 1; box-shadow: 0 2px 6px rgba(37,99,235,0.3);" title="Share Selected with Team">👥 Share Selected</button>
+            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
         `;
         listContainer.parentNode.insertBefore(actionBar, listContainer);
     }
@@ -1857,7 +1803,7 @@ function renderFollowUpItems() {
                 checkbox.type = 'checkbox';
                 checkbox.className = 'followup-select-checkbox';
                 checkbox.value = record.mc;
-                checkbox.style.cssText = "margin-right: 8px; cursor: pointer;";
+                checkbox.style.cssText = "margin-right: 6px; cursor: pointer;";
                 topHeader.insertBefore(checkbox, topHeader.firstChild);
             }
 
@@ -1866,7 +1812,7 @@ function renderFollowUpItems() {
                 let teamBtn = document.createElement('button');
                 teamBtn.className = 'single-team-share-btn';
                 teamBtn.innerHTML = "👥 Share";
-                teamBtn.style.cssText = "background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;";
+                teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
                 teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
                 btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
             }
@@ -1955,41 +1901,41 @@ function renderHistoryItems() {
         data = data.reverse();
 
         if (data.length === 0) {
-            listContainer.innerHTML = `<p style="color: #94a3b8; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
+            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
             return;
         }
 
         let itemsHTML = "";
         data.forEach(item => {
             let displayStatus = item.status === "Interrupted (Auto-Saved)"
-                ? `<span style="color: #f87171; font-weight:bold;">⚠️ ${item.status}</span>`
-                : `<span style="color: #4ade80; font-weight:bold;">✅ ${item.status}</span>`;
+                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
+                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
             let resumeBtnStyle = recordsCount === 0 
-                ? "background: #334155; color: #64748b; border: none; padding: 6px 12px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
             
             let csvBtnStyle = recordsCount === 0 
-                ? "background: #334155; color: #64748b; border: none; padding: 6px 12px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: #22c55e; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
+                : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
 
             let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
             let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
 
             itemsHTML += `
-                <div style="background: var(--dl-sub-bg, #000f24); border: 1px solid var(--dl-border-color, #1e3a8a); border-left: 4px solid #2563eb; padding: 14px; margin-bottom: 12px; border-radius: 8px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                    <div style="font-size: 11px; color: #94a3b8; font-weight: bold;">${item.date}</div>
-                    <div style="font-size: 14px; font-weight: bold; color: var(--dl-text-main, #ffffff); margin: 6px 0;">Range: ${item.range}</div>
-                    <div style="font-size: 12px; margin-bottom: 10px;">Status: ${displayStatus}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; border-top: 1px solid var(--dl-border-color, #1e3a8a); padding-top: 10px;">
-                        <span style="background: rgba(37,99,235,0.2); color: #38bdf8; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 11px; border: 1px solid #2563eb;">${recordsCount} Active</span>
-                        <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
+                    <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
+                        <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
+                        <div style="display: flex; gap: 4px; align-items: center;">
                             <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
-                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
                             <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
-                            <button onclick="deleteHistoryItem(${item.id})" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -2035,7 +1981,7 @@ window.loadHistorySheetToTable = async function(id) {
             let phoneCellHTML = buildPhoneCellMarkup(record.phone);
             
             let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
-            let rowStyleHTML = isAlreadyFollowed ? `style="background: rgba(34,197,94,0.15);"` : '';
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             let activeRemarksValue = record.remarks || "";
 
             tableBody.innerHTML += `<tr ${rowStyleHTML}>
@@ -2095,7 +2041,7 @@ window.resumeHistorySheet = async function(id) {
             let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
             let phoneCellHTML = buildPhoneCellMarkup(record.phone);
             let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
-            let rowStyleHTML = isAlreadyFollowed ? `style="background: rgba(34,197,94,0.15);"` : '';
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
             let activeRemarksValue = record.remarks || "";
 
             tableBody.innerHTML += `<tr ${rowStyleHTML}>
@@ -2211,10 +2157,9 @@ window.stopScraping = function() {
     scraping = false;
     let statusBox = document.getElementById('status');
     if (statusBox) {
-        statusBox.style.background = "rgba(234,179,8,0.15)";
-        statusBox.style.color = "#facc15";
-        statusBox.style.border = "1px solid #eab308";
-        statusBox.style.padding = "12px 18px";
+        statusBox.style.background = "#fff3cd";
+        statusBox.style.color = "#856404";
+        statusBox.style.padding = "10px 15px";
         statusBox.innerHTML = "<strong>⏸️ Processing Paused Safely. Click Start to resume/run again.</strong>";
     }
     if (currentHistoryId) {
@@ -2428,13 +2373,12 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         statusBox.style.flexDirection = "row";
         statusBox.style.alignItems = "center";
         statusBox.style.justifyContent = "space-between";
-        statusBox.style.padding = "14px 18px";
-        statusBox.style.background = "var(--dl-card-bg, #001a3a)";
-        statusBox.style.color = "var(--dl-text-color, #fff)";
-        statusBox.style.border = "1px solid var(--dl-border-color, #1e3a8a)";
-        statusBox.style.borderLeft = "5px solid #2563eb";
-        statusBox.style.borderRadius = "8px";
-        statusBox.style.boxShadow = "0 4px 15px rgba(0,0,0,0.2)";
+        statusBox.style.padding = "10px 15px";
+        statusBox.style.background = "#f8f9fa";
+        statusBox.style.color = "#333";
+        statusBox.style.border = "1px solid #e9ecef";
+        statusBox.style.borderLeft = "5px solid #002d62";
+        statusBox.style.borderRadius = "4px";
     }
 
     if (!currentHistoryId && db) {
@@ -2530,20 +2474,20 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
-        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#f87171; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#4ade80; font-size:11px; font-weight:bold;">Status: Stable</span>`;
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
-                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 4px; text-align: left;">
-                    <div style="font-size: 13px; font-weight: bold; color: var(--dl-text-main, #fff);">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
+                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                    <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <span style="font-size: 11px; color: #94a3b8; font-weight: bold;">${timeString}</span>
+                        <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
                         ${latestErrorText}
                     </div>
                 </div>
-                <div style="position: relative; width: 42px; height: 42px; border-radius: 50%; background: conic-gradient(#2563eb ${degrees}deg, #1e293b ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <div style="position: absolute; width: 32px; height: 32px; background: var(--dl-sub-bg, #000f24); border-radius: 50%;"></div>
-                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: var(--dl-text-main, #fff);">${percentage}%</span>
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
                 </div>
             `;
         }
@@ -2561,10 +2505,10 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     document.getElementById('stopBtn').style.display = 'none';
 
     if (statusBox) {
-        statusBox.style.padding = "18px";
+        statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
-        statusBox.style.borderLeft = "5px solid #22c55e";
-        statusBox.innerHTML = `<strong style="font-size: 15px; color: #4ade80; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
+        statusBox.style.borderLeft = "5px solid #28a745";
+        statusBox.innerHTML = `<strong style="font-size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
     }
 
     if(scrapedData.length > 0) {
@@ -2580,3 +2524,5 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
+
