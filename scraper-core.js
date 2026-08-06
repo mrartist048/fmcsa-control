@@ -310,15 +310,14 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        // 3 minutes (180000ms) threshold for offline delay
-        const offlineThreshold = 180000;
+        const offlineThreshold = 180000; // 3 minutes
 
         Object.keys(data).forEach(key => {
             let session = data[key];
             if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
                 activeSessionsMap[key] = session;
             } else if (key !== safeTabKey) {
-                fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${key}.json`, { method: 'DELETE' });
+                // Keep session record in database for offline tracking, but mark expired if needed or just let checkGlobalSessions inspect timestamps
             }
         });
 
@@ -626,8 +625,8 @@ function injectHistoryUIFramework() {
         tModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         tModal.innerHTML = `
             <div style="background: white; padding: 25px; border-radius: 8px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">👥 Share with Active Team Member</h3>
-                <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select an active online laptop/user from your account group:</p>
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">👥 Share with Team Member</h3>
+                <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select team member (Online or Offline will receive inbox message):</p>
                 <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;"></div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
                     <button onclick="closeTeamSelectModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
@@ -1062,7 +1061,7 @@ async function renderAdvancedAdminModal() {
             </div>
             
             <div style="display: flex; background: #f1f3f4; border-bottom: 1px solid #ddd; padding: 10px 15px; gap: 8px;">
-                <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🟢 Live Users</button>
+                <button onclick="switchAdminTab('online')" id="adminTabBtnOnline" style="flex: 1; background: #002d62; color: white; border: none; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">👥 Live & Offline Users</button>
                 <button onclick="switchAdminTab('leaderboard')" id="adminTabBtnLeaderboard" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">🏆 Team Calling</button>
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
@@ -1083,7 +1082,7 @@ async function renderAdvancedAdminModal() {
             </div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
-                Loading live team status and reports...
+                Loading team status and reports...
             </div>
 
             <div style="background: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee;">
@@ -1184,7 +1183,7 @@ window.onCustomDateRangeChanged = function() {
 async function fetchAndRenderAdminData() {
     let bodyContainer = document.getElementById('adminReportsModalBody');
     if (bodyContainer) {
-        bodyContainer.innerHTML = `<p style="color: #6c757d; font-style: italic; padding: 30px;">Refreshing live team status and reports...</p>`;
+        bodyContainer.innerHTML = `<p style="color: #6c757d; font-style: italic; padding: 30px;">Refreshing team status and reports...</p>`;
     }
 
     try {
@@ -1254,43 +1253,60 @@ function renderAdminTabContent(tabName) {
     let sessionsData = window.cachedAdminSessions || {};
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let now = Date.now();
-    // 3 minutes (180000ms) threshold for offline delay checking in UI
-    const offlineThreshold = 180000;
+    const offlineThreshold = 180000; // 3 minutes
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
 
     if (tabName === 'online') {
-        let activeUsersHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
-        let activeCount = 0;
-
-        Object.keys(sessionsData).forEach(key => {
-            let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp) {
-                let isOnline = (now - s.timestamp < offlineThreshold);
-                if (isOnline) {
-                    activeCount++;
-                    let lastActiveTime = new Date(s.timestamp).toLocaleTimeString();
-                    activeUsersHtml += `
-                        <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid #28a745; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
-                            <div>
-                                <div style="font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 6px;">
-                                    🟢 <span>${s.nickname}</span> <span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px;">Online</span>
-                                </div>
-                                <div style="color: #666; font-size: 11px; margin-top: 4px;">Login Time: <b>${s.loginTime || 'N/A'}</b></div>
-                            </div>
-                            <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee;">Last Heartbeat: <br><b>${lastActiveTime}</b></div>
-                        </div>
-                    `;
-                }
-            }
+        let usersHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
+        
+        let allKnownUsers = new Set();
+        Object.keys(sessionsData).forEach(k => {
+            if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
         });
+        Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
+        
+        if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
-        if (activeCount === 0) {
-            activeUsersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No dispatchers currently online.</div>`;
+        let userListArray = Array.from(allKnownUsers);
+
+        if (userListArray.length === 0) {
+            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users registered yet.</div>`;
+        } else {
+            userListArray.forEach(name => {
+                let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
+                let sessionObj = userSessionKey ? sessionsData[userSessionKey] : null;
+                
+                let isOnline = false;
+                if (sessionObj && sessionObj.timestamp && (now - sessionObj.timestamp < offlineThreshold)) {
+                    isOnline = true;
+                }
+
+                let badgeHtml = isOnline 
+                    ? `<span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">🟢 Online</span>`
+                    : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
+                
+                let borderColor = isOnline ? "#28a745" : "#6c757d";
+                let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
+
+                usersHtml += `
+                    <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid ${borderColor}; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+                        <div>
+                            <div style="font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 8px;">
+                                <span>${name}</span> ${badgeHtml}
+                            </div>
+                            <div style="color: #666; font-size: 11px; margin-top: 4px;">${loginInfo}</div>
+                        </div>
+                        <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee; text-align: right;">
+                            Last Seen: <br><b>${sessionObj && sessionObj.timestamp ? new Date(sessionObj.timestamp).toLocaleTimeString() : 'Never'}</b>
+                        </div>
+                    </div>
+                `;
+            });
         }
-        activeUsersHtml += `</div>`;
-        bodyContainer.innerHTML = activeUsersHtml;
+        usersHtml += `</div>`;
+        bodyContainer.innerHTML = usersHtml;
 
     } else if (tabName === 'leaderboard') {
         let perfMap = {};
@@ -1487,7 +1503,7 @@ window.openShiftShareModal = async function() {
         </div>
         <div style="padding: 20px;">
             <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select manager or team member to send shift report:</p>
-            <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;">Loading active members...</div>
+            <div id="dlShiftMembersRadioList" style="max-height: 160px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;">Loading members...</div>
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
                 <button onclick="openCallingDetailModal()" style="background: #6c757d; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Back</button>
                 <button onclick="confirmSendShiftReport()" style="background: #28a745; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Send Report</button>
@@ -1496,35 +1512,42 @@ window.openShiftShareModal = async function() {
     `;
 
     try {
-        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
-        let sessionsData = await res.json() || {};
+        let [sessionsRes, reportsRes] = await Promise.all([
+            fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+            fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`)
+        ]);
+        let sessionsData = await sessionsRes.json() || {};
+        let reportsData = await reportsRes.json() || {};
         
-        let activeMembers = [];
-        let now = Date.now();
-        const offlineThreshold = 180000;
-
-        Object.keys(sessionsData).forEach(key => {
-            let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp && (now - s.timestamp < offlineThreshold)) {
-                if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
-                    activeMembers.push(s.nickname);
-                }
-            }
+        let allMembers = new Set();
+        Object.keys(sessionsData).forEach(k => {
+            if (sessionsData[k] && sessionsData[k].nickname) allMembers.add(sessionsData[k].nickname);
         });
+        Object.keys(reportsData).forEach(name => allMembers.add(name));
+
+        let membersList = Array.from(allMembers).filter(n => n !== dispatcherNickname);
 
         let radioListDiv = document.getElementById('dlShiftMembersRadioList');
-        if (activeMembers.length === 0) {
-            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other online members/managers found.</div>`;
+        if (membersList.length === 0) {
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other team members found.</div>`;
             return;
         }
 
+        let now = Date.now();
+        const offlineThreshold = 180000;
+
         let html = "";
-        activeMembers.forEach((name, idx) => {
+        membersList.forEach((name, idx) => {
+            let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
+            let sObj = userSessionKey ? sessionsData[userSessionKey] : null;
+            let isOnline = sObj && sObj.timestamp && (now - sObj.timestamp < offlineThreshold);
+            let statusText = isOnline ? "🟢 Online" : "⚪ Offline";
+
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
                 <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
                     <input type="radio" name="shiftTargetRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
-                    <span>💻 <b>${name}</b> (Online)</span>
+                    <span><b>${name}</b> (${statusText})</span>
                 </label>
             `;
         });
@@ -1780,47 +1803,54 @@ window.openTeamShareModal = async function(recordsToShare) {
 
     let radioListDiv = document.getElementById('dlTeamMembersRadioList');
     if (!radioListDiv) return;
-    radioListDiv.innerHTML = `<div style="text-align: center; color: #6c757d; font-size: 12px; padding: 15px;">Loading active online laptops...</div>`;
+    radioListDiv.innerHTML = `<div style="text-align: center; color: #6c757d; font-size: 12px; padding: 15px;">Loading team members...</div>`;
 
     let tModal = document.getElementById('dlTeamSelectModal');
     if (tModal) tModal.style.display = 'flex';
 
     try {
-        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`);
-        let sessionsData = await res.json() || {};
+        let [sessionsRes, reportsRes] = await Promise.all([
+            fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+            fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`)
+        ]);
+        let sessionsData = await sessionsRes.json() || {};
+        let reportsData = await reportsRes.json() || {};
         
-        let activeMembers = [];
-        let now = Date.now();
-        const offlineThreshold = 180000;
-
-        Object.keys(sessionsData).forEach(key => {
-            let s = sessionsData[key];
-            if (s && s.nickname && s.timestamp && (now - s.timestamp < offlineThreshold)) {
-                if (s.nickname !== dispatcherNickname && !activeMembers.includes(s.nickname)) {
-                    activeMembers.push(s.nickname);
-                }
-            }
+        let allMembers = new Set();
+        Object.keys(sessionsData).forEach(k => {
+            if (sessionsData[k] && sessionsData[k].nickname) allMembers.add(sessionsData[k].nickname);
         });
+        Object.keys(reportsData).forEach(name => allMembers.add(name));
 
-        if (activeMembers.length === 0) {
-            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other active team members online right now.</div>`;
+        let membersList = Array.from(allMembers).filter(n => n !== dispatcherNickname);
+
+        if (membersList.length === 0) {
+            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other team members found.</div>`;
             return;
         }
 
+        let now = Date.now();
+        const offlineThreshold = 180000;
+
         let html = "";
-        activeMembers.forEach((name, idx) => {
+        membersList.forEach((name, idx) => {
+            let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
+            let sObj = userSessionKey ? sessionsData[userSessionKey] : null;
+            let isOnline = sObj && sObj.timestamp && (now - sObj.timestamp < offlineThreshold);
+            let statusText = isOnline ? "🟢 Online" : "⚪ Offline";
+
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
                 <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
                     <input type="radio" name="teamMemberRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
-                    <span>💻 <b>${name}</b> (Online)</span>
+                    <span><b>${name}</b> (${statusText})</span>
                 </label>
             `;
         });
         radioListDiv.innerHTML = html;
     } catch (e) {
-        console.error("Failed to fetch active sessions:", e);
-        radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px;">Error loading active laptops.</div>`;
+        console.error("Failed to fetch team members:", e);
+        radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px;">Error loading team members.</div>`;
     }
 };
 
