@@ -965,7 +965,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
 
 let activeCallPhone = null;
 
-window.logCallCount = function(phoneNum, cellElement) {
+window.logCallCount = async function(phoneNum, cellElement) {
     if (!phoneNum || phoneNum === 'N/A') return;
     
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
@@ -981,6 +981,17 @@ window.logCallCount = function(phoneNum, cellElement) {
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
+
+    // Live sync to database so Admin Panel sees it instantly on refresh
+    try {
+        let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+        await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
+            method: 'PUT',
+            body: JSON.stringify(callLogs)
+        });
+    } catch (e) {
+        console.error("Failed to sync call log to DB:", e);
+    }
 
     showPremiumNotification(`✅ Call Count Logged for ${phoneNum}`, 2500);
 
@@ -1211,7 +1222,6 @@ async function fetchAndRenderAdminData() {
         let allReportsGrouped = await reportsRes.json() || {};
         let dbCallLogs = await clientCallLogsRes.json() || {};
 
-        // Sync local storage call logs with DB if needed or aggregate live session logs
         window.cachedAdminSessions = sessionsData;
         window.cachedAdminReportsGrouped = allReportsGrouped;
         window.cachedAdminDbCallLogs = dbCallLogs;
@@ -1321,6 +1331,7 @@ function renderAdminTabContent(tabName) {
 
     let sessionsData = window.cachedAdminSessions || {};
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
+    let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
     const offlineThreshold = 180000; // 3 minutes
 
@@ -1335,6 +1346,7 @@ function renderAdminTabContent(tabName) {
             if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
         });
         Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
+        Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
         
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
@@ -1385,45 +1397,39 @@ function renderAdminTabContent(tabName) {
     } else if (tabName === 'leaderboard') {
         let perfMap = {};
         
-        // Aggregate from shift reports
-        Object.keys(allReportsGrouped).forEach(agentName => {
-            let repList = allReportsGrouped[agentName];
-            if (Array.isArray(repList)) {
-                repList.forEach(rep => {
-                    let repDate = rep.date || "";
-                    if (repDate >= startDate && repDate <= endDate) {
-                        if (!perfMap[agentName]) {
-                            perfMap[agentName] = { totalCalls: 0, shiftsCount: 0 };
-                        }
-                        perfMap[agentName].totalCalls += rep.totalCalls || 0;
-                        perfMap[agentName].shiftsCount += 1;
-                    }
-                });
-            }
-        });
-
-        // Also aggregate local browser call logs in real-time on refresh to prevent double counting and ensure latest unshared calls show correctly
-        let allKnownUsers = new Set(Object.keys(perfMap));
+        let allKnownUsers = new Set();
+        Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
+        Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
         Object.keys(sessionsData).forEach(k => {
             if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
         });
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
         allKnownUsers.forEach(agentName => {
-            let localLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${agentName}`)) || [];
-            let filteredLocal = localLogs.filter(l => {
-                let lDate = l.shiftDate || (l.date ? l.date.split(',')[0].trim() : "");
+            let agentDbLogs = dbCallLogs[agentName];
+            if (!Array.isArray(agentDbLogs)) {
+                let localLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${agentName}`)) || [];
+                agentDbLogs = localLogs;
+            }
+
+            let filteredLogs = agentDbLogs.filter(l => {
+                let lDate = l.shiftDate || "";
                 return lDate >= startDate && lDate <= endDate;
             });
 
-            if (filteredLocal.length > 0) {
+            if (filteredLogs.length > 0) {
                 if (!perfMap[agentName]) {
                     perfMap[agentName] = { totalCalls: 0, shiftsCount: 1 };
                 }
-                // Use max or merge intelligently so reports + local unshared calls don't double count if already in report
-                let reportTotal = allReportsGrouped[agentName] ? allReportsGrouped[agentName].reduce((s, r) => (r.date >= startDate && r.date <= endDate) ? s + (r.totalCalls || 0) : s, 0) : 0;
-                if (filteredLocal.length > reportTotal) {
-                    perfMap[agentName].totalCalls = filteredLocal.length;
+                perfMap[agentName].totalCalls = filteredLogs.length;
+            } else {
+                let repList = allReportsGrouped[agentName] || [];
+                let filteredReps = repList.filter(r => r.date >= startDate && r.date <= endDate);
+                if (filteredReps.length > 0) {
+                    if (!perfMap[agentName]) {
+                        perfMap[agentName] = { totalCalls: 0, shiftsCount: filteredReps.length };
+                    }
+                    perfMap[agentName].totalCalls = filteredReps.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
                 }
             }
         });
@@ -1431,7 +1437,7 @@ function renderAdminTabContent(tabName) {
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
         let leaderHtml = `
             <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
-                📅 Showing Performance from <b>${startDate}</b> to <b>${endDate}</b> (Auto-Aggregated)
+                📅 Showing Performance from <b>${startDate}</b> to <b>${endDate}</b> (Live Auto-Aggregated)
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
         `;
@@ -1448,7 +1454,7 @@ function renderAdminTabContent(tabName) {
                             <span style="font-size: 20px; width: 25px; text-align: center;">${medal}</span>
                             <div>
                                 <b style="color: #002d62; font-size: 15px;">${name}</b>
-                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Shifts Recorded: ${stats.shiftsCount}</div>
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Active Calls Tracked in Real-Time</div>
                             </div>
                         </div>
                         <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">
