@@ -240,6 +240,7 @@ window.logoutUser = function() {
     let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
     localStorage.removeItem("dl_logged_client");
+    localStorage.removeItem(`dl_fixed_login_time_${currentClient}_${dispatcherNickname}`);
     window.location.reload();
 };
 
@@ -264,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 4000);
+    setInterval(checkGlobalSessions, 2000); // 2 seconds fast interval for quick online status
 }
 
 if (document.readyState === 'loading') {
@@ -302,7 +303,19 @@ async function checkGlobalSessions() {
     if (userLimit === 0 || !currentClient) return;
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
-    const loginTimeString = new Date().toLocaleTimeString();
+    
+    // Fixed Login Time Logic: Get or create once per session/day, do not overwrite continuously
+    let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
+    let loginTimeString = localStorage.getItem(timeKey);
+    let todayDateKey = getCurrentShiftDateKey();
+    let storedDateKey = localStorage.getItem(`${timeKey}_date`);
+
+    if (!loginTimeString || storedDateKey !== todayDateKey) {
+        loginTimeString = new Date().toLocaleTimeString();
+        localStorage.setItem(timeKey, loginTimeString);
+        localStorage.setItem(`${timeKey}_date`, todayDateKey);
+    }
+
     let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     
     try {
@@ -310,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 180000; // 3 minutes
+        const offlineThreshold = 240000; // Increased to 4 minutes to prevent delay/flicker offline status
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -1376,7 +1389,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 180000;
+    const offlineThreshold = 240000; // 4 minutes threshold for accurate online status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1843,7 +1856,7 @@ window.openShiftShareModal = async function() {
         }
 
         let now = Date.now();
-        const offlineThreshold = 180000;
+        const offlineThreshold = 240000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2153,7 +2166,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        const offlineThreshold = 180000;
+        const offlineThreshold = 240000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2740,7 +2753,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 180000;
+            const offlineThreshold = 240000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
