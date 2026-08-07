@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 2000); // 2 seconds fast interval for quick online status
+    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
 }
 
 if (document.readyState === 'loading') {
@@ -304,7 +304,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
-    // Fixed Login Time Logic: Get or create once per session/day, do not overwrite continuously
+    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -323,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 240000; // Increased to 4 minutes to prevent delay/flicker offline status
+        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -1389,7 +1389,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 240000; // 4 minutes threshold for accurate online status
+    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1427,6 +1427,8 @@ function renderAdminTabContent(tabName) {
                 : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
+            
+            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -1856,7 +1858,7 @@ window.openShiftShareModal = async function() {
         }
 
         let now = Date.now();
-        const offlineThreshold = 240000;
+        const offlineThreshold = 60000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2166,7 +2168,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        const offlineThreshold = 240000;
+        const offlineThreshold = 60000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2753,7 +2755,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 240000;
+            const offlineThreshold = 60000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
