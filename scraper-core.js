@@ -1031,7 +1031,7 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
         date: new Date().toLocaleString(),
-        status: dispositionStatus // e.g., "Hung up", "Voicemail", "Sale Closed", etc.
+        status: dispositionStatus 
     };
     
     callLogs.push(logEntry);
@@ -1933,13 +1933,16 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-// ====== 3 SECOND DELAYED CALL REVIEW TRIGGER ======
+// ====== DIALER LAUNCH & 3 SECONDS DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
     
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
+
+    // Open dialer immediately
+    window.open(`tel:${phoneNum}`, '_self');
 
     navigator.clipboard.writeText(phoneNum).then(() => {
         let badge = document.createElement('span');
@@ -1960,6 +1963,9 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
 
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
+
+    // Open dialer immediately
+    window.open(`tel:${phoneNum}`, '_self');
 
     navigator.clipboard.writeText(phoneNum).then(() => {
         // 3 seconds delay before showing status review modal
