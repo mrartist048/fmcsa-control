@@ -681,32 +681,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(dModal);
     }
 
-    document.addEventListener('click', function(event) {
-        let hDrawer = document.getElementById('dlHistoryDrawer');
-        let fDrawer = document.getElementById('dlFollowUpDrawer');
-        let hBtn = document.getElementById('openHistoryBtn');
-        let fBtn = document.getElementById('openFollowUpDrawerBtn');
-
-        if (hDrawer && hDrawer.style.right === "0px") {
-            if (!hDrawer.contains(event.target) && (!hBtn || !hBtn.contains(event.target))) {
-                hDrawer.style.right = "-420px";
-            }
-        }
-
-        if (fDrawer && fDrawer.style.right === "0px") {
-            if (!fDrawer.contains(event.target) && (!fBtn || !fBtn.contains(event.target))) {
-                fDrawer.style.right = "-420px";
-            }
-        }
-
-        let dModal = document.getElementById('dlDispositionModal');
-        if (dModal && dModal.style.display === 'flex') return;
-
-        if (pendingReviewPhone && !event.target.closest('.phone-clickable-cell') && !event.target.closest('#dlDispositionModal')) {
-            openDispositionModal(pendingReviewPhone);
-        }
-    });
-
     injectAdvancedFilterBar();
 
     let tableHeader = document.querySelector('table tr');
@@ -1933,7 +1907,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-// ====== DIALER LAUNCH & 3 SECONDS DELAYED STATUS REVIEW TRIGGER ======
+// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1941,8 +1915,8 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
-    // Open dialer immediately
-    window.open(`tel:${phoneNum}`, '_self');
+    // Trigger phone dialer
+    window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
         let badge = document.createElement('span');
@@ -1964,8 +1938,8 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
-    // Open dialer immediately
-    window.open(`tel:${phoneNum}`, '_self');
+    // Trigger phone dialer
+    window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
         // 3 seconds delay before showing status review modal
@@ -1979,7 +1953,7 @@ function buildPhoneCellMarkup(phoneNum) {
     if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
-            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return true;" class="phone-clickable-cell" title="Click to Call">
+            <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return false;" class="phone-clickable-cell" title="Click to Call">
                 <div class="phone-cell-content">
                     <span class="phone-icon-span">📞</span>
                     <span class="clickable-phone-text">${phoneNum}</span>
