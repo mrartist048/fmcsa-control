@@ -635,14 +635,14 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-    // ====== CALL DISPOSITION REVIEW MODAL (REFERENCE IMAGE MATCH) ======
+    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
         dModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 100000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         dModal.innerHTML = `
             <div style="background: #ffffff; width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box;">
-                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center;">Give Review of previous call</h3>
+                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center;">What is Status of this call</h3>
                 <p style="font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 15px;">Select call status for <b id="dispTargetPhoneNum" style="color: #002d62;"></b></p>
                 
                 <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -699,9 +699,8 @@ function injectHistoryUIFramework() {
             }
         }
 
-        // Trigger Review Modal if clicking anywhere outside when there's a pending call review
         let dModal = document.getElementById('dlDispositionModal');
-        if (dModal && dModal.style.display === 'flex') return; // already open
+        if (dModal && dModal.style.display === 'flex') return;
 
         if (pendingReviewPhone && !event.target.closest('.phone-clickable-cell') && !event.target.closest('#dlDispositionModal')) {
             openDispositionModal(pendingReviewPhone);
@@ -1032,13 +1031,12 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
         dispatcher: dispatcherNickname,
         shiftDate: getCurrentShiftDateKey(),
         date: new Date().toLocaleString(),
-        status: dispositionStatus // e.g. "Hung up", "Voicemail", "Sale Closed", etc.
+        status: dispositionStatus // e.g., "Hung up", "Voicemail", "Sale Closed", etc.
     };
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Live sync to database so Admin Panel sees it instantly
     try {
         let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
         await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
@@ -1133,7 +1131,7 @@ async function renderAdvancedAdminModal() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 780px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="background: white; width: 820px; max-height: 90vh; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
             <div style="background: #002d62; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">👑 Admin Dashboard & Team Monitoring</h3>
@@ -1148,10 +1146,8 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <!-- FILTER BAR CONTAINER (DYNAMICALLY SHOWN/HIDDEN) -->
-            <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
-                <!-- DYNAMIC CONTENT INSERTED BY JS DEPENDING ON TAB -->
-            </div>
+            <!-- FILTER BAR CONTAINER -->
+            <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
                 Loading team status and reports...
@@ -1174,7 +1170,7 @@ async function renderAdvancedAdminModal() {
 window.adminDateFilterMode = 'today'; 
 window.adminStartDateStr = new Date().toISOString().split('T')[0];
 window.adminEndDateStr = new Date().toISOString().split('T')[0];
-window.adminUsersViewMode = 'all'; // 'all', 'online', 'offline'
+window.adminUsersViewMode = 'all';
 
 window.setAdminDateFilterPreset = function(preset, doRender = true) {
     window.adminDateFilterMode = preset;
@@ -1406,7 +1402,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 180000; // 3 minutes
+    const offlineThreshold = 180000;
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1510,7 +1506,7 @@ function renderAdminTabContent(tabName) {
         let sortedLeaderboard = Object.keys(perfMap).sort((a, b) => perfMap[b].totalCalls - perfMap[a].totalCalls);
         let leaderHtml = `
             <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
-                📅 Showing Performance from <b>${startDate}</b> to <b>${endDate}</b> (Live Auto-Aggregated)
+                📅 Showing Performance from <b>${startDate}</b> to <b>${endDate}</b>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
         `;
@@ -1645,7 +1641,6 @@ function renderAdminTabContent(tabName) {
                         else counts["Hung up"]++;
                     });
 
-                    // Pickup ratio calculation: (Follow up + Sale Closed) out of total calls (or as requested)
                     let totalC = logsArr.length > 0 ? logsArr.length : rep.totalCalls;
                     let connectedCalls = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
                     let pickupRatio = totalC > 0 ? Math.round((connectedCalls / totalC) * 100) : 0;
@@ -1938,6 +1933,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
+// ====== 3 SECOND DELAYED CALL REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1952,7 +1948,10 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        openDispositionModal(phoneNum);
+        // 3 seconds delay before showing status review modal
+        setTimeout(() => {
+            openDispositionModal(phoneNum);
+        }, 3000);
     });
 };
 
@@ -1963,7 +1962,10 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallCellElement = cellElement;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
-        openDispositionModal(phoneNum);
+        // 3 seconds delay before showing status review modal
+        setTimeout(() => {
+            openDispositionModal(phoneNum);
+        }, 3000);
     });
 };
 
