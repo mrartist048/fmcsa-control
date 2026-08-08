@@ -693,7 +693,7 @@ function injectHistoryUIFramework() {
     }
 
     injectAdvancedFilterBar();
-    injectSaferScraperFiltersUI(); // 🚀 Yahan naye SAFER filters inject kiye gaye hain
+    injectSaferScraperFiltersUI(); // 🚀 Ab ye Start button ke neechay compact dropdown style mein hain
 
     let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
@@ -724,93 +724,122 @@ function injectHistoryUIFramework() {
 }
 
 // ==========================================
-// 🚀 NEW SAFER FILTERS UI & LOGIC FOR SCRAPING
+// 🚀 CLEAN COMPACT DROPDOWN SAFER FILTERS UI
 // ==========================================
 function injectSaferScraperFiltersUI() {
-    let table = document.querySelector('table');
-    if (!table || document.getElementById('saferScraperFiltersWrapper')) return;
+    let startBtn = document.getElementById('startBtn');
+    if (!startBtn || document.getElementById('saferScraperFiltersWrapper')) return;
 
     let saferFiltersDiv = document.createElement('div');
     saferFiltersDiv.id = 'saferScraperFiltersWrapper';
-    saferFiltersDiv.style.cssText = "background: #eef2ff; padding: 15px; margin: 12px 0; border: 1px solid #93c5fd; border-radius: 6px; font-family: sans-serif;";
+    saferFiltersDiv.style.cssText = "background: #f8fafc; padding: 12px 15px; margin: 10px 0 15px 0; border: 1px solid #cbd5e1; border-radius: 6px; font-family: sans-serif;";
     
     saferFiltersDiv.innerHTML = `
-        <div style="font-size: 14px; font-weight: bold; color: #002d62; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px;">
-            🛡️ SAFER Scraper Filters (Operation, Carrier & Cargo)
+        <div style="font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 8px;">
+            🛡️ SAFER Scraper Filters (Click to expand & select criteria):
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             
-            <!-- Operation Classification -->
-            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                <div style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;">Operation Classification:</div>
-                <div id="saferOpClassList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
-                    <label><input type="checkbox" value="Auth. For Hire"> Auth. For Hire</label>
-                    <label><input type="checkbox" value="Exempt For Hire"> Exempt For Hire</label>
-                    <label><input type="checkbox" value="Private(Property)"> Private(Property)</label>
-                    <label><input type="checkbox" value="Priv. Pass. (Business)"> Priv. Pass. (Business)</label>
-                    <label><input type="checkbox" value="Priv. Pass.(Non-business)"> Priv. Pass.(Non-business)</label>
-                    <label><input type="checkbox" value="Migrant"> Migrant</label>
-                    <label><input type="checkbox" value="U.S. Mail"> U.S. Mail</label>
-                    <label><input type="checkbox" value="Fed. Gov't"> Fed. Gov't</label>
-                    <label><input type="checkbox" value="State Gov't"> State Gov't</label>
-                    <label><input type="checkbox" value="Local Gov't"> Local Gov't</label>
-                    <label><input type="checkbox" value="Indian Nation"> Indian Nation</label>
+            <!-- Operation Classification Dropdown -->
+            <div style="position: relative;">
+                <button type="button" onclick="toggleSaferDropdown(event, 'saferOpClassDropdown')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Operation Classification ▼</button>
+                <div id="saferOpClassDropdown" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; width: 240px; top: 100%; left: 0; margin-top: 4px; text-align: left;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Select Operation:</div>
+                    <div id="saferOpClassList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; max-height: 200px; overflow-y: auto;">
+                        <label><input type="checkbox" value="Auth. For Hire"> Auth. For Hire</label>
+                        <label><input type="checkbox" value="Exempt For Hire"> Exempt For Hire</label>
+                        <label><input type="checkbox" value="Private(Property)"> Private(Property)</label>
+                        <label><input type="checkbox" value="Priv. Pass. (Business)"> Priv. Pass. (Business)</label>
+                        <label><input type="checkbox" value="Priv. Pass.(Non-business)"> Priv. Pass.(Non-business)</label>
+                        <label><input type="checkbox" value="Migrant"> Migrant</label>
+                        <label><input type="checkbox" value="U.S. Mail"> U.S. Mail</label>
+                        <label><input type="checkbox" value="Fed. Gov't"> Fed. Gov't</label>
+                        <label><input type="checkbox" value="State Gov't"> State Gov't</label>
+                        <label><input type="checkbox" value="Local Gov't"> Local Gov't</label>
+                        <label><input type="checkbox" value="Indian Nation"> Indian Nation</label>
+                    </div>
                 </div>
             </div>
 
-            <!-- Carrier Operation -->
-            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                <div style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;">Carrier Operation:</div>
-                <div id="saferCarrierOpList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
-                    <label><input type="checkbox" value="Interstate"> Interstate</label>
-                    <label><input type="checkbox" value="Intrastate Only (HM)"> Intrastate Only (HM)</label>
-                    <label><input type="checkbox" value="Intrastate Only (Non-HM)"> Intrastate Only (Non-HM)</label>
+            <!-- Carrier Operation Dropdown -->
+            <div style="position: relative;">
+                <button type="button" onclick="toggleSaferDropdown(event, 'saferCarrierOpDropdown')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Carrier Operation ▼</button>
+                <div id="saferCarrierOpDropdown" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; width: 220px; top: 100%; left: 0; margin-top: 4px; text-align: left;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Select Carrier Op:</div>
+                    <div id="saferCarrierOpList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+                        <label><input type="checkbox" value="Interstate"> Interstate</label>
+                        <label><input type="checkbox" value="Intrastate Only (HM)"> Intrastate Only (HM)</label>
+                        <label><input type="checkbox" value="Intrastate Only (Non-HM)"> Intrastate Only (Non-HM)</label>
+                    </div>
                 </div>
             </div>
 
-            <!-- Cargo Carried -->
-            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                <div style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;">Cargo Carried:</div>
-                <div id="saferCargoList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px;">
-                    <label><input type="checkbox" value="General Freight"> General Freight</label>
-                    <label><input type="checkbox" value="Household Goods"> Household Goods</label>
-                    <label><input type="checkbox" value="Metal: sheets, coils, rolls"> Metal: sheets, coils, rolls</label>
-                    <label><input type="checkbox" value="Motor Vehicles"> Motor Vehicles</label>
-                    <label><input type="checkbox" value="Drive/Tow away"> Drive/Tow away</label>
-                    <label><input type="checkbox" value="Logs, Poles, Beams, Lumber"> Logs, Poles, Beams, Lumber</label>
-                    <label><input type="checkbox" value="Building Materials"> Building Materials</label>
-                    <label><input type="checkbox" value="Mobile Homes"> Mobile Homes</label>
-                    <label><input type="checkbox" value="Machinery, Large Objects"> Machinery, Large Objects</label>
-                    <label><input type="checkbox" value="Fresh Produce"> Fresh Produce</label>
-                    <label><input type="checkbox" value="Liquids/Gases"> Liquids/Gases</label>
-                    <label><input type="checkbox" value="Intermodal Cont."> Intermodal Cont.</label>
-                    <label><input type="checkbox" value="Passengers"> Passengers</label>
-                    <label><input type="checkbox" value="Oilfield Equipment"> Oilfield Equipment</label>
-                    <label><input type="checkbox" value="Livestock"> Livestock</label>
-                    <label><input type="checkbox" value="Grain, Feed, Hay"> Grain, Feed, Hay</label>
-                    <label><input type="checkbox" value="Coal/Coke"> Coal/Coke</label>
-                    <label><input type="checkbox" value="Meat"> Meat</label>
-                    <label><input type="checkbox" value="Garbage/Refuse"> Garbage/Refuse</label>
-                    <label><input type="checkbox" value="US Mail"> US Mail</label>
-                    <label><input type="checkbox" value="Chemicals"> Chemicals</label>
-                    <label><input type="checkbox" value="Commodities Dry Bulk"> Commodities Dry Bulk</label>
-                    <label><input type="checkbox" value="Refrigerated Food"> Refrigerated Food</label>
-                    <label><input type="checkbox" value="Beverages"> Beverages</label>
-                    <label><input type="checkbox" value="Paper Products"> Paper Products</label>
-                    <label><input type="checkbox" value="Utilities"> Utilities</label>
-                    <label><input type="checkbox" value="Agricultural/Farm Supplies"> Agricultural/Farm Supplies</label>
-                    <label><input type="checkbox" value="Construction"> Construction</label>
-                    <label><input type="checkbox" value="Water Well"> Water Well</label>
+            <!-- Cargo Carried Dropdown -->
+            <div style="position: relative;">
+                <button type="button" onclick="toggleSaferDropdown(event, 'saferCargoDropdown')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Cargo Carried ▼</button>
+                <div id="saferCargoDropdown" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; width: 280px; top: 100%; left: 0; margin-top: 4px; text-align: left;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Select Cargo:</div>
+                    <div id="saferCargoList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; max-height: 220px; overflow-y: auto;">
+                        <label><input type="checkbox" value="General Freight"> General Freight</label>
+                        <label><input type="checkbox" value="Household Goods"> Household Goods</label>
+                        <label><input type="checkbox" value="Metal: sheets, coils, rolls"> Metal: sheets, coils, rolls</label>
+                        <label><input type="checkbox" value="Motor Vehicles"> Motor Vehicles</label>
+                        <label><input type="checkbox" value="Drive/Tow away"> Drive/Tow away</label>
+                        <label><input type="checkbox" value="Logs, Poles, Beams, Lumber"> Logs, Poles, Beams, Lumber</label>
+                        <label><input type="checkbox" value="Building Materials"> Building Materials</label>
+                        <label><input type="checkbox" value="Mobile Homes"> Mobile Homes</label>
+                        <label><input type="checkbox" value="Machinery, Large Objects"> Machinery, Large Objects</label>
+                        <label><input type="checkbox" value="Fresh Produce"> Fresh Produce</label>
+                        <label><input type="checkbox" value="Liquids/Gases"> Liquids/Gases</label>
+                        <label><input type="checkbox" value="Intermodal Cont."> Intermodal Cont.</label>
+                        <label><input type="checkbox" value="Passengers"> Passengers</label>
+                        <label><input type="checkbox" value="Oilfield Equipment"> Oilfield Equipment</label>
+                        <label><input type="checkbox" value="Livestock"> Livestock</label>
+                        <label><input type="checkbox" value="Grain, Feed, Hay"> Grain, Feed, Hay</label>
+                        <label><input type="checkbox" value="Coal/Coke"> Coal/Coke</label>
+                        <label><input type="checkbox" value="Meat"> Meat</label>
+                        <label><input type="checkbox" value="Garbage/Refuse"> Garbage/Refuse</label>
+                        <label><input type="checkbox" value="US Mail"> US Mail</label>
+                        <label><input type="checkbox" value="Chemicals"> Chemicals</label>
+                        <label><input type="checkbox" value="Commodities Dry Bulk"> Commodities Dry Bulk</label>
+                        <label><input type="checkbox" value="Refrigerated Food"> Refrigerated Food</label>
+                        <label><input type="checkbox" value="Beverages"> Beverages</label>
+                        <label><input type="checkbox" value="Paper Products"> Paper Products</label>
+                        <label><input type="checkbox" value="Utilities"> Utilities</label>
+                        <label><input type="checkbox" value="Agricultural/Farm Supplies"> Agricultural/Farm Supplies</label>
+                        <label><input type="checkbox" value="Construction"> Construction</label>
+                        <label><input type="checkbox" value="Water Well"> Water Well</label>
+                    </div>
                 </div>
             </div>
 
-        </div>
-        <div style="margin-top: 10px; text-align: right;">
-            <button onclick="resetSaferFilters()" style="background: #6c757d; color: white; border: none; padding: 5px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Reset SAFER Filters</button>
+            <button onclick="resetSaferFilters()" style="background: #6c757d; color: white; border: none; padding: 6px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Reset Filters</button>
         </div>
     `;
-    table.parentNode.insertBefore(saferFiltersDiv, table);
+    startBtn.parentNode.insertBefore(saferFiltersDiv, startBtn.nextSibling);
+
+    document.addEventListener('click', function(e) {
+        ['saferOpClassDropdown', 'saferCarrierOpDropdown', 'saferCargoDropdown'].forEach(id => {
+            let drop = document.getElementById(id);
+            if (drop && drop.style.display === 'block') {
+                let parentBtn = drop.previousElementSibling;
+                if (!drop.contains(e.target) && parentBtn && !parentBtn.contains(e.target)) {
+                    drop.style.display = 'none';
+                }
+            }
+        });
+    });
 }
+
+window.toggleSaferDropdown = function(e, dropdownId) {
+    e.stopPropagation();
+    ['saferOpClassDropdown', 'saferCarrierOpDropdown', 'saferCargoDropdown'].forEach(id => {
+        let el = document.getElementById(id);
+        if (el) {
+            el.style.display = (id === dropdownId && el.style.display !== 'block') ? 'block' : 'none';
+        }
+    });
+};
 
 window.resetSaferFilters = function() {
     document.querySelectorAll('#saferScraperFiltersWrapper input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -2831,7 +2860,7 @@ window.stopScraping = function() {
 }
 
 // ==========================================
-// 🚀 UPDATED SCRAPER WITH SAFER FILTERS VALIDATION
+// 🚀 UPDATED SCRAPER WITH COMPACT SAFER FILTERS VALIDATION
 // ==========================================
 async function processSingleMCWithDetailedError(mc, statusBox) {
     let maxRetries = 3;
@@ -2919,7 +2948,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // 🚀 Check Selected SAFER Filters (Operation Classification, Carrier Operation, Cargo Carried)
+            // 🚀 Check Selected SAFER Filters
             let selectedOpClasses = Array.from(document.querySelectorAll('#saferOpClassList input:checked')).map(cb => cb.value.toLowerCase());
             let selectedCarrierOps = Array.from(document.querySelectorAll('#saferCarrierOpList input:checked')).map(cb => cb.value.toLowerCase());
             let selectedCargos = Array.from(document.querySelectorAll('#saferCargoList input:checked')).map(cb => cb.value.toLowerCase());
