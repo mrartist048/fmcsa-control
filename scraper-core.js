@@ -551,6 +551,10 @@ function injectHistoryUIFramework() {
 
     let startBtn = document.getElementById('startBtn');
     if (startBtn && !document.getElementById('openHistoryBtn')) {
+        startBtn.style.padding = "8px 16px";
+        startBtn.style.fontSize = "14px";
+        startBtn.style.height = "auto";
+
         let historyBtn = document.createElement('button');
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
@@ -693,7 +697,7 @@ function injectHistoryUIFramework() {
     }
 
     injectAdvancedFilterBar();
-    injectSaferScraperFiltersUI(); // 🚀 Ab ye Start button ke neechay compact dropdown style mein hain
+    injectSaferScraperFiltersUI();
 
     let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
@@ -723,22 +727,19 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-// ==========================================
-// 🚀 CLEAN COMPACT DROPDOWN SAFER FILTERS UI
-// ==========================================
 function injectSaferScraperFiltersUI() {
-    let startBtn = document.getElementById('startBtn');
-    if (!startBtn || document.getElementById('saferScraperFiltersWrapper')) return;
+    let statusBox = document.getElementById('status');
+    if (!statusBox || document.getElementById('saferScraperFiltersWrapper')) return;
 
     let saferFiltersDiv = document.createElement('div');
     saferFiltersDiv.id = 'saferScraperFiltersWrapper';
-    saferFiltersDiv.style.cssText = "background: #f8fafc; padding: 12px 15px; margin: 10px 0 15px 0; border: 1px solid #cbd5e1; border-radius: 6px; font-family: sans-serif;";
+    saferFiltersDiv.style.cssText = "background: #f8fafc; padding: 10px 15px; margin: 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;";
     
     saferFiltersDiv.innerHTML = `
-        <div style="font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 8px;">
-            🛡️ SAFER Scraper Filters (Click to expand & select criteria):
+        <div style="font-size: 12px; font-weight: bold; color: #002d62;">
+            🛡️ SAFER Scraper Filters (Must have 'x' mark):
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
             
             <!-- Operation Classification Dropdown -->
             <div style="position: relative;">
@@ -813,10 +814,10 @@ function injectSaferScraperFiltersUI() {
                 </div>
             </div>
 
-            <button onclick="resetSaferFilters()" style="background: #6c757d; color: white; border: none; padding: 6px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Reset Filters</button>
+            <button onclick="resetSaferFilters()" style="background: #6c757d; color: white; border: none; padding: 6px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Reset</button>
         </div>
     `;
-    startBtn.parentNode.insertBefore(saferFiltersDiv, startBtn.nextSibling);
+    statusBox.parentNode.insertBefore(saferFiltersDiv, statusBox);
 
     document.addEventListener('click', function(e) {
         ['saferOpClassDropdown', 'saferCarrierOpDropdown', 'saferCargoDropdown'].forEach(id => {
@@ -2860,7 +2861,7 @@ window.stopScraping = function() {
 }
 
 // ==========================================
-// 🚀 UPDATED SCRAPER WITH COMPACT SAFER FILTERS VALIDATION
+// 🚀 EXACT 'X' MARK VALIDATION SCRAPER LOGIC
 // ==========================================
 async function processSingleMCWithDetailedError(mc, statusBox) {
     let maxRetries = 3;
@@ -2912,8 +2913,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
 
-            let pageTextContent = el.textContent || "";
-
             for (let i = 0; i < cells.length; i++) {
                 let text = cells[i].textContent.trim();
                 if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
@@ -2948,23 +2947,48 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // 🚀 Check Selected SAFER Filters
-            let selectedOpClasses = Array.from(document.querySelectorAll('#saferOpClassList input:checked')).map(cb => cb.value.toLowerCase());
-            let selectedCarrierOps = Array.from(document.querySelectorAll('#saferCarrierOpList input:checked')).map(cb => cb.value.toLowerCase());
-            let selectedCargos = Array.from(document.querySelectorAll('#saferCargoList input:checked')).map(cb => cb.value.toLowerCase());
+            // 🚀 Precise 'x' Mark Validation Check
+            // On SAFER page, an active option has an 'x' right before its text name inside the table structure.
+            let selectedOpClasses = Array.from(document.querySelectorAll('#saferOpClassList input:checked')).map(cb => cb.value.trim().toLowerCase());
+            let selectedCarrierOps = Array.from(document.querySelectorAll('#saferCarrierOpList input:checked')).map(cb => cb.value.trim().toLowerCase());
+            let selectedCargos = Array.from(document.querySelectorAll('#saferCargoList input:checked')).map(cb => cb.value.trim().toLowerCase());
+
+            let allTextWithX = "";
+            el.querySelectorAll('td, th, font, span').forEach(node => {
+                let inner = node.textContent.replace(/\s+/g, ' ').trim();
+                // Check if element contains 'x ' right before a category name
+                if (inner.includes('x ')) {
+                    allTextWithX += " " + inner.toLowerCase();
+                }
+            });
+
+            // Fallback check across full HTML elements where 'x' is placed right next to the target text
+            let fullHtmlLower = htmlText.toLowerCase();
 
             if (selectedOpClasses.length > 0) {
-                let matched = selectedOpClasses.some(op => pageTextContent.toLowerCase().includes(op));
+                let matched = selectedOpClasses.some(op => {
+                    let pattern1 = new RegExp(`x\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                    let pattern2 = new RegExp(`>\\s*x\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                    return pattern1.test(fullHtmlLower) || pattern2.test(fullHtmlLower) || allTextWithX.includes(`x ${op}`);
+                });
                 if (!matched) return { status: "filtered_out" };
             }
 
             if (selectedCarrierOps.length > 0) {
-                let matched = selectedCarrierOps.some(cop => pageTextContent.toLowerCase().includes(cop));
+                let matched = selectedCarrierOps.some(cop => {
+                    let pattern1 = new RegExp(`x\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                    let pattern2 = new RegExp(`>\\s*x\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                    return pattern1.test(fullHtmlLower) || pattern2.test(fullHtmlLower) || allTextWithX.includes(`x ${cop}`);
+                });
                 if (!matched) return { status: "filtered_out" };
             }
 
             if (selectedCargos.length > 0) {
-                let matched = selectedCargos.some(cargo => pageTextContent.toLowerCase().includes(cargo));
+                let matched = selectedCargos.some(cargo => {
+                    let pattern1 = new RegExp(`x\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                    let pattern2 = new RegExp(`>\\s*x\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+                    return pattern1.test(fullHtmlLower) || pattern2.test(fullHtmlLower) || allTextWithX.includes(`x ${cargo}`);
+                });
                 if (!matched) return { status: "filtered_out" };
             }
 
