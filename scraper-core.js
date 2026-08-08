@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000);
+    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
 }
 
 if (document.readyState === 'loading') {
@@ -304,6 +304,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
+    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -322,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000;
+        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -551,10 +552,6 @@ function injectHistoryUIFramework() {
 
     let startBtn = document.getElementById('startBtn');
     if (startBtn && !document.getElementById('openHistoryBtn')) {
-        startBtn.style.padding = "8px 16px";
-        startBtn.style.fontSize = "14px";
-        startBtn.style.height = "auto";
-
         let historyBtn = document.createElement('button');
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
@@ -651,6 +648,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
+    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -697,7 +695,6 @@ function injectHistoryUIFramework() {
     }
 
     injectAdvancedFilterBar();
-    injectSaferScraperFiltersUI();
 
     let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
@@ -726,126 +723,6 @@ function injectHistoryUIFramework() {
 
     injectEmailProposalPanel();
 }
-
-function injectSaferScraperFiltersUI() {
-    let statusBox = document.getElementById('status');
-    if (!statusBox || document.getElementById('saferScraperFiltersWrapper')) return;
-
-    let saferFiltersDiv = document.createElement('div');
-    saferFiltersDiv.id = 'saferScraperFiltersWrapper';
-    saferFiltersDiv.style.cssText = "background: #f8fafc; padding: 10px 15px; margin: 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;";
-    
-    saferFiltersDiv.innerHTML = `
-        <div style="font-size: 12px; font-weight: bold; color: #002d62;">
-            🛡️ SAFER Scraper Filters (Must have 'x' mark):
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-            
-            <!-- Operation Classification Dropdown -->
-            <div style="position: relative;">
-                <button type="button" onclick="toggleSaferDropdown(event, 'saferOpClassDropdown')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Operation Classification ▼</button>
-                <div id="saferOpClassDropdown" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; width: 240px; top: 100%; left: 0; margin-top: 4px; text-align: left;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Select Operation:</div>
-                    <div id="saferOpClassList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px; max-height: 200px; overflow-y: auto;">
-                        <label><input type="checkbox" value="Auth. For Hire"> Auth. For Hire</label>
-                        <label><input type="checkbox" value="Exempt For Hire"> Exempt For Hire</label>
-                        <label><input type="checkbox" value="Private(Property)"> Private(Property)</label>
-                        <label><input type="checkbox" value="Priv. Pass. (Business)"> Priv. Pass. (Business)</label>
-                        <label><input type="checkbox" value="Priv. Pass.(Non-business)"> Priv. Pass.(Non-business)</label>
-                        <label><input type="checkbox" value="Migrant"> Migrant</label>
-                        <label><input type="checkbox" value="U.S. Mail"> U.S. Mail</label>
-                        <label><input type="checkbox" value="Fed. Gov't"> Fed. Gov't</label>
-                        <label><input type="checkbox" value="State Gov't"> State Gov't</label>
-                        <label><input type="checkbox" value="Local Gov't"> Local Gov't</label>
-                        <label><input type="checkbox" value="Indian Nation"> Indian Nation</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Carrier Operation Dropdown -->
-            <div style="position: relative;">
-                <button type="button" onclick="toggleSaferDropdown(event, 'saferCarrierOpDropdown')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Carrier Operation ▼</button>
-                <div id="saferCarrierOpDropdown" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; width: 220px; top: 100%; left: 0; margin-top: 4px; text-align: left;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Select Carrier Op:</div>
-                    <div id="saferCarrierOpList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
-                        <label><input type="checkbox" value="Interstate"> Interstate</label>
-                        <label><input type="checkbox" value="Intrastate Only (HM)"> Intrastate Only (HM)</label>
-                        <label><input type="checkbox" value="Intrastate Only (Non-HM)"> Intrastate Only (Non-HM)</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Cargo Carried Dropdown -->
-            <div style="position: relative;">
-                <button type="button" onclick="toggleSaferDropdown(event, 'saferCargoDropdown')" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Cargo Carried ▼</button>
-                <div id="saferCargoDropdown" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 1000; width: 280px; top: 100%; left: 0; margin-top: 4px; text-align: left;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Select Cargo:</div>
-                    <div id="saferCargoList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px; max-height: 220px; overflow-y: auto;">
-                        <label><input type="checkbox" value="General Freight"> General Freight</label>
-                        <label><input type="checkbox" value="Household Goods"> Household Goods</label>
-                        <label><input type="checkbox" value="Metal: sheets, coils, rolls"> Metal: sheets, coils, rolls</label>
-                        <label><input type="checkbox" value="Motor Vehicles"> Motor Vehicles</label>
-                        <label><input type="checkbox" value="Drive/Tow away"> Drive/Tow away</label>
-                        <label><input type="checkbox" value="Logs, Poles, Beams, Lumber"> Logs, Poles, Beams, Lumber</label>
-                        <label><input type="checkbox" value="Building Materials"> Building Materials</label>
-                        <label><input type="checkbox" value="Mobile Homes"> Mobile Homes</label>
-                        <label><input type="checkbox" value="Machinery, Large Objects"> Machinery, Large Objects</label>
-                        <label><input type="checkbox" value="Fresh Produce"> Fresh Produce</label>
-                        <label><input type="checkbox" value="Liquids/Gases"> Liquids/Gases</label>
-                        <label><input type="checkbox" value="Intermodal Cont."> Intermodal Cont.</label>
-                        <label><input type="checkbox" value="Passengers"> Passengers</label>
-                        <label><input type="checkbox" value="Oilfield Equipment"> Oilfield Equipment</label>
-                        <label><input type="checkbox" value="Livestock"> Livestock</label>
-                        <label><input type="checkbox" value="Grain, Feed, Hay"> Grain, Feed, Hay</label>
-                        <label><input type="checkbox" value="Coal/Coke"> Coal/Coke</label>
-                        <label><input type="checkbox" value="Meat"> Meat</label>
-                        <label><input type="checkbox" value="Garbage/Refuse"> Garbage/Refuse</label>
-                        <label><input type="checkbox" value="US Mail"> US Mail</label>
-                        <label><input type="checkbox" value="Chemicals"> Chemicals</label>
-                        <label><input type="checkbox" value="Commodities Dry Bulk"> Commodities Dry Bulk</label>
-                        <label><input type="checkbox" value="Refrigerated Food"> Refrigerated Food</label>
-                        <label><input type="checkbox" value="Beverages"> Beverages</label>
-                        <label><input type="checkbox" value="Paper Products"> Paper Products</label>
-                        <label><input type="checkbox" value="Utilities"> Utilities</label>
-                        <label><input type="checkbox" value="Agricultural/Farm Supplies"> Agricultural/Farm Supplies</label>
-                        <label><input type="checkbox" value="Construction"> Construction</label>
-                        <label><input type="checkbox" value="Water Well"> Water Well</label>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="resetSaferFilters()" style="background: #6c757d; color: white; border: none; padding: 6px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Reset</button>
-        </div>
-    `;
-    statusBox.parentNode.insertBefore(saferFiltersDiv, statusBox);
-
-    document.addEventListener('click', function(e) {
-        ['saferOpClassDropdown', 'saferCarrierOpDropdown', 'saferCargoDropdown'].forEach(id => {
-            let drop = document.getElementById(id);
-            if (drop && drop.style.display === 'block') {
-                let parentBtn = drop.previousElementSibling;
-                if (!drop.contains(e.target) && parentBtn && !parentBtn.contains(e.target)) {
-                    drop.style.display = 'none';
-                }
-            }
-        });
-    });
-}
-
-window.toggleSaferDropdown = function(e, dropdownId) {
-    e.stopPropagation();
-    ['saferOpClassDropdown', 'saferCarrierOpDropdown', 'saferCargoDropdown'].forEach(id => {
-        let el = document.getElementById(id);
-        if (el) {
-            el.style.display = (id === dropdownId && el.style.display !== 'block') ? 'block' : 'none';
-        }
-    });
-};
-
-window.resetSaferFilters = function() {
-    document.querySelectorAll('#saferScraperFiltersWrapper input[type="checkbox"]').forEach(cb => cb.checked = false);
-    showPremiumNotification("🔄 SAFER filters reset successfully!", 2000);
-};
 
 window.scrollToTopScreen = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1256,6 +1133,7 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
+            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1511,7 +1389,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000;
+    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1549,6 +1427,8 @@ function renderAdminTabContent(tabName) {
                 : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
+            
+            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -2042,6 +1922,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
+// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -2049,6 +1930,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -2058,6 +1940,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2070,9 +1953,11 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2860,9 +2745,6 @@ window.stopScraping = function() {
     }
 }
 
-// ==========================================
-// 🚀 EXACT 'X' MARK VALIDATION SCRAPER LOGIC
-// ==========================================
 async function processSingleMCWithDetailedError(mc, statusBox) {
     let maxRetries = 3;
     let attempt = 0;
@@ -2945,51 +2827,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
             if (record.status !== "AUTHORIZED") { 
                 return { status: "filtered_out" }; 
-            }
-
-            // 🚀 Precise 'x' Mark Validation Check
-            // On SAFER page, an active option has an 'x' right before its text name inside the table structure.
-            let selectedOpClasses = Array.from(document.querySelectorAll('#saferOpClassList input:checked')).map(cb => cb.value.trim().toLowerCase());
-            let selectedCarrierOps = Array.from(document.querySelectorAll('#saferCarrierOpList input:checked')).map(cb => cb.value.trim().toLowerCase());
-            let selectedCargos = Array.from(document.querySelectorAll('#saferCargoList input:checked')).map(cb => cb.value.trim().toLowerCase());
-
-            let allTextWithX = "";
-            el.querySelectorAll('td, th, font, span').forEach(node => {
-                let inner = node.textContent.replace(/\s+/g, ' ').trim();
-                // Check if element contains 'x ' right before a category name
-                if (inner.includes('x ')) {
-                    allTextWithX += " " + inner.toLowerCase();
-                }
-            });
-
-            // Fallback check across full HTML elements where 'x' is placed right next to the target text
-            let fullHtmlLower = htmlText.toLowerCase();
-
-            if (selectedOpClasses.length > 0) {
-                let matched = selectedOpClasses.some(op => {
-                    let pattern1 = new RegExp(`x\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-                    let pattern2 = new RegExp(`>\\s*x\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-                    return pattern1.test(fullHtmlLower) || pattern2.test(fullHtmlLower) || allTextWithX.includes(`x ${op}`);
-                });
-                if (!matched) return { status: "filtered_out" };
-            }
-
-            if (selectedCarrierOps.length > 0) {
-                let matched = selectedCarrierOps.some(cop => {
-                    let pattern1 = new RegExp(`x\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-                    let pattern2 = new RegExp(`>\\s*x\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-                    return pattern1.test(fullHtmlLower) || pattern2.test(fullHtmlLower) || allTextWithX.includes(`x ${cop}`);
-                });
-                if (!matched) return { status: "filtered_out" };
-            }
-
-            if (selectedCargos.length > 0) {
-                let matched = selectedCargos.some(cargo => {
-                    let pattern1 = new RegExp(`x\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-                    let pattern2 = new RegExp(`>\\s*x\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
-                    return pattern1.test(fullHtmlLower) || pattern2.test(fullHtmlLower) || allTextWithX.includes(`x ${cargo}`);
-                });
-                if (!matched) return { status: "filtered_out" };
             }
 
             if (record.usdot !== 'N/A') {
@@ -3266,3 +3103,5 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
+
