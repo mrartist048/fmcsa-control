@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000);
+    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
 }
 
 if (document.readyState === 'loading') {
@@ -304,6 +304,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
+    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -322,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 120000; // Increased tolerance threshold to 2 minutes to safely handle minor local clock/timezone discrepancies
+        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -647,6 +648,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
+    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -1131,6 +1133,7 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
+            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1386,7 +1389,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 120000; // Increased tolerance threshold to 2 minutes for robust offline check across minor clock variations
+    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1576,17 +1579,20 @@ function renderAdminTabContent(tabName) {
 
             Object.keys(logsGroupedByDate).forEach(d => {
                 let dayLogs = logsGroupedByDate[d];
-                if (!combinedShiftsMap[d]) {
-                    combinedShiftsMap[d] = {
-                        date: d,
-                        timestamp: "Live Active Shift",
-                        totalCalls: dayLogs.length,
-                        logs: dayLogs
-                    };
-                } else {
-                    if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
-                        combinedShiftsMap[d].totalCalls = dayLogs.length;
-                        combinedShiftsMap[d].logs = dayLogs;
+                // Inclusive check: display shift if logs fall within the date range, regardless of timezone discrepancies in shiftDate naming
+                if (d >= startDate && d <= endDate) {
+                    if (!combinedShiftsMap[d]) {
+                        combinedShiftsMap[d] = {
+                            date: d,
+                            timestamp: "Live Active Shift",
+                            totalCalls: dayLogs.length,
+                            logs: dayLogs
+                        };
+                    } else {
+                        if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
+                            combinedShiftsMap[d].totalCalls = dayLogs.length;
+                            combinedShiftsMap[d].logs = dayLogs;
+                        }
                     }
                 }
             });
@@ -1695,11 +1701,13 @@ window.downloadSingleAgentReportCSV = function(agentName) {
 
     Object.keys(logsGroupedByDate).forEach(d => {
         let dayLogs = logsGroupedByDate[d];
-        if (!combinedShiftsMap[d]) {
-            combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: dayLogs.length, logs: dayLogs };
-        } else if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
-            combinedShiftsMap[d].totalCalls = dayLogs.length;
-            combinedShiftsMap[d].logs = dayLogs;
+        if (d >= startDate && d <= endDate) {
+            if (!combinedShiftsMap[d]) {
+                combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: dayLogs.length, logs: dayLogs };
+            } else if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
+                combinedShiftsMap[d].totalCalls = dayLogs.length;
+                combinedShiftsMap[d].logs = dayLogs;
+            }
         }
     });
 
@@ -1776,11 +1784,13 @@ window.downloadAdminReportCSV = function() {
 
         Object.keys(logsGroupedByDate).forEach(d => {
             let dayLogs = logsGroupedByDate[d];
-            if (!combinedShiftsMap[d]) {
-                combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: dayLogs.length, logs: dayLogs };
-            } else if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
-                combinedShiftsMap[d].totalCalls = dayLogs.length;
-                combinedShiftsMap[d].logs = dayLogs;
+            if (d >= startDate && d <= endDate) {
+                if (!combinedShiftsMap[d]) {
+                    combinedShiftsMap[d] = { date: d, timestamp: "Live Active Shift", totalCalls: dayLogs.length, logs: dayLogs };
+                } else if (dayLogs.length > combinedShiftsMap[d].totalCalls) {
+                    combinedShiftsMap[d].totalCalls = dayLogs.length;
+                    combinedShiftsMap[d].logs = dayLogs;
+                }
             }
         });
 
@@ -1854,7 +1864,7 @@ window.openShiftShareModal = async function() {
         }
 
         let now = Date.now();
-        const offlineThreshold = 120000;
+        const offlineThreshold = 60000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -1918,6 +1928,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
+// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1925,6 +1936,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -1934,6 +1946,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -1946,9 +1959,11 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2159,7 +2174,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        const offlineThreshold = 120000;
+        const offlineThreshold = 60000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2746,7 +2761,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 120000;
+            const offlineThreshold = 60000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
@@ -2777,101 +2792,47 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
             const htmlText = await response.text();
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
-            let foundOnSafer = false;
-
-            if (!htmlText.includes("Record not found") && !htmlText.includes("No records found") && htmlText.includes("USDOT Number:")) {
-                foundOnSafer = true;
-                let el = document.createElement('html');
-                el.innerHTML = htmlText;
-                let cells = el.querySelectorAll('td, th');
-
-                for (let i = 0; i < cells.length; i++) {
-                    let text = cells[i].textContent.trim();
-                    if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
-                        if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                    }
-                    if (text.startsWith("USDOT Number:")) {
-                        if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
-                    }
-                    if (text.startsWith("Entity Type:")) {
-                        if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                    }
-                    if (text.startsWith("Operating Authority Status:")) {
-                        if (cells[i+1]) {
-                            let rawStatus = cells[i+1].textContent.toUpperCase();
-                            if (rawStatus.includes("NOT AUTHORIZED")) {
-                                record.status = "NOT AUTHORIZED";
-                            } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
-                                record.status = "AUTHORIZED";
-                            } else {
-                                record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
-                            }
-                        }
-                    }
-                    if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                    if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
-                    if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
-                        if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
-                    }
-                }
-            }
-
-            // ====== BROKERSNAPSHOT FALLBACK & INTEGRATION FOR NEW / MISSING MC RECORDS ======
-            if (!foundOnSafer || record.status !== "AUTHORIZED") {
-                try {
-                    const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=&prefix=MC&docket=${mc}`;
-                    const brokerRes = await fetch(brokerSnapshotUrl);
-                    if (brokerRes.ok) {
-                        const brokerHtml = await brokerRes.text();
-                        if (brokerHtml.includes("USDOT") || brokerHtml.includes("Company") || brokerHtml.includes("Tractors") || brokerHtml.includes("Carrier")) {
-                            let brokerEl = document.createElement('html');
-                            brokerEl.innerHTML = brokerHtml;
-                            
-                            foundOnSafer = true;
-                            record.status = "AUTHORIZED";
-
-                            let textNodes = brokerEl.querySelectorAll('div, span, a, td, th, p');
-                            textNodes.forEach(node => {
-                                let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
-                                if (/^USDOT\s*#?\s*(\d+)$/i.test(cleanText)) {
-                                    let match = cleanText.match(/\d+/);
-                                    if (match) record.usdot = match[0];
-                                } else if (/^Legal Name:\s*(.+)$/i.test(cleanText) || /^Company Name:\s*(.+)$/i.test(cleanText)) {
-                                    let parts = cleanText.split(':');
-                                    if (parts[1]) record.name = parts[1].trim();
-                                }
-                            });
-
-                            let vehicleList = [];
-                            textNodes.forEach(node => {
-                                let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
-                                if (/^Tractors\s+\d+$/i.test(cleanText)) {
-                                    let num = cleanText.match(/\d+/)[0];
-                                    let formatted = `Power Only ${num}`;
-                                    if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                                } else if (/^Trucks\s+\d+$/i.test(cleanText)) {
-                                    let num = cleanText.match(/\d+/)[0];
-                                    let formatted = `Box Truck ${num}`;
-                                    if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                                } else if (/^Trailers\s+\d+$/i.test(cleanText)) {
-                                    let num = cleanText.match(/\d+/)[0];
-                                    let formatted = `Trailers ${num}`;
-                                    if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                                }
-                            });
-                            if (vehicleList.length > 0) {
-                                record.vehicleType = vehicleList.join(" | ");
-                            }
-                        }
-                    }
-                } catch (bsErr) {
-                    console.warn(`BrokerSnapshot direct search warning for MC ${mc}:`, bsErr.message);
-                }
-            }
-
-            if (!foundOnSafer || (record.status !== "AUTHORIZED" && record.status !== "ACTIVE")) {
+            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
                 return { status: "not_found" };
+            }
+
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let el = document.createElement('html');
+            el.innerHTML = htmlText;
+            let cells = el.querySelectorAll('td, th');
+
+            for (let i = 0; i < cells.length; i++) {
+                let text = cells[i].textContent.trim();
+                if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
+                    if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("USDOT Number:")) {
+                    if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+                }
+                if (text.startsWith("Entity Type:")) {
+                    if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("Operating Authority Status:")) {
+                    if (cells[i+1]) {
+                        let rawStatus = cells[i+1].textContent.toUpperCase();
+                        if (rawStatus.includes("NOT AUTHORIZED")) {
+                            record.status = "NOT AUTHORIZED";
+                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
+                            record.status = "AUTHORIZED";
+                        } else {
+                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+                        }
+                    }
+                }
+                if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
+                    if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+            }
+
+            if (record.status !== "AUTHORIZED") { 
+                return { status: "filtered_out" }; 
             }
 
             if (record.usdot !== 'N/A') {
