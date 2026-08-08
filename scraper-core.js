@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000);
+    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
 }
 
 if (document.readyState === 'loading') {
@@ -304,6 +304,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
+    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -322,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000;
+        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -647,6 +648,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
+    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -1131,6 +1133,7 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
+            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1386,7 +1389,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000;
+    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1424,6 +1427,8 @@ function renderAdminTabContent(tabName) {
                 : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
+            
+            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -1917,6 +1922,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
+// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1924,6 +1930,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -1933,6 +1940,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -1945,9 +1953,11 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2858,31 +2868,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                     console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
                 }
 
-                if (record.vehicleType === 'N/A' || !record.vehicleType) {
-                    try {
-                        const safeVUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=${record.usdot}`;
-                        const safeVRes = await fetch(safeVUrl);
-                        if (safeVRes.ok) {
-                            const safeVHtml = await safeVRes.text();
-                            let safeVEl = document.createElement('html');
-                            safeVEl.innerHTML = safeVHtml;
-                            let safeCells = safeVEl.querySelectorAll('td, th');
-                            let vList = [];
-                            for (let sc = 0; sc < safeCells.length; sc++) {
-                                let stText = safeCells[sc].textContent.trim();
-                                if (stText.includes("Straight Truck") || stText.includes("Box Truck")) {
-                                    if (safeCells[sc+1]) vList.push(`Box Truck ${safeCells[sc+1].textContent.trim()}`);
-                                } else if (stText.includes("Tractor")) {
-                                    if (safeCells[sc+1]) vList.push(`Power Only ${safeCells[sc+1].textContent.trim()}`);
-                                } else if (stText.includes("Trailer")) {
-                                    if (safeCells[sc+1]) vList.push(`Trailers ${safeCells[sc+1].textContent.trim()}`);
-                                }
-                            }
-                            if (vList.length > 0) record.vehicleType = vList.join(" | ");
-                        }
-                    } catch (e) {}
-                }
-
                 try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsResponse = await fetch(smsUrl);
@@ -3118,3 +3103,5 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
+
