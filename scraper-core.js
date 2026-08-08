@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
+    setInterval(checkGlobalSessions, 1000);
 }
 
 if (document.readyState === 'loading') {
@@ -304,7 +304,6 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
-    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -323,7 +322,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
+        const offlineThreshold = 60000;
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -648,7 +647,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -695,6 +693,7 @@ function injectHistoryUIFramework() {
     }
 
     injectAdvancedFilterBar();
+    injectSaferScraperFiltersUI(); // 🚀 Yahan naye SAFER filters inject kiye gaye hain
 
     let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
@@ -723,6 +722,100 @@ function injectHistoryUIFramework() {
 
     injectEmailProposalPanel();
 }
+
+// ==========================================
+// 🚀 NEW SAFER FILTERS UI & LOGIC FOR SCRAPING
+// ==========================================
+function injectSaferScraperFiltersUI() {
+    let table = document.querySelector('table');
+    if (!table || document.getElementById('saferScraperFiltersWrapper')) return;
+
+    let saferFiltersDiv = document.createElement('div');
+    saferFiltersDiv.id = 'saferScraperFiltersWrapper';
+    saferFiltersDiv.style.cssText = "background: #eef2ff; padding: 15px; margin: 12px 0; border: 1px solid #93c5fd; border-radius: 6px; font-family: sans-serif;";
+    
+    saferFiltersDiv.innerHTML = `
+        <div style="font-size: 14px; font-weight: bold; color: #002d62; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px;">
+            🛡️ SAFER Scraper Filters (Operation, Carrier & Cargo)
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+            
+            <!-- Operation Classification -->
+            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                <div style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;">Operation Classification:</div>
+                <div id="saferOpClassList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+                    <label><input type="checkbox" value="Auth. For Hire"> Auth. For Hire</label>
+                    <label><input type="checkbox" value="Exempt For Hire"> Exempt For Hire</label>
+                    <label><input type="checkbox" value="Private(Property)"> Private(Property)</label>
+                    <label><input type="checkbox" value="Priv. Pass. (Business)"> Priv. Pass. (Business)</label>
+                    <label><input type="checkbox" value="Priv. Pass.(Non-business)"> Priv. Pass.(Non-business)</label>
+                    <label><input type="checkbox" value="Migrant"> Migrant</label>
+                    <label><input type="checkbox" value="U.S. Mail"> U.S. Mail</label>
+                    <label><input type="checkbox" value="Fed. Gov't"> Fed. Gov't</label>
+                    <label><input type="checkbox" value="State Gov't"> State Gov't</label>
+                    <label><input type="checkbox" value="Local Gov't"> Local Gov't</label>
+                    <label><input type="checkbox" value="Indian Nation"> Indian Nation</label>
+                </div>
+            </div>
+
+            <!-- Carrier Operation -->
+            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                <div style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;">Carrier Operation:</div>
+                <div id="saferCarrierOpList" style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+                    <label><input type="checkbox" value="Interstate"> Interstate</label>
+                    <label><input type="checkbox" value="Intrastate Only (HM)"> Intrastate Only (HM)</label>
+                    <label><input type="checkbox" value="Intrastate Only (Non-HM)"> Intrastate Only (Non-HM)</label>
+                </div>
+            </div>
+
+            <!-- Cargo Carried -->
+            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                <div style="font-size: 12px; font-weight: bold; color: #1e3a8a; margin-bottom: 6px;">Cargo Carried:</div>
+                <div id="saferCargoList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11px;">
+                    <label><input type="checkbox" value="General Freight"> General Freight</label>
+                    <label><input type="checkbox" value="Household Goods"> Household Goods</label>
+                    <label><input type="checkbox" value="Metal: sheets, coils, rolls"> Metal: sheets, coils, rolls</label>
+                    <label><input type="checkbox" value="Motor Vehicles"> Motor Vehicles</label>
+                    <label><input type="checkbox" value="Drive/Tow away"> Drive/Tow away</label>
+                    <label><input type="checkbox" value="Logs, Poles, Beams, Lumber"> Logs, Poles, Beams, Lumber</label>
+                    <label><input type="checkbox" value="Building Materials"> Building Materials</label>
+                    <label><input type="checkbox" value="Mobile Homes"> Mobile Homes</label>
+                    <label><input type="checkbox" value="Machinery, Large Objects"> Machinery, Large Objects</label>
+                    <label><input type="checkbox" value="Fresh Produce"> Fresh Produce</label>
+                    <label><input type="checkbox" value="Liquids/Gases"> Liquids/Gases</label>
+                    <label><input type="checkbox" value="Intermodal Cont."> Intermodal Cont.</label>
+                    <label><input type="checkbox" value="Passengers"> Passengers</label>
+                    <label><input type="checkbox" value="Oilfield Equipment"> Oilfield Equipment</label>
+                    <label><input type="checkbox" value="Livestock"> Livestock</label>
+                    <label><input type="checkbox" value="Grain, Feed, Hay"> Grain, Feed, Hay</label>
+                    <label><input type="checkbox" value="Coal/Coke"> Coal/Coke</label>
+                    <label><input type="checkbox" value="Meat"> Meat</label>
+                    <label><input type="checkbox" value="Garbage/Refuse"> Garbage/Refuse</label>
+                    <label><input type="checkbox" value="US Mail"> US Mail</label>
+                    <label><input type="checkbox" value="Chemicals"> Chemicals</label>
+                    <label><input type="checkbox" value="Commodities Dry Bulk"> Commodities Dry Bulk</label>
+                    <label><input type="checkbox" value="Refrigerated Food"> Refrigerated Food</label>
+                    <label><input type="checkbox" value="Beverages"> Beverages</label>
+                    <label><input type="checkbox" value="Paper Products"> Paper Products</label>
+                    <label><input type="checkbox" value="Utilities"> Utilities</label>
+                    <label><input type="checkbox" value="Agricultural/Farm Supplies"> Agricultural/Farm Supplies</label>
+                    <label><input type="checkbox" value="Construction"> Construction</label>
+                    <label><input type="checkbox" value="Water Well"> Water Well</label>
+                </div>
+            </div>
+
+        </div>
+        <div style="margin-top: 10px; text-align: right;">
+            <button onclick="resetSaferFilters()" style="background: #6c757d; color: white; border: none; padding: 5px 12px; font-size: 11px; border-radius: 4px; cursor: pointer; font-weight: bold;">🔄 Reset SAFER Filters</button>
+        </div>
+    `;
+    table.parentNode.insertBefore(saferFiltersDiv, table);
+}
+
+window.resetSaferFilters = function() {
+    document.querySelectorAll('#saferScraperFiltersWrapper input[type="checkbox"]').forEach(cb => cb.checked = false);
+    showPremiumNotification("🔄 SAFER filters reset successfully!", 2000);
+};
 
 window.scrollToTopScreen = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1133,7 +1226,6 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1389,7 +1481,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
+    const offlineThreshold = 60000;
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1427,8 +1519,6 @@ function renderAdminTabContent(tabName) {
                 : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
-            
-            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -1922,7 +2012,6 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1930,7 +2019,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
-    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -1940,7 +2028,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -1953,11 +2040,9 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
-    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2745,6 +2830,9 @@ window.stopScraping = function() {
     }
 }
 
+// ==========================================
+// 🚀 UPDATED SCRAPER WITH SAFER FILTERS VALIDATION
+// ==========================================
 async function processSingleMCWithDetailedError(mc, statusBox) {
     let maxRetries = 3;
     let attempt = 0;
@@ -2795,6 +2883,8 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
 
+            let pageTextContent = el.textContent || "";
+
             for (let i = 0; i < cells.length; i++) {
                 let text = cells[i].textContent.trim();
                 if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
@@ -2827,6 +2917,26 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
             if (record.status !== "AUTHORIZED") { 
                 return { status: "filtered_out" }; 
+            }
+
+            // 🚀 Check Selected SAFER Filters (Operation Classification, Carrier Operation, Cargo Carried)
+            let selectedOpClasses = Array.from(document.querySelectorAll('#saferOpClassList input:checked')).map(cb => cb.value.toLowerCase());
+            let selectedCarrierOps = Array.from(document.querySelectorAll('#saferCarrierOpList input:checked')).map(cb => cb.value.toLowerCase());
+            let selectedCargos = Array.from(document.querySelectorAll('#saferCargoList input:checked')).map(cb => cb.value.toLowerCase());
+
+            if (selectedOpClasses.length > 0) {
+                let matched = selectedOpClasses.some(op => pageTextContent.toLowerCase().includes(op));
+                if (!matched) return { status: "filtered_out" };
+            }
+
+            if (selectedCarrierOps.length > 0) {
+                let matched = selectedCarrierOps.some(cop => pageTextContent.toLowerCase().includes(cop));
+                if (!matched) return { status: "filtered_out" };
+            }
+
+            if (selectedCargos.length > 0) {
+                let matched = selectedCargos.some(cargo => pageTextContent.toLowerCase().includes(cargo));
+                if (!matched) return { status: "filtered_out" };
             }
 
             if (record.usdot !== 'N/A') {
@@ -3103,5 +3213,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
