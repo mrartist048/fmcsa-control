@@ -566,7 +566,7 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    // ====== REDESIGNED SAFER-SPECIFIC DROPDOWN & CHECKBOX FILTER PANELS ======
+    // ====== PLACING SAFER-SPECIFIC FILTERS RIGHT ABOVE START SCANNING / HISTORY / FOLLOW-UPS ======
     let existingFilterPanel = document.getElementById('saferAdvancedFiltersPanel');
     if (existingFilterPanel) existingFilterPanel.remove();
 
@@ -582,105 +582,78 @@ function injectHistoryUIFramework() {
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start;">
                 
-                <!-- Operation Classification Dropdown with Checkboxes -->
-                <div style="flex: 1; min-width: 250px; position: relative;">
+                <!-- Operation Classification Dropdown (Single Selection like State dropdown) -->
+                <div style="flex: 1; min-width: 250px;">
                     <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Operation Classification:</label>
-                    <div onclick="toggleSaferDropdown('opClassDropdownContent', event)" style="background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="opClassDropdownLabel">Select Operation Classifications ▼</span>
-                        <span style="font-size: 10px; color: #666;">▼</span>
-                    </div>
-                    <div id="opClassDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 10000; width: 100%; top: 100%; left: 0; margin-top: 4px; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;" id="filterOpClassContainer">
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Auth. For Hire" onchange="updateDropdownLabel('opClass')"> Auth. For Hire</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Exempt For Hire" onchange="updateDropdownLabel('opClass')"> Exempt For Hire</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Private(Property)" onchange="updateDropdownLabel('opClass')"> Private(Property)</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Priv. Pass. (Business)" onchange="updateDropdownLabel('opClass')"> Priv. Pass. (Business)</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Priv. Pass.(Non-business)" onchange="updateDropdownLabel('opClass')"> Priv. Pass.(Non-business)</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Migrant" onchange="updateDropdownLabel('opClass')"> Migrant</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="U.S. Mail" onchange="updateDropdownLabel('opClass')"> U.S. Mail</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Fed. Gov't" onchange="updateDropdownLabel('opClass')"> Fed. Gov't</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="State Gov't" onchange="updateDropdownLabel('opClass')"> State Gov't</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Local Gov't" onchange="updateDropdownLabel('opClass')"> Local Gov't</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Indian Nation" onchange="updateDropdownLabel('opClass')"> Indian Nation</label>
-                        </div>
-                    </div>
+                    <select id="filterOpClassSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
+                        <option value="">All Operation Classifications</option>
+                        <option value="Auth. For Hire">Auth. For Hire</option>
+                        <option value="Exempt For Hire">Exempt For Hire</option>
+                        <option value="Private(Property)">Private(Property)</option>
+                        <option value="Priv. Pass. (Business)">Priv. Pass. (Business)</option>
+                        <option value="Priv. Pass.(Non-business)">Priv. Pass.(Non-business)</option>
+                        <option value="Migrant">Migrant</option>
+                        <option value="U.S. Mail">U.S. Mail</option>
+                        <option value="Fed. Gov't">Fed. Gov't</option>
+                        <option value="State Gov't">State Gov't</option>
+                        <option value="Local Gov't">Local Gov't</option>
+                        <option value="Indian Nation">Indian Nation</option>
+                    </select>
                 </div>
 
-                <!-- Carrier Operation Dropdown with Checkboxes -->
-                <div style="flex: 1; min-width: 220px; position: relative;">
+                <!-- Carrier Operation Dropdown (Single Selection like State dropdown) -->
+                <div style="flex: 1; min-width: 220px;">
                     <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Carrier Operation:</label>
-                    <div onclick="toggleSaferDropdown('carrierOpDropdownContent', event)" style="background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="carrierOpDropdownLabel">Select Carrier Operations ▼</span>
-                        <span style="font-size: 10px; color: #666;">▼</span>
-                    </div>
-                    <div id="carrierOpDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 10000; width: 100%; top: 100%; left: 0; margin-top: 4px; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;" id="filterCarrierOpContainer">
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Interstate" onchange="updateDropdownLabel('carrierOp')"> Interstate</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Intrastate Only (HM)" onchange="updateDropdownLabel('carrierOp')"> Intrastate Only (HM)</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Intrastate Only (Non-HM)" onchange="updateDropdownLabel('carrierOp')"> Intrastate Only (Non-HM)</label>
-                        </div>
-                    </div>
+                    <select id="filterCarrierOpSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
+                        <option value="">All Carrier Operations</option>
+                        <option value="Interstate">Interstate</option>
+                        <option value="Intrastate Only (HM)">Intrastate Only (HM)</option>
+                        <option value="Intrastate Only (Non-HM)">Intrastate Only (Non-HM)</option>
+                    </select>
                 </div>
 
-                <!-- Cargo Carried Dropdown with Checkboxes -->
-                <div style="flex: 1.2; min-width: 260px; position: relative;">
+                <!-- Cargo Carried Dropdown (Single Selection like State dropdown) -->
+                <div style="flex: 1.2; min-width: 260px;">
                     <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Cargo Carried:</label>
-                    <div onclick="toggleSaferDropdown('cargoDropdownContent', event)" style="background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                        <span id="cargoDropdownLabel">Select Cargo Carried ▼</span>
-                        <span style="font-size: 10px; color: #666;">▼</span>
-                    </div>
-                    <div id="cargoDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 10000; width: 100%; top: 100%; left: 0; margin-top: 4px; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;" id="filterCargoContainer">
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="General Freight" onchange="updateDropdownLabel('cargo')"> General Freight</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Household Goods" onchange="updateDropdownLabel('cargo')"> Household Goods</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Metal: sheets, coils, rolls" onchange="updateDropdownLabel('cargo')"> Metal: sheets, coils, rolls</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Motor Vehicles" onchange="updateDropdownLabel('cargo')"> Motor Vehicles</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Drive/Tow away" onchange="updateDropdownLabel('cargo')"> Drive/Tow away</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Logs, Poles, Beams, Lumber" onchange="updateDropdownLabel('cargo')"> Logs, Poles, Beams, Lumber</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Building Materials" onchange="updateDropdownLabel('cargo')"> Building Materials</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Mobile Homes" onchange="updateDropdownLabel('cargo')"> Mobile Homes</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Machinery, Large Objects" onchange="updateDropdownLabel('cargo')"> Machinery, Large Objects</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Fresh Produce" onchange="updateDropdownLabel('cargo')"> Fresh Produce</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Liquids/Gases" onchange="updateDropdownLabel('cargo')"> Liquids/Gases</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Intermodal Cont." onchange="updateDropdownLabel('cargo')"> Intermodal Cont.</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Passengers" onchange="updateDropdownLabel('cargo')"> Passengers</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Oilfield Equipment" onchange="updateDropdownLabel('cargo')"> Oilfield Equipment</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Livestock" onchange="updateDropdownLabel('cargo')"> Livestock</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Grain, Feed, Hay" onchange="updateDropdownLabel('cargo')"> Grain, Feed, Hay</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Coal/Coke" onchange="updateDropdownLabel('cargo')"> Coal/Coke</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Meat" onchange="updateDropdownLabel('cargo')"> Meat</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Garbage/Refuse" onchange="updateDropdownLabel('cargo')"> Garbage/Refuse</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="US Mail" onchange="updateDropdownLabel('cargo')"> US Mail</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Chemicals" onchange="updateDropdownLabel('cargo')"> Chemicals</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Commodities Dry Bulk" onchange="updateDropdownLabel('cargo')"> Commodities Dry Bulk</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Refrigerated Food" onchange="updateDropdownLabel('cargo')"> Refrigerated Food</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Beverages" onchange="updateDropdownLabel('cargo')"> Beverages</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Paper Products" onchange="updateDropdownLabel('cargo')"> Paper Products</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Utilities" onchange="updateDropdownLabel('cargo')"> Utilities</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Agricultural/Farm Supplies" onchange="updateDropdownLabel('cargo')"> Agricultural/Farm Supplies</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Construction" onchange="updateDropdownLabel('cargo')"> Construction</label>
-                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Water Well" onchange="updateDropdownLabel('cargo')"> Water Well</label>
-                        </div>
-                    </div>
+                    <select id="filterCargoSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
+                        <option value="">All Cargo Carried</option>
+                        <option value="General Freight">General Freight</option>
+                        <option value="Household Goods">Household Goods</option>
+                        <option value="Metal: sheets, coils, rolls">Metal: sheets, coils, rolls</option>
+                        <option value="Motor Vehicles">Motor Vehicles</option>
+                        <option value="Drive/Tow away">Drive/Tow away</option>
+                        <option value="Logs, Poles, Beams, Lumber">Logs, Poles, Beams, Lumber</option>
+                        <option value="Building Materials">Building Materials</option>
+                        <option value="Mobile Homes">Mobile Homes</option>
+                        <option value="Machinery, Large Objects">Machinery, Large Objects</option>
+                        <option value="Fresh Produce">Fresh Produce</option>
+                        <option value="Liquids/Gases">Liquids/Gases</option>
+                        <option value="Intermodal Cont.">Intermodal Cont.</option>
+                        <option value="Passengers">Passengers</option>
+                        <option value="Oilfield Equipment">Oilfield Equipment</option>
+                        <option value="Livestock">Livestock</option>
+                        <option value="Grain, Feed, Hay">Grain, Feed, Hay</option>
+                        <option value="Coal/Coke">Coal/Coke</option>
+                        <option value="Meat">Meat</option>
+                        <option value="Garbage/Refuse">Garbage/Refuse</option>
+                        <option value="US Mail">US Mail</option>
+                        <option value="Chemicals">Chemicals</option>
+                        <option value="Commodities Dry Bulk">Commodities Dry Bulk</option>
+                        <option value="Refrigerated Food">Refrigerated Food</option>
+                        <option value="Beverages">Beverages</option>
+                        <option value="Paper Products">Paper Products</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Agricultural/Farm Supplies">Agricultural/Farm Supplies</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Water Well">Water Well</option>
+                    </select>
                 </div>
 
             </div>
         `;
-        let targetRef = document.getElementById('status') || startBtn.parentNode;
-        targetRef.parentNode.insertBefore(saferFilterPanel, targetRef);
-
-        // Global click listener to close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
-            ['opClassDropdownContent', 'carrierOpDropdownContent', 'cargoDropdownContent'].forEach(id => {
-                let dropdown = document.getElementById(id);
-                if (dropdown && dropdown.style.display === 'block') {
-                    let parentContainer = dropdown.parentNode;
-                    if (!parentContainer.contains(e.target)) {
-                        dropdown.style.display = 'none';
-                    }
-                }
-            });
-        });
+        // Insert right above the start button / start scanning row container
+        let startContainer = startBtn.parentNode;
+        startContainer.parentNode.insertBefore(saferFilterPanel, startContainer);
     }
 
     if (!document.getElementById('dlHistoryDrawer')) {
@@ -839,49 +812,17 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
-window.toggleSaferDropdown = function(dropdownId, e) {
-    e.stopPropagation();
-    let dropdown = document.getElementById(dropdownId);
-    if (!dropdown) return;
-
-    // Close any other open safer dropdowns first
-    ['opClassDropdownContent', 'carrierOpDropdownContent', 'cargoDropdownContent'].forEach(id => {
-        if (id !== dropdownId) {
-            let other = document.getElementById(id);
-            if (other) other.style.display = 'none';
-        }
-    });
-
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-};
-
-window.updateDropdownLabel = function(type) {
-    let containerId = type === 'opClass' ? 'filterOpClassContainer' : type === 'carrierOp' ? 'filterCarrierOpContainer' : 'filterCargoContainer';
-    let labelId = type === 'opClass' ? 'opClassDropdownLabel' : type === 'carrierOp' ? 'carrierOpDropdownLabel' : 'cargoDropdownLabel';
-    let defaultText = type === 'opClass' ? 'Select Operation Classifications ▼' : type === 'carrierOp' ? 'Select Carrier Operations ▼' : 'Select Cargo Carried ▼';
-
-    let checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`);
-    let labelSpan = document.getElementById(labelId);
-
-    if (!labelSpan) return;
-
-    if (checkboxes.length === 0) {
-        labelSpan.innerText = defaultText;
-    } else if (checkboxes.length === 1) {
-        labelSpan.innerText = checkboxes[0].value;
-    } else {
-        labelSpan.innerText = `${checkboxes.length} Selected`;
-    }
+window.updateSaferFilters = function() {
+    showPremiumNotification("⚙️ Safer scraper filters updated!", 2000);
 };
 
 window.clearAllSaferFilters = function() {
-    document.querySelectorAll('#saferAdvancedFiltersPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
-    ['opClassDropdownLabel', 'carrierOpDropdownLabel', 'cargoDropdownLabel'].forEach((id, idx) => {
-        let span = document.getElementById(id);
-        if (span) {
-            span.innerText = idx === 0 ? 'Select Operation Classifications ▼' : idx === 1 ? 'Select Carrier Operations ▼' : 'Select Cargo Carried ▼';
-        }
-    });
+    let opSel = document.getElementById('filterOpClassSelect');
+    let carSel = document.getElementById('filterCarrierOpSelect');
+    let carGO = document.getElementById('filterCargoSelect');
+    if (opSel) opSel.value = "";
+    if (carSel) carSel.value = "";
+    if (carGO) carGO.value = "";
     showPremiumNotification("🔄 Safer scraper filters cleared!", 2500);
 };
 
@@ -3003,29 +2944,22 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             let carrierOpList = [];
             let cargoList = [];
 
-            // Robust extraction by searching table rows/cells containing the category names and checking for 'X' mark adjacent to them
             let tables = el.querySelectorAll('table');
             tables.forEach(table => {
                 let textAll = table.textContent || "";
                 if (textAll.includes("Operation Classification") || textAll.includes("Carrier Operation") || textAll.includes("Cargo Carried")) {
                     let rows = table.querySelectorAll('tr');
                     rows.forEach(row => {
-                        let rowText = row.textContent || "";
                         let cellsInRow = row.querySelectorAll('td, th');
-                        
-                        // Check cells for 'X' marks next to category names
                         cellsInRow.forEach(cell => {
                             let cellHtml = cell.innerHTML || "";
                             let cellText = cell.textContent.trim();
-                            
-                            // Check if cell contains an X mark (either bold 'X', 'x', or inside table formatting)
                             let hasMark = /\b[Xx]\b/.test(cellText) || cellHtml.includes("<b>X</b>") || cellHtml.includes("<b>x</b>") || cellHtml.includes(">X<") || cellHtml.includes(">x<");
                             
                             if (hasMark) {
-                                // Find which category label is in this cell or row
                                 const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
                                 const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
-                                const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
+                                const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
 
                                 possibleOpClasses.forEach(op => {
                                     if (cellText.includes(op) && !opClassList.includes(op)) opClassList.push(op);
@@ -3042,7 +2976,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             });
 
-            // Fallback text check if table parsing missed anything due to layout structure
             let fullTextContent = el.textContent || "";
             if (opClassList.length === 0) {
                 const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
@@ -3070,35 +3003,33 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             record.carrierOp = carrierOpList.length > 0 ? carrierOpList.join(" | ") : 'N/A';
             record.cargoCarried = cargoList.length > 0 ? cargoList.join(" | ") : 'N/A';
 
-            // ====== CORRECTED USER APPLIED SAFER FILTERS LOGIC ======
-            let selectedOpClasses = Array.from(document.querySelectorAll('#filterOpClassContainer input[type="checkbox"]:checked')).map(cb => cb.value);
-            let selectedCarrierOps = Array.from(document.querySelectorAll('#filterCarrierOpContainer input[type="checkbox"]:checked')).map(cb => cb.value);
-            let selectedCargoes = Array.from(document.querySelectorAll('#filterCargoContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+            // ====== CORRECTED SINGLE SELECTION SAFER FILTER LOGIC ======
+            let selectedOpClass = (document.getElementById('filterOpClassSelect')?.value || "").trim();
+            let selectedCarrierOp = (document.getElementById('filterCarrierOpSelect')?.value || "").trim();
+            let selectedCargo = (document.getElementById('filterCargoSelect')?.value || "").trim();
 
             // Always enforce Authorized status check first
             if (record.status !== "AUTHORIZED") { 
                 return { status: "filtered_out" }; 
             }
 
-            // If user selected Operation Classification filters, carrier MUST match at least one selected operation classification
-            if (selectedOpClasses.length > 0) {
-                let matchesOpClass = selectedOpClasses.some(sel => record.opClass.includes(sel));
-                if (!matchesOpClass) return { status: "filtered_out" };
+            // If user selected an Operation Classification filter, carrier MUST match it
+            if (selectedOpClass !== "") {
+                if (!record.opClass.includes(selectedOpClass)) return { status: "filtered_out" };
             }
 
-            // If user selected Carrier Operation filters, carrier MUST match at least one selected carrier operation
-            if (selectedCarrierOps.length > 0) {
-                let matchesCarrierOp = selectedCarrierOps.some(sel => record.carrierOp.includes(sel));
-                if (!matchesCarrierOp) return { status: "filtered_out" };
+            // If user selected a Carrier Operation filter, carrier MUST match it
+            if (selectedCarrierOp !== "") {
+                if (!record.carrierOp.includes(selectedCarrierOp)) return { status: "filtered_out" };
             }
 
-            // If user selected Cargo Carried filters, carrier MUST match at least one selected cargo carried category
-            if (selectedCargoes.length > 0) {
-                let matchesCargo = selectedCargoes.some(sel => record.cargoCarried.includes(sel));
-                if (!matchesCargo) return { status: "filtered_out" };
+            // If user selected a Cargo Carried filter, carrier MUST match it
+            if (selectedCargo !== "") {
+                if (!record.cargoCarried.includes(selectedCargo)) return { status: "filtered_out" };
             }
 
             if (record.usdot !== 'N/A') {
+                // ====== FIXED VEHICLE TYPE EXTRACTION & ROBUST FALLBACK ======
                 try {
                     const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
                     const brokerRes = await fetch(brokerSnapshotUrl);
@@ -3131,10 +3062,30 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
                         if (vehicleList.length > 0) {
                             record.vehicleType = vehicleList.join(" | ");
+                        } else {
+                            // Check full text or table content if standard regex missed it
+                            let fullBrokerText = brokerEl.textContent || "";
+                            let foundTypes = [];
+                            if (fullBrokerText.includes("Tractors")) foundTypes.push("Power Only");
+                            if (fullBrokerText.includes("Trucks")) foundTypes.push("Box Truck");
+                            if (fullBrokerText.includes("Trailers")) foundTypes.push("Trailers");
+                            if (foundTypes.length > 0) {
+                                record.vehicleType = foundTypes.join(" | ");
+                            }
                         }
                     }
                 } catch (bErr) {
                     console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
+                }
+
+                // Fallback secondary vehicle determination based on Power Units or Cargo/Operation if still N/A
+                if (record.vehicleType === 'N/A' && record.powerUnits !== 'N/A' && parseInt(record.powerUnits) > 0) {
+                    let pUnits = parseInt(record.powerUnits);
+                    if (record.cargoCarried.includes("General Freight") || record.cargoCarried.includes("Building Materials")) {
+                        record.vehicleType = pUnits > 1 ? `Box Truck / Trailers (${pUnits})` : "Box Truck";
+                    } else {
+                        record.vehicleType = `Power Only (${pUnits})`;
+                    }
                 }
 
                 try {
