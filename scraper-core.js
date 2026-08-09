@@ -304,7 +304,6 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
-    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -323,7 +322,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
+        const offlineThreshold = 60000; // 1 minute offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -349,7 +348,8 @@ async function checkGlobalSessions() {
                 instanceId: tabUniqueId,
                 nickname: dispatcherNickname,
                 timestamp: now,
-                loginTime: loginTimeString
+                loginTime: loginTimeString,
+                shiftDate: todayDateKey
             })
         });
 
@@ -648,7 +648,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -1133,7 +1132,6 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1150,14 +1148,21 @@ async function renderAdvancedAdminModal() {
     `;
     document.body.appendChild(modal);
 
-    setAdminDateFilterPreset('today', false);
-    await fetchAndRenderAdminData();
+    // Render initial tab immediately with local cache to avoid delay
+    window.currentActiveAdminTab = 'online';
+    window.adminUsersViewMode = 'online'; // Default to today/online active users as requested
+    setupAdminFilterBar('online');
+    renderAdminTabContent('online');
+
+    // Fetch fresh background data
+    await fetchAndCacheAdminData();
+    renderAdminTabContent(window.currentActiveAdminTab || 'online');
 }
 
 window.adminDateFilterMode = 'today'; 
 window.adminStartDateStr = new Date().toISOString().split('T')[0];
 window.adminEndDateStr = new Date().toISOString().split('T')[0];
-window.adminUsersViewMode = 'all';
+window.adminUsersViewMode = 'online'; // Default requested to only show today's active/offline users
 
 window.setAdminDateFilterPreset = function(preset, doRender = true) {
     window.adminDateFilterMode = preset;
@@ -1206,7 +1211,7 @@ window.setAdminDateFilterPreset = function(preset, doRender = true) {
     if (startInput) startInput.value = window.adminStartDateStr;
     if (endInput) endInput.value = window.adminEndDateStr;
 
-    if (doRender && window.cachedAdminReportsGrouped) {
+    if (doRender) {
         renderAdminTabContent(window.currentActiveAdminTab || 'online');
     }
 };
@@ -1230,9 +1235,7 @@ window.onCustomDateRangeChanged = function() {
             }
         });
 
-        if (window.cachedAdminReportsGrouped) {
-            renderAdminTabContent(window.currentActiveAdminTab || 'online');
-        }
+        renderAdminTabContent(window.currentActiveAdminTab || 'online');
     }
 };
 
@@ -1242,8 +1245,9 @@ window.setAdminUsersViewMode = function(mode) {
     let btnAll = document.getElementById('userFilterAll');
     let btnOnline = document.getElementById('userFilterOnline');
     let btnOffline = document.getElementById('userFilterOffline');
+    let btnToday = document.getElementById('userFilterToday');
 
-    [btnAll, btnOnline, btnOffline].forEach(b => {
+    [btnAll, btnOnline, btnOffline, btnToday].forEach(b => {
         if (b) {
             b.style.background = "#e2eafc";
             b.style.color = "#002d62";
@@ -1251,7 +1255,7 @@ window.setAdminUsersViewMode = function(mode) {
         }
     });
 
-    let activeB = mode === 'all' ? btnAll : mode === 'online' ? btnOnline : btnOffline;
+    let activeB = mode === 'all' ? btnAll : mode === 'online' ? btnOnline : mode === 'offline' ? btnOffline : btnToday;
     if (activeB) {
         activeB.style.background = "#002d62";
         activeB.style.color = "white";
@@ -1261,12 +1265,7 @@ window.setAdminUsersViewMode = function(mode) {
     renderAdminTabContent('online');
 };
 
-async function fetchAndRenderAdminData() {
-    let bodyContainer = document.getElementById('adminReportsModalBody');
-    if (bodyContainer) {
-        bodyContainer.innerHTML = `<p style="color: #6c757d; font-style: italic; padding: 30px;">Refreshing team status and reports...</p>`;
-    }
-
+async function fetchAndCacheAdminData() {
     try {
         let [sessionsRes, reportsRes, clientCallLogsRes] = await Promise.all([
             fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
@@ -1274,19 +1273,11 @@ async function fetchAndRenderAdminData() {
             fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
         ]);
 
-        let sessionsData = await sessionsRes.json() || {};
-        let allReportsGrouped = await reportsRes.json() || {};
-        let dbCallLogs = await clientCallLogsRes.json() || {};
-
-        window.cachedAdminSessions = sessionsData;
-        window.cachedAdminReportsGrouped = allReportsGrouped;
-        window.cachedAdminDbCallLogs = dbCallLogs;
-        
-        let activeTab = window.currentActiveAdminTab || 'online';
-        renderAdminTabContent(activeTab);
+        window.cachedAdminSessions = await sessionsRes.json() || {};
+        window.cachedAdminReportsGrouped = await reportsRes.json() || {};
+        window.cachedAdminDbCallLogs = await clientCallLogsRes.json() || {};
     } catch (e) {
         console.error("Failed to load admin monitoring dashboard:", e);
-        if (bodyContainer) bodyContainer.innerHTML = `<p style="color: #dc3545;">Failed to load data from database.</p>`;
     }
 }
 
@@ -1297,7 +1288,8 @@ window.refreshAdminModalData = async function() {
         refBtn.style.pointerEvents = "none";
     }
     
-    await fetchAndRenderAdminData();
+    await fetchAndCacheAdminData();
+    renderAdminTabContent(window.currentActiveAdminTab || 'online');
     showPremiumNotification("🔄 Admin dashboard refreshed successfully!", 2500);
 
     if (refBtn) {
@@ -1305,6 +1297,63 @@ window.refreshAdminModalData = async function() {
         refBtn.style.pointerEvents = "auto";
     }
 };
+
+function setupAdminFilterBar(tabName) {
+    let filterBarContainer = document.getElementById('adminFilterBarContainer');
+    let exportCsvBtn = document.getElementById('adminExportCsvBtn');
+
+    if (!filterBarContainer) return;
+
+    if (tabName === 'online') {
+        if (exportCsvBtn) exportCsvBtn.style.display = 'none';
+        filterBarContainer.style.display = 'flex';
+        
+        let todayBg = window.adminUsersViewMode === 'today' ? '#002d62' : '#e2eafc';
+        let todayCol = window.adminUsersViewMode === 'today' ? 'white' : '#002d62';
+        let todayBrd = window.adminUsersViewMode === 'today' ? 'none' : '1px solid #b6ccfe';
+
+        let onBg = window.adminUsersViewMode === 'online' ? '#002d62' : '#e2eafc';
+        let onCol = window.adminUsersViewMode === 'online' ? 'white' : '#002d62';
+        let onBrd = window.adminUsersViewMode === 'online' ? 'none' : '1px solid #b6ccfe';
+
+        let offBg = window.adminUsersViewMode === 'offline' ? '#002d62' : '#e2eafc';
+        let offCol = window.adminUsersViewMode === 'offline' ? 'white' : '#002d62';
+        let offBrd = window.adminUsersViewMode === 'offline' ? 'none' : '1px solid #b6ccfe';
+
+        let allBg = window.adminUsersViewMode === 'all' ? '#002d62' : '#e2eafc';
+        let allCol = window.adminUsersViewMode === 'all' ? 'white' : '#002d62';
+        let allBrd = window.adminUsersViewMode === 'all' ? 'none' : '1px solid #b6ccfe';
+
+        filterBarContainer.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px; width: 100%; justify-content: space-between; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: bold; color: #002d62;">👤 User Filter:</span>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button onclick="setAdminUsersViewMode('today')" id="userFilterToday" style="background: ${todayBg}; color: ${todayCol}; border: ${todayBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today's Users</button>
+                    <button onclick="setAdminUsersViewMode('online')" id="userFilterOnline" style="background: ${onBg}; color: ${onCol}; border: ${onBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🟢 Online Now</button>
+                    <button onclick="setAdminUsersViewMode('offline')" id="userFilterOffline" style="background: ${offBg}; color: ${offCol}; border: ${offBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">⚪ Offline Today</button>
+                    <button onclick="setAdminUsersViewMode('all')" id="userFilterAll" style="background: ${allBg}; color: ${allCol}; border: ${allBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All History</button>
+                </div>
+            </div>
+        `;
+    } else {
+        if (exportCsvBtn) exportCsvBtn.style.display = 'flex';
+        filterBarContainer.style.display = 'flex';
+        filterBarContainer.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: bold; color: #002d62;">📅 Range Filter:</span>
+                <button onclick="setAdminDateFilterPreset('today')" id="adminPresetToday" style="background: #002d62; color: white; border: none; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Today</button>
+                <button onclick="setAdminDateFilterPreset('week')" id="adminPresetWeek" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Last 7 Days</button>
+                <button onclick="setAdminDateFilterPreset('month')" id="adminPresetMonth" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">This Month</button>
+                <button onclick="setAdminDateFilterPreset('all')" id="adminPresetAll" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">All Time</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #333;">
+                <span>From:</span> <input type="date" id="adminCustomStartDate" onchange="onCustomDateRangeChanged()" value="${window.adminStartDateStr}" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
+                <span>To:</span> <input type="date" id="adminCustomEndDate" onchange="onCustomDateRangeChanged()" value="${window.adminEndDateStr}" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
+            </div>
+        `;
+        setAdminDateFilterPreset(window.adminDateFilterMode, false);
+    }
+}
 
 window.switchAdminTab = function(tabName) {
     window.currentActiveAdminTab = tabName;
@@ -1327,57 +1376,7 @@ window.switchAdminTab = function(tabName) {
         activeBtn.style.border = "none";
     }
 
-    let filterBarContainer = document.getElementById('adminFilterBarContainer');
-    let exportCsvBtn = document.getElementById('adminExportCsvBtn');
-
-    if (tabName === 'online') {
-        if (exportCsvBtn) exportCsvBtn.style.display = 'none';
-        if (filterBarContainer) {
-            filterBarContainer.style.display = 'flex';
-            let allBg = window.adminUsersViewMode === 'all' ? '#002d62' : '#e2eafc';
-            let allCol = window.adminUsersViewMode === 'all' ? 'white' : '#002d62';
-            let allBrd = window.adminUsersViewMode === 'all' ? 'none' : '1px solid #b6ccfe';
-
-            let onBg = window.adminUsersViewMode === 'online' ? '#002d62' : '#e2eafc';
-            let onCol = window.adminUsersViewMode === 'online' ? 'white' : '#002d62';
-            let onBrd = window.adminUsersViewMode === 'online' ? 'none' : '1px solid #b6ccfe';
-
-            let offBg = window.adminUsersViewMode === 'offline' ? '#002d62' : '#e2eafc';
-            let offCol = window.adminUsersViewMode === 'offline' ? 'white' : '#002d62';
-            let offBrd = window.adminUsersViewMode === 'offline' ? 'none' : '1px solid #b6ccfe';
-
-            filterBarContainer.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 6px; width: 100%; justify-content: space-between;">
-                    <span style="font-size: 12px; font-weight: bold; color: #002d62;">👤 Filter Users:</span>
-                    <div style="display: flex; gap: 6px;">
-                        <button onclick="setAdminUsersViewMode('all')" id="userFilterAll" style="background: ${allBg}; color: ${allCol}; border: ${allBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All Users</button>
-                        <button onclick="setAdminUsersViewMode('online')" id="userFilterOnline" style="background: ${onBg}; color: ${onCol}; border: ${onBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🟢 Online Users</button>
-                        <button onclick="setAdminUsersViewMode('offline')" id="userFilterOffline" style="background: ${offBg}; color: ${offCol}; border: ${offBrd}; padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">⚪ Offline Users</button>
-                    </div>
-                </div>
-            `;
-        }
-    } else {
-        if (exportCsvBtn) exportCsvBtn.style.display = 'flex';
-        if (filterBarContainer) {
-            filterBarContainer.style.display = 'flex';
-            filterBarContainer.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <span style="font-size: 12px; font-weight: bold; color: #002d62;">📅 Range Filter:</span>
-                    <button onclick="setAdminDateFilterPreset('today')" id="adminPresetToday" style="background: #002d62; color: white; border: none; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Today</button>
-                    <button onclick="setAdminDateFilterPreset('week')" id="adminPresetWeek" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">Last 7 Days</button>
-                    <button onclick="setAdminDateFilterPreset('month')" id="adminPresetMonth" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">This Month</button>
-                    <button onclick="setAdminDateFilterPreset('all')" id="adminPresetAll" style="background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 5px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">All Time</button>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #333;">
-                    <span>From:</span> <input type="date" id="adminCustomStartDate" onchange="onCustomDateRangeChanged()" value="${window.adminStartDateStr}" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
-                    <span>To:</span> <input type="date" id="adminCustomEndDate" onchange="onCustomDateRangeChanged()" value="${window.adminEndDateStr}" style="padding: 4px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px;">
-                </div>
-            `;
-            setAdminDateFilterPreset(window.adminDateFilterMode, false);
-        }
-    }
-
+    setupAdminFilterBar(tabName);
     renderAdminTabContent(tabName);
 };
 
@@ -1389,7 +1388,8 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
+    const offlineThreshold = 60000; // 1 minute threshold
+    let todayDateStr = getCurrentShiftDateKey();
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1399,11 +1399,25 @@ function renderAdminTabContent(tabName) {
         
         let allKnownUsers = new Set();
         Object.keys(sessionsData).forEach(k => {
-            if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
+            let s = sessionsData[k];
+            if (s && s.nickname) {
+                // If user logged in today or is currently active, include them
+                if (!s.shiftDate || s.shiftDate === todayDateStr || (now - s.timestamp < 86400000)) {
+                    allKnownUsers.add(s.nickname);
+                }
+            }
         });
-        Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
-        Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
         
+        // Also check today's call logs & shift reports for users active today
+        Object.keys(dbCallLogs).forEach(name => {
+            let logs = dbCallLogs[name] || [];
+            if (logs.some(l => l.shiftDate === todayDateStr)) allKnownUsers.add(name);
+        });
+        Object.keys(allReportsGrouped).forEach(name => {
+            let reps = allReportsGrouped[name] || [];
+            if (reps.some(r => r.date === todayDateStr)) allKnownUsers.add(name);
+        });
+
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
         let userListArray = Array.from(allKnownUsers);
@@ -1418,18 +1432,25 @@ function renderAdminTabContent(tabName) {
                 isOnline = true;
             }
 
+            let isTodayActive = isOnline || (sessionObj && sessionObj.shiftDate === todayDateStr);
+            if (!isTodayActive) {
+                // Check if user made any calls today
+                let agentLogs = dbCallLogs[name] || [];
+                if (agentLogs.some(l => l.shiftDate === todayDateStr)) isTodayActive = true;
+            }
+
+            // Apply view mode filters instantly
             if (window.adminUsersViewMode === 'online' && !isOnline) return;
-            if (window.adminUsersViewMode === 'offline' && isOnline) return;
+            if (window.adminUsersViewMode === 'offline' && (isOnline || !isTodayActive)) return;
+            if (window.adminUsersViewMode === 'today' && !isTodayActive) return;
 
             displayedCount++;
             let badgeHtml = isOnline 
-                ? `<span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">🟢 Online</span>`
-                : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
+                ? `<span style="font-size: 10px; background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-weight: bold;">🟢 Online Now</span>`
+                : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline Today</span>`;
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
-            
-            // Login time based directly on admin panel PC/client local clock format from session stored
-            let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
+            let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Active Today</b>`;
 
             usersHtml += `
                 <div style="background: white; border: 1px solid #e0e0e0; border-left: 4px solid ${borderColor}; padding: 12px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
@@ -1440,14 +1461,14 @@ function renderAdminTabContent(tabName) {
                         <div style="color: #666; font-size: 11px; margin-top: 4px;">${loginInfo}</div>
                     </div>
                     <div style="color: #555; font-size: 11px; background: #f8f9fa; padding: 6px 10px; border-radius: 4px; border: 1px solid #eee; text-align: right;">
-                        Last Seen: <br><b>${sessionObj && sessionObj.timestamp ? new Date(sessionObj.timestamp).toLocaleTimeString() : 'Never'}</b>
+                        Last Seen: <br><b>${sessionObj && sessionObj.timestamp ? new Date(sessionObj.timestamp).toLocaleTimeString() : 'Today'}</b>
                     </div>
                 </div>
             `;
         });
 
         if (displayedCount === 0) {
-            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users found for view mode "${window.adminUsersViewMode}".</div>`;
+            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users found for view mode "${window.adminUsersViewMode}" today.</div>`;
         }
         usersHtml += `</div>`;
         bodyContainer.innerHTML = usersHtml;
@@ -1458,9 +1479,6 @@ function renderAdminTabContent(tabName) {
         let allKnownUsers = new Set();
         Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
         Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
-        Object.keys(sessionsData).forEach(k => {
-            if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
-        });
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
         allKnownUsers.forEach(agentName => {
@@ -1476,17 +1494,13 @@ function renderAdminTabContent(tabName) {
             });
 
             if (filteredLogs.length > 0) {
-                if (!perfMap[agentName]) {
-                    perfMap[agentName] = { totalCalls: 0 };
-                }
+                if (!perfMap[agentName]) perfMap[agentName] = { totalCalls: 0 };
                 perfMap[agentName].totalCalls = filteredLogs.length;
             } else {
                 let repList = allReportsGrouped[agentName] || [];
                 let filteredReps = repList.filter(r => r.date >= startDate && r.date <= endDate);
                 if (filteredReps.length > 0) {
-                    if (!perfMap[agentName]) {
-                        perfMap[agentName] = { totalCalls: 0 };
-                    }
+                    if (!perfMap[agentName]) perfMap[agentName] = { totalCalls: 0 };
                     perfMap[agentName].totalCalls = filteredReps.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
                 }
             }
@@ -1529,9 +1543,6 @@ function renderAdminTabContent(tabName) {
         let allKnownUsers = new Set();
         Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
         Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
-        Object.keys(sessionsData).forEach(k => {
-            if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
-        });
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
         let reportsHtml = `
@@ -1922,7 +1933,6 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1930,7 +1940,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
-    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -1940,7 +1949,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -1953,11 +1961,9 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
-    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
