@@ -566,7 +566,7 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    // ====== PLACING SAFER-SPECIFIC FILTERS RIGHT ABOVE START SCANNING / HISTORY / FOLLOW-UPS ======
+    // ====== PLACING SAFER-SPECIFIC FILTERS RIGHT ABOVE START SCANNING / HISTORY / FOLLOW-UPS WITH CLEAN UI ======
     let existingFilterPanel = document.getElementById('saferAdvancedFiltersPanel');
     if (existingFilterPanel) existingFilterPanel.remove();
 
@@ -576,15 +576,11 @@ function injectHistoryUIFramework() {
         saferFilterPanel.style.cssText = "background: #f8f9fa; border: 1px solid #b6ccfe; padding: 15px; margin: 15px 0; border-radius: 8px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,45,98,0.05);";
         
         saferFilterPanel.innerHTML = `
-            <div style="font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 12px; border-bottom: 1px solid #d0e1fd; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span>⚙️ Safer Scraper Filters (Operation Classification, Carrier Operation, Cargo Carried)</span>
-                <button type="button" onclick="clearAllSaferFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Clear Filters</button>
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start;">
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
                 
-                <!-- Operation Classification Dropdown (Single Selection like State dropdown) -->
+                <!-- Operation Classification Dropdown (Single Selection) -->
                 <div style="flex: 1; min-width: 250px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Operation Classification:</label>
+                    <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Operation Classification:</label>
                     <select id="filterOpClassSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
                         <option value="">All Operation Classifications</option>
                         <option value="Auth. For Hire">Auth. For Hire</option>
@@ -601,9 +597,9 @@ function injectHistoryUIFramework() {
                     </select>
                 </div>
 
-                <!-- Carrier Operation Dropdown (Single Selection like State dropdown) -->
+                <!-- Carrier Operation Dropdown (Single Selection) -->
                 <div style="flex: 1; min-width: 220px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Carrier Operation:</label>
+                    <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Carrier Operation:</label>
                     <select id="filterCarrierOpSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
                         <option value="">All Carrier Operations</option>
                         <option value="Interstate">Interstate</option>
@@ -612,9 +608,9 @@ function injectHistoryUIFramework() {
                     </select>
                 </div>
 
-                <!-- Cargo Carried Dropdown (Single Selection like State dropdown) -->
+                <!-- Cargo Carried Dropdown (Single Selection) -->
                 <div style="flex: 1.2; min-width: 260px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Cargo Carried:</label>
+                    <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Cargo Carried:</label>
                     <select id="filterCargoSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
                         <option value="">All Cargo Carried</option>
                         <option value="General Freight">General Freight</option>
@@ -649,9 +645,13 @@ function injectHistoryUIFramework() {
                     </select>
                 </div>
 
+                <!-- Clear Filters Button -->
+                <div>
+                    <button type="button" onclick="clearAllSaferFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 9px 14px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; height: 38px;" title="Clear Filters">🔄 Clear</button>
+                </div>
+
             </div>
         `;
-        // Insert right above the start button / start scanning row container
         let startContainer = startBtn.parentNode;
         startContainer.parentNode.insertBefore(saferFilterPanel, startContainer);
     }
@@ -2939,7 +2939,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            // Extract Safer Specific Checkboxes/Marks (Operation Classification, Carrier Operation, Cargo Carried) accurately from HTML structure
+            // ====== PRECISE EXTRACTION & MAPPING OF SAFER CATEGORIES ======
             let opClassList = [];
             let carrierOpList = [];
             let cargoList = [];
@@ -3003,7 +3003,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             record.carrierOp = carrierOpList.length > 0 ? carrierOpList.join(" | ") : 'N/A';
             record.cargoCarried = cargoList.length > 0 ? cargoList.join(" | ") : 'N/A';
 
-            // ====== CORRECTED SINGLE SELECTION SAFER FILTER LOGIC ======
+            // ====== STRICT SINGLE SELECTION FILTER LOGIC (FIXED EXACT MATCHING) ======
             let selectedOpClass = (document.getElementById('filterOpClassSelect')?.value || "").trim();
             let selectedCarrierOp = (document.getElementById('filterCarrierOpSelect')?.value || "").trim();
             let selectedCargo = (document.getElementById('filterCargoSelect')?.value || "").trim();
@@ -3013,23 +3013,26 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // If user selected an Operation Classification filter, carrier MUST match it
+            // If user selected an Operation Classification filter, carrier MUST match it exactly
             if (selectedOpClass !== "") {
-                if (!record.opClass.includes(selectedOpClass)) return { status: "filtered_out" };
+                let opArr = record.opClass.split(" | ").map(s => s.trim());
+                if (!opArr.includes(selectedOpClass)) return { status: "filtered_out" };
             }
 
-            // If user selected a Carrier Operation filter, carrier MUST match it
+            // If user selected a Carrier Operation filter, carrier MUST match it exactly
             if (selectedCarrierOp !== "") {
-                if (!record.carrierOp.includes(selectedCarrierOp)) return { status: "filtered_out" };
+                let carArr = record.carrierOp.split(" | ").map(s => s.trim());
+                if (!carArr.includes(selectedCarrierOp)) return { status: "filtered_out" };
             }
 
-            // If user selected a Cargo Carried filter, carrier MUST match it
+            // If user selected a Cargo Carried filter, carrier MUST match it exactly (prevents general freight matching motor vehicles)
             if (selectedCargo !== "") {
-                if (!record.cargoCarried.includes(selectedCargo)) return { status: "filtered_out" };
+                let cargoArr = record.cargoCarried.split(" | ").map(s => s.trim());
+                if (!cargoArr.includes(selectedCargo)) return { status: "filtered_out" };
             }
 
             if (record.usdot !== 'N/A') {
-                // ====== FIXED VEHICLE TYPE EXTRACTION & ROBUST FALLBACK ======
+                // ====== ENHANCED VEHICLE TYPE EXTRACTION ======
                 try {
                     const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
                     const brokerRes = await fetch(brokerSnapshotUrl);
@@ -3063,7 +3066,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                         if (vehicleList.length > 0) {
                             record.vehicleType = vehicleList.join(" | ");
                         } else {
-                            // Check full text or table content if standard regex missed it
                             let fullBrokerText = brokerEl.textContent || "";
                             let foundTypes = [];
                             if (fullBrokerText.includes("Tractors")) foundTypes.push("Power Only");
@@ -3078,7 +3080,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                     console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
                 }
 
-                // Fallback secondary vehicle determination based on Power Units or Cargo/Operation if still N/A
                 if (record.vehicleType === 'N/A' && record.powerUnits !== 'N/A' && parseInt(record.powerUnits) > 0) {
                     let pUnits = parseInt(record.powerUnits);
                     if (record.cargoCarried.includes("General Freight") || record.cargoCarried.includes("Building Materials")) {
