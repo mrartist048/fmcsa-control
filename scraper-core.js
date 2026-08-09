@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
+    setInterval(checkGlobalSessions, 1000);
 }
 
 if (document.readyState === 'loading') {
@@ -304,7 +304,6 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
-    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -323,7 +322,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
+        const offlineThreshold = 60000;
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -482,7 +481,7 @@ function injectHistoryUIFramework() {
             .premium-followup-btn:hover { background: #e0a800; }
             
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
-            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: background-color 0.2s ease-in-out; text-decoration: none !important; display: block; border-radius: 6px !important; }
+            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: none !important; text-decoration: none !important; display: block; border-radius: 6px !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; }
             .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
             .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
@@ -490,7 +489,7 @@ function injectHistoryUIFramework() {
             .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
             .phone-icon-span { font-size: 14px; line-height: 1; }
             .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
-            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; }
+            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; z-index: 5; }
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
         `;
@@ -648,7 +647,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-    // ====== CALL DISPOSITION REVIEW MODAL ("Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -1389,7 +1387,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
+    const offlineThreshold = 60000;
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1427,8 +1425,6 @@ function renderAdminTabContent(tabName) {
                 : `<span style="font-size: 10px; background: #f1f3f4; color: #6c757d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">⚪ Offline</span>`;
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
-            
-            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -1922,7 +1918,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
+// ====== INSTANT COLOR CHANGE & CALL/COPY HANDLERS ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1930,8 +1926,11 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
-    // Trigger phone dialer
-    window.location.href = `tel:${phoneNum}`;
+    // Instant color highlight
+    if (activeCallCellElement) {
+        document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
+        activeCallCellElement.classList.add('active-called-cell');
+    }
 
     navigator.clipboard.writeText(phoneNum).then(() => {
         let badge = document.createElement('span');
@@ -1940,7 +1939,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        // 3 seconds delay before showing status review modal
+        // Trigger disposition modal after 3 seconds
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -1953,11 +1952,14 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
+    // Instant color highlight
+    document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
+    cellElement.classList.add('active-called-cell');
+
     // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -3103,5 +3105,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
