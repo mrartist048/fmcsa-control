@@ -2998,68 +2998,104 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            // Extract Safer Specific Checkboxes (Operation Classification, Carrier Operation, Cargo Carried) from the Snapshot HTML
-            let fullTextContent = el.textContent || "";
-            
-            // Extract Operation Classifications
+            // Extract Safer Specific Checkboxes/Marks (Operation Classification, Carrier Operation, Cargo Carried) accurately from HTML structure
             let opClassList = [];
-            const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
-            possibleOpClasses.forEach(op => {
-                let regex = new RegExp(`[xX]\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
-                if (regex.test(fullTextContent) || (fullTextContent.includes(op) && fullTextContent.includes("Operation Classification"))) {
-                    opClassList.push(op);
-                }
-            });
-            if (opClassList.length > 0) record.opClass = opClassList.join(" | ");
-
-            // Extract Carrier Operation
             let carrierOpList = [];
-            const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
-            possibleCarrierOps.forEach(cop => {
-                if (fullTextContent.includes(cop)) {
-                    carrierOpList.push(cop);
-                }
-            });
-            if (carrierOpList.length > 0) record.carrierOp = carrierOpList.join(" | ");
-
-            // Extract Cargo Carried
             let cargoList = [];
-            const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
-            possibleCargoes.forEach(cargo => {
-                if (fullTextContent.includes(cargo)) {
-                    cargoList.push(cargo);
+
+            // Robust extraction by searching table rows/cells containing the category names and checking for 'X' mark adjacent to them
+            let tables = el.querySelectorAll('table');
+            tables.forEach(table => {
+                let textAll = table.textContent || "";
+                if (textAll.includes("Operation Classification") || textAll.includes("Carrier Operation") || textAll.includes("Cargo Carried")) {
+                    let rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        let rowText = row.textContent || "";
+                        let cellsInRow = row.querySelectorAll('td, th');
+                        
+                        // Check cells for 'X' marks next to category names
+                        cellsInRow.forEach(cell => {
+                            let cellHtml = cell.innerHTML || "";
+                            let cellText = cell.textContent.trim();
+                            
+                            // Check if cell contains an X mark (either bold 'X', 'x', or inside table formatting)
+                            let hasMark = /\b[Xx]\b/.test(cellText) || cellHtml.includes("<b>X</b>") || cellHtml.includes("<b>x</b>") || cellHtml.includes(">X<") || cellHtml.includes(">x<");
+                            
+                            if (hasMark) {
+                                // Find which category label is in this cell or row
+                                const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
+                                const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
+                                const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
+
+                                possibleOpClasses.forEach(op => {
+                                    if (cellText.includes(op) && !opClassList.includes(op)) opClassList.push(op);
+                                });
+                                possibleCarrierOps.forEach(cop => {
+                                    if (cellText.includes(cop) && !carrierOpList.includes(cop)) carrierOpList.push(cop);
+                                });
+                                possibleCargoes.forEach(cargo => {
+                                    if (cellText.includes(cargo) && !cargoList.includes(cargo)) cargoList.push(cargo);
+                                });
+                            }
+                        });
+                    });
                 }
             });
-            if (cargoList.length > 0) record.cargoCarried = cargoList.join(" | ");
 
-            // ====== CHECK USER APPLIED SAFER FILTERS ======
+            // Fallback text check if table parsing missed anything due to layout structure
+            let fullTextContent = el.textContent || "";
+            if (opClassList.length === 0) {
+                const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
+                possibleOpClasses.forEach(op => {
+                    let regex = new RegExp(`[xX]\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
+                    if (regex.test(fullTextContent)) opClassList.push(op);
+                });
+            }
+            if (carrierOpList.length === 0) {
+                const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
+                possibleCarrierOps.forEach(cop => {
+                    let regex = new RegExp(`[xX]\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
+                    if (regex.test(fullTextContent) || fullTextContent.includes(cop)) carrierOpList.push(cop);
+                });
+            }
+            if (cargoList.length === 0) {
+                const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
+                possibleCargoes.forEach(cargo => {
+                    let regex = new RegExp(`[xX]\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
+                    if (regex.test(fullTextContent)) cargoList.push(cargo);
+                });
+            }
+
+            record.opClass = opClassList.length > 0 ? opClassList.join(" | ") : 'N/A';
+            record.carrierOp = carrierOpList.length > 0 ? carrierOpList.join(" | ") : 'N/A';
+            record.cargoCarried = cargoList.length > 0 ? cargoList.join(" | ") : 'N/A';
+
+            // ====== CORRECTED USER APPLIED SAFER FILTERS LOGIC ======
             let selectedOpClasses = Array.from(document.querySelectorAll('#filterOpClassContainer input[type="checkbox"]:checked')).map(cb => cb.value);
             let selectedCarrierOps = Array.from(document.querySelectorAll('#filterCarrierOpContainer input[type="checkbox"]:checked')).map(cb => cb.value);
             let selectedCargoes = Array.from(document.querySelectorAll('#filterCargoContainer input[type="checkbox"]:checked')).map(cb => cb.value);
 
-            // If user applied Operation Classification filter
+            // Always enforce Authorized status check first
+            if (record.status !== "AUTHORIZED") { 
+                return { status: "filtered_out" }; 
+            }
+
+            // If user selected Operation Classification filters, carrier MUST match at least one selected operation classification
             if (selectedOpClasses.length > 0) {
                 let matchesOpClass = selectedOpClasses.some(sel => record.opClass.includes(sel));
                 if (!matchesOpClass) return { status: "filtered_out" };
             }
 
-            // If user applied Carrier Operation filter
+            // If user selected Carrier Operation filters, carrier MUST match at least one selected carrier operation
             if (selectedCarrierOps.length > 0) {
                 let matchesCarrierOp = selectedCarrierOps.some(sel => record.carrierOp.includes(sel));
                 if (!matchesCarrierOp) return { status: "filtered_out" };
             }
 
-            // If user applied Cargo Carried filter
+            // If user selected Cargo Carried filters, carrier MUST match at least one selected cargo carried category
             if (selectedCargoes.length > 0) {
                 let matchesCargo = selectedCargoes.some(sel => record.cargoCarried.includes(sel));
                 if (!matchesCargo) return { status: "filtered_out" };
-            }
-
-            // If no specific Safer filters are selected, default to Authorized status check
-            if (selectedOpClasses.length === 0 && selectedCarrierOps.length === 0 && selectedCargoes.length === 0) {
-                if (record.status !== "AUTHORIZED") { 
-                    return { status: "filtered_out" }; 
-                }
             }
 
             if (record.usdot !== 'N/A') {
