@@ -323,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000; // Updated to exactly 1 minute for offline delay
+        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -1389,25 +1389,20 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000; // Updated to 1 minute threshold for precise offline status
+    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
-    let todayDateStr = new Date().toISOString().split('T')[0];
 
     if (tabName === 'online') {
         let usersHtml = `<div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">`;
         
         let allKnownUsers = new Set();
         Object.keys(sessionsData).forEach(k => {
-            let sObj = sessionsData[k];
-            if (sObj && sObj.timestamp) {
-                let sessionLocalDate = new Date(sObj.timestamp).toISOString().split('T')[0];
-                if (sessionLocalDate === todayDateStr && sObj.nickname) {
-                    allKnownUsers.add(sObj.nickname);
-                }
-            }
+            if (sessionsData[k] && sessionsData[k].nickname) allKnownUsers.add(sessionsData[k].nickname);
         });
+        Object.keys(allReportsGrouped).forEach(name => allKnownUsers.add(name));
+        Object.keys(dbCallLogs).forEach(name => allKnownUsers.add(name));
         
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
@@ -1415,10 +1410,7 @@ function renderAdminTabContent(tabName) {
         let displayedCount = 0;
 
         userListArray.forEach(name => {
-            let userSessionKey = Object.keys(sessionsData).find(k => {
-                let s = sessionsData[k];
-                return s && s.nickname === name && new Date(s.timestamp).toISOString().split('T')[0] === todayDateStr;
-            });
+            let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
             let sessionObj = userSessionKey ? sessionsData[userSessionKey] : null;
             
             let isOnline = false;
@@ -1436,6 +1428,7 @@ function renderAdminTabContent(tabName) {
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
             
+            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -1454,7 +1447,7 @@ function renderAdminTabContent(tabName) {
         });
 
         if (displayedCount === 0) {
-            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users found for view mode "${window.adminUsersViewMode}" today.</div>`;
+            usersHtml += `<div style="text-align: center; color: #6c757d; font-size: 13px; font-style: italic; padding: 30px;">No users found for view mode "${window.adminUsersViewMode}".</div>`;
         }
         usersHtml += `</div>`;
         bodyContainer.innerHTML = usersHtml;
@@ -1541,7 +1534,7 @@ function renderAdminTabContent(tabName) {
         });
         if (dispatcherNickname) allKnownUsers.add(dispatcherNickname);
 
-        reportsHtml = `
+        let reportsHtml = `
             <div style="font-size: 11px; color: #6c757d; text-align: left; margin-bottom: 8px;">
                 📅 Shift Reports & Pickup Ratio Breakdown from <b>${startDate}</b> to <b>${endDate}</b>
             </div>
@@ -2578,4 +2571,535 @@ window.loadHistorySheetToTable = async function(id) {
                 ${phoneCellHTML}
                 <td>${record.address}</td> 
                 ${emailCellHTML}
-        Sorry, something went wrong. Please try your request again.
+                <td>${record.powerUnits}</td>
+                <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                </td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+            </tr>`;
+        }
+        populateStateDropdown();
+        populateVehicleTypeCheckboxes();
+        toggleHistoryDrawer(); 
+    };
+};
+
+window.resumeHistorySheet = async function(id) {
+    const tx = db.transaction("history", "readonly");
+    const req = tx.objectStore("history").get(id);
+
+    req.onsuccess = async function() {
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
+        if (!item || !item.range) return;
+
+        let parts = item.range.split('-');
+        let startRange = parseInt(parts[0].trim());
+        let endRange = parseInt(parts[1].trim());
+
+        let startInput = document.getElementById('startMc');
+        let endInput = document.getElementById('endMc');
+        if (startInput) startInput.value = startRange;
+        if (endInput) endInput.value = endRange;
+
+        scrapedData = item.records || [];
+        currentHistoryId = item.id;
+        window.activeScrapeRange = item.range;
+
+        const tableBody = document.getElementById('resultsTable');
+        tableBody.innerHTML = '';
+        
+        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+        for (let index = 0; index < scrapedData.length; index++) {
+            let record = scrapedData[index];
+            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+            let phoneCellHTML = buildPhoneCellMarkup(record.phone);
+            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
+            let activeRemarksValue = record.remarks || "";
+
+            tableBody.innerHTML += `<tr ${rowStyleHTML}>
+                <td><b>${record.mc}</b></td>
+                <td>${record.usdot}</td>
+                <td>${record.name}</td>
+                <td>${record.entityType}</td>
+                <td><span class="badge badge-active">${record.status}</span></td>
+                ${phoneCellHTML}
+                <td>${record.address}</td> 
+                ${emailCellHTML}
+                <td>${record.powerUnits}</td>
+                <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
+                <td class="remarks-cell-container">
+                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                </td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+            </tr>`;
+        }
+        populateStateDropdown();
+        populateVehicleTypeCheckboxes();
+        toggleHistoryDrawer();
+        
+        let nextStartMc = startRange;
+        if (scrapedData.length > 0) {
+            let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
+            if (!isNaN(maxScannedMc) && maxScannedMc >= startRange) {
+                nextStartMc = maxScannedMc + 1;
+            }
+        }
+        
+        startScraping(nextStartMc, endRange);
+    };
+};
+
+window.downloadHistoryCSV = function(id) {
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const req = store.get(id);
+    req.onsuccess = function() {
+        let item = req.result;
+        if (!item) {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            item = lsBackup.find(r => r.id === id);
+        }
+        let recordsList = item && item.records ? item.records : [];
+        if (recordsList.length > 0) {
+            triggerCSVDownload(recordsList, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
+        }
+    };
+};
+
+window.deleteHistoryItem = function(id) {
+    if (confirm("Delete this sheet from history?")) {
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.delete(id);
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup = lsBackup.filter(r => r.id !== id);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+            renderHistoryItems();
+        };
+    }
+};
+
+function triggerCSVDownload(recordsData, filename) {
+    const csv = generateCSVString(recordsData);
+    let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
+function updateRealTimeHistory(recordsArray, isCompleted = false) {
+    if (!db || currentHistoryId === null) return;
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const req = store.get(currentHistoryId);
+    
+    req.onsuccess = function() {
+        const data = req.result;
+        if (data) {
+            data.totalRecords = recordsArray.length;
+            data.records = recordsArray;
+            data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
+            
+            store.put(data);
+            
+            tx.oncomplete = function() {
+                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+                let index = lsBackup.findIndex(r => r.id === currentHistoryId);
+                if (index !== -1) {
+                    lsBackup[index] = data;
+                } else {
+                    lsBackup.push(data);
+                }
+                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+                
+                if (document.getElementById('dlHistoryDrawer') && document.getElementById('dlHistoryDrawer').style.right === "0px") {
+                    renderHistoryItems();
+                }
+            };
+        }
+    };
+}
+
+let scraping = false; 
+let scrapedData = [];
+
+window.stopScraping = function() {
+    scraping = false;
+    let statusBox = document.getElementById('status');
+    if (statusBox) {
+        statusBox.style.background = "#fff3cd";
+        statusBox.style.color = "#856404";
+        statusBox.style.padding = "10px 15px";
+        statusBox.innerHTML = "<strong>⏸️ Processing Paused Safely. Click Start to resume/run again.</strong>";
+    }
+    if (currentHistoryId) {
+        updateRealTimeHistory(scrapedData, false);
+    }
+}
+
+async function processSingleMCWithDetailedError(mc, statusBox) {
+    let maxRetries = 3;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            const sessionUrl = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
+            const sRes = await fetch(sessionUrl);
+            const sData = await sRes.json() || {};
+            let now = Date.now();
+            const offlineThreshold = 60000;
+            
+            let activeCount = 0;
+            Object.keys(sData).forEach(k => {
+                let session = sData[k];
+                if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
+                    activeCount++;
+                }
+            });
+
+            if (userLimit > 0 && activeCount > userLimit) {
+                if (statusBox) {
+                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeCount}/${userLimit}). Pausing scraping...</strong>`;
+                }
+                return { status: "limit_exceeded" };
+            }
+
+            const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
+            const response = await fetch(snapshotUrl);
+            
+            if (!response.ok) {
+                attempt++;
+                if (statusBox) {
+                    statusBox.innerHTML = `<strong>⚠️ Safer Server Issue (Attempt ${attempt}/${maxRetries}). Retrying...</strong>`;
+                }
+                await new Promise(r => setTimeout(r, 2000 * attempt));
+                continue;
+            }
+
+            const htmlText = await response.text();
+
+            if (htmlText.includes("Record not found") || htmlText.includes("No records found") || !htmlText.includes("USDOT Number:")) {
+                return { status: "not_found" };
+            }
+
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let el = document.createElement('html');
+            el.innerHTML = htmlText;
+            let cells = el.querySelectorAll('td, th');
+
+            for (let i = 0; i < cells.length; i++) {
+                let text = cells[i].textContent.trim();
+                if (text.startsWith("Legal Name:") || text.startsWith("Entity Name:")) {
+                    if(cells[i+1]) record.name = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("USDOT Number:")) {
+                    if(cells[i+1]) record.usdot = cells[i+1].textContent.trim().split(/\s+/)[0];
+                }
+                if (text.startsWith("Entity Type:")) {
+                    if(cells[i+1]) record.entityType = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+                if (text.startsWith("Operating Authority Status:")) {
+                    if (cells[i+1]) {
+                        let rawStatus = cells[i+1].textContent.toUpperCase();
+                        if (rawStatus.includes("NOT AUTHORIZED")) {
+                            record.status = "NOT AUTHORIZED";
+                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
+                            record.status = "AUTHORIZED";
+                        } else {
+                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
+                        }
+                    }
+                }
+                if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Phone:")) { if(cells[i+1]) record.phone = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
+                if (text.startsWith("Physical Address:") || (text.startsWith("Address:") && !text.includes("Mailing"))) {
+                    if(cells[i+1]) record.address = cells[i+1].textContent.trim().replace(/\s+/g, ' ');
+                }
+            }
+
+            if (record.status !== "AUTHORIZED") { 
+                return { status: "filtered_out" }; 
+            }
+
+            if (record.usdot !== 'N/A') {
+                try {
+                    const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
+                    const brokerRes = await fetch(brokerSnapshotUrl);
+                    
+                    if (brokerRes.ok) {
+                        const brokerHtml = await brokerRes.text();
+                        let brokerEl = document.createElement('html');
+                        brokerEl.innerHTML = brokerHtml;
+                        
+                        let vehicleList = [];
+                        let textNodes = brokerEl.querySelectorAll('div, span, a, td, th, p');
+                        
+                        textNodes.forEach(node => {
+                            let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
+                            
+                            if (/^Tractors\s+\d+$/i.test(cleanText)) {
+                                let num = cleanText.match(/\d+/)[0];
+                                let formatted = `Power Only ${num}`;
+                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                            } else if (/^Trucks\s+\d+$/i.test(cleanText)) {
+                                let num = cleanText.match(/\d+/)[0];
+                                let formatted = `Box Truck ${num}`;
+                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                            } else if (/^Trailers\s+\d+$/i.test(cleanText)) {
+                                let num = cleanText.match(/\d+/)[0];
+                                let formatted = `Trailers ${num}`;
+                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                            }
+                        });
+
+                        if (vehicleList.length > 0) {
+                            record.vehicleType = vehicleList.join(" | ");
+                        }
+                    }
+                } catch (bErr) {
+                    console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
+                }
+
+                try {
+                    const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
+                    const smsResponse = await fetch(smsUrl);
+                    if (smsResponse.ok) {
+                        const smsHtml = await smsResponse.text();
+                        let smsEl = document.createElement('html');
+                        smsEl.innerHTML = smsHtml;
+                        let smsCells = smsEl.querySelectorAll('td, th, span, label, a');
+                        for (let j = 0; j < smsCells.length; j++) {
+                            let smsText = smsCells[j].textContent.trim();
+                            if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
+                                let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+                                if (emailMatch && !emailMatch[0].includes("fmcsa") && !emailMatch[0].includes("dot.gov")) { 
+                                    record.email = emailMatch[0]; 
+                                    break; 
+                                }
+                            }
+                        }
+                        if (record.email === 'N/A') {
+                            let fullPageEmailMatch = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+                            if (fullPageEmailMatch) {
+                                let validEmail = fullPageEmailMatch.find(e => !e.toLowerCase().includes("fmcsa") && !e.toLowerCase().includes("dot.gov"));
+                                if (validEmail) record.email = validEmail;
+                            }
+                        }
+                    }
+                } catch (smsErr) { 
+                    console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
+                }
+            }
+            return { status: "success", data: record };
+
+        } catch (err) {
+            attempt++;
+            if (statusBox) {
+                statusBox.innerHTML = `<strong>⚠️ Safer Server Issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
+            }
+            await new Promise(r => setTimeout(r, 3000 * attempt));
+        }
+    }
+    return { status: "error", message: `Failed after retries for MC ${mc}` };
+}
+
+window.startScraping = async function(overrideStart = null, overrideEnd = null) {
+    const start = overrideStart !== null ? overrideStart : parseInt(document.getElementById('startMc').value);
+    const end = overrideEnd !== null ? overrideEnd : parseInt(document.getElementById('endMc').value);
+
+    if (isNaN(start) || isNaN(end) || start > end) {
+        let stBox = document.getElementById('status');
+        if (stBox) stBox.innerText = "Please enter a valid MC range.";
+        return;
+    }
+
+    let currentRangeStr = `${start} - ${end}`;
+    if (!currentHistoryId || window.activeScrapeRange !== currentRangeStr) {
+        if (overrideStart === null) {
+            currentHistoryId = null;
+            scrapedData = [];
+        }
+        window.activeScrapeRange = currentRangeStr;
+        if (overrideStart === null) {
+            const tableBody = document.getElementById('resultsTable');
+            if (tableBody) tableBody.innerHTML = '';
+        }
+    }
+
+    scraping = true; 
+    document.getElementById('startBtn').style.display = 'none';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.getElementById('downloadBtn').style.display = 'none';
+
+    let totalToScan = end - start + 1;
+    let totalProcessed = 0;
+    let errorDetailsList = [];
+    let startTime = Date.now();
+
+    let statusBox = document.getElementById('status');
+    if (statusBox) {
+        statusBox.style.display = "flex";
+        statusBox.style.flexDirection = "row";
+        statusBox.style.alignItems = "center";
+        statusBox.style.justifyContent = "space-between";
+        statusBox.style.padding = "10px 15px";
+        statusBox.style.background = "#f8f9fa";
+        statusBox.style.color = "#333";
+        statusBox.style.border = "1px solid #e9ecef";
+        statusBox.style.borderLeft = "5px solid #002d62";
+        statusBox.style.borderRadius = "4px";
+    }
+
+    if (!currentHistoryId && db) {
+        const now = new Date();
+        const formattedDate = now.toLocaleString('en-US', { hour12: true });
+
+        const initialHistoryItem = {
+            id: Date.now(),
+            date: formattedDate,
+            range: currentRangeStr,
+            totalRecords: scrapedData.length,
+            status: "Interrupted (Auto-Saved)",
+            records: scrapedData
+        };
+
+        currentHistoryId = initialHistoryItem.id;
+        const tx = db.transaction("history", "readwrite");
+        const store = tx.objectStore("history");
+        store.add(initialHistoryItem);
+        
+        tx.oncomplete = function() {
+            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
+            lsBackup.push(initialHistoryItem);
+            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
+        };
+    }
+
+    let effectiveStart = start;
+    if (scrapedData.length > 0) {
+        let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
+        if (!isNaN(maxScannedMc) && maxScannedMc >= start && maxScannedMc < end) {
+            effectiveStart = maxScannedMc + 1;
+        }
+    }
+
+    for (let mc = effectiveStart; mc <= end; mc++) {
+        if (!scraping) break;
+
+        let result = await processSingleMCWithDetailedError(mc, statusBox);
+        
+        if (result.status === "limit_exceeded") {
+            stopScraping();
+            showLimitExceededModal(`Your global license limit for "${currentClient}" has been reached. Max allowed active tabs/devices is <b>${userLimit}</b>. Scraping has been paused safely.`);
+            break;
+        }
+
+        totalProcessed++;
+
+        if (result.status === "error") {
+            errorDetailsList.push(result.message);
+        } else {
+            errorDetailsList = []; 
+            if (result.status === "success" && result.data) {
+                let record = result.data;
+                scrapedData.push(record);
+                let recordIndex = scrapedData.length - 1;
+                updateRealTimeHistory(scrapedData, false);
+
+                let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+                let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
+                let activeRemarksValue = record.remarks || "";
+
+                const tableBody = document.getElementById('resultsTable');
+                let newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td><b>${record.mc}</b></td>
+                    <td>${record.usdot}</td>
+                    <td>${record.name}</td>
+                    <td>${record.entityType}</td>
+                    <td><span class="badge badge-active">${record.status}</span></td>
+                    ${phoneCellMarkup}
+                    <td>${record.address}</td>
+                    ${emailCellMarkup}
+                    <td>${record.powerUnits}</td>
+                    <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
+                    <td class="remarks-cell-container">
+                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
+                    </td>
+                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                `;
+                tableBody.appendChild(newRow);
+            }
+        }
+
+        let percentage = Math.floor((totalProcessed / totalToScan) * 100);
+        let elapsedSeconds = (Date.now() - startTime) / 1000;
+        let avgTimePerMC = elapsedSeconds / (totalProcessed || 1);
+        let remainingMCs = totalToScan - totalProcessed;
+        let estimatedRemainingSeconds = remainingMCs * avgTimePerMC;
+
+        let mins = Math.floor(estimatedRemainingSeconds / 60);
+        let secs = Math.floor(estimatedRemainingSeconds % 60);
+        let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
+        let degrees = percentage * 3.6;
+
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
+
+        if (statusBox && scraping) {
+            statusBox.innerHTML = `
+                <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                    <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
+                        ${latestErrorText}
+                    </div>
+                </div>
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                </div>
+            `;
+        }
+        populateStateDropdown();
+        populateVehicleTypeCheckboxes();
+        applyAdvancedFilters();
+
+        await new Promise(r => setTimeout(r, 350));
+    }
+
+    scraping = false;
+    document.getElementById('startBtn').style.display = 'inline-block';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'none';
+
+    if (statusBox) {
+        statusBox.style.padding = "15px";
+        statusBox.style.display = "flex";
+        statusBox.style.borderLeft = "5px solid #28a745";
+        statusBox.innerHTML = `<strong style="font-size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
+    }
+
+    if(scrapedData.length > 0) {
+        document.getElementById('downloadBtn').style.display = 'inline-block';
+        updateRealTimeHistory(scrapedData, true);
+    }
+}
+
+window.downloadCSV = function() {
+    if(scrapedData.length > 0) {
+        const start = document.getElementById('startMc').value;
+        const end = document.getElementById('endMc').value;
+        triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
+    }
+}
