@@ -566,85 +566,121 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    // ====== INJECT SAFER-SPECIFIC FILTER PANELS (Operation Classification, Carrier Operation, Cargo Carried) ======
-    if (startBtn && !document.getElementById('saferAdvancedFiltersPanel')) {
+    // ====== REDESIGNED SAFER-SPECIFIC DROPDOWN & CHECKBOX FILTER PANELS ======
+    let existingFilterPanel = document.getElementById('saferAdvancedFiltersPanel');
+    if (existingFilterPanel) existingFilterPanel.remove();
+
+    if (startBtn) {
         let saferFilterPanel = document.createElement('div');
         saferFilterPanel.id = 'saferAdvancedFiltersPanel';
-        saferFilterPanel.style.cssText = "background: #f8f9fa; border: 1px solid #b6ccfe; padding: 15px; margin: 12px 0; border-radius: 8px; font-family: sans-serif;";
+        saferFilterPanel.style.cssText = "background: #f8f9fa; border: 1px solid #b6ccfe; padding: 15px; margin: 15px 0; border-radius: 8px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,45,98,0.05);";
         
         saferFilterPanel.innerHTML = `
-            <div style="font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 10px; border-bottom: 1px solid #d0e1fd; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 12px; border-bottom: 1px solid #d0e1fd; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <span>⚙️ Safer Scraper Filters (Operation Classification, Carrier Operation, Cargo Carried)</span>
-                <button type="button" onclick="clearAllSaferFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Clear Filters</button>
+                <button type="button" onclick="clearAllSaferFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Clear Filters</button>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-                <!-- Operation Classification -->
-                <div style="flex: 1; min-width: 240px;">
-                    <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px;">Operation Classification:</div>
-                    <div id="filterOpClassContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Auth. For Hire"> Auth. For Hire</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Exempt For Hire"> Exempt For Hire</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Private(Property)"> Private(Property)</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Priv. Pass. (Business)"> Priv. Pass. (Business)</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Priv. Pass.(Non-business)"> Priv. Pass.(Non-business)</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Migrant"> Migrant</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="U.S. Mail"> U.S. Mail</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Fed. Gov't"> Fed. Gov't</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="State Gov't"> State Gov't</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Local Gov't"> Local Gov't</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Indian Nation"> Indian Nation</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start;">
+                
+                <!-- Operation Classification Dropdown with Checkboxes -->
+                <div style="flex: 1; min-width: 250px; position: relative;">
+                    <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Operation Classification:</label>
+                    <div onclick="toggleSaferDropdown('opClassDropdownContent', event)" style="background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="opClassDropdownLabel">Select Operation Classifications ▼</span>
+                        <span style="font-size: 10px; color: #666;">▼</span>
+                    </div>
+                    <div id="opClassDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 10000; width: 100%; top: 100%; left: 0; margin-top: 4px; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;" id="filterOpClassContainer">
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Auth. For Hire" onchange="updateDropdownLabel('opClass')"> Auth. For Hire</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Exempt For Hire" onchange="updateDropdownLabel('opClass')"> Exempt For Hire</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Private(Property)" onchange="updateDropdownLabel('opClass')"> Private(Property)</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Priv. Pass. (Business)" onchange="updateDropdownLabel('opClass')"> Priv. Pass. (Business)</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Priv. Pass.(Non-business)" onchange="updateDropdownLabel('opClass')"> Priv. Pass.(Non-business)</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Migrant" onchange="updateDropdownLabel('opClass')"> Migrant</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="U.S. Mail" onchange="updateDropdownLabel('opClass')"> U.S. Mail</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Fed. Gov't" onchange="updateDropdownLabel('opClass')"> Fed. Gov't</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="State Gov't" onchange="updateDropdownLabel('opClass')"> State Gov't</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Local Gov't" onchange="updateDropdownLabel('opClass')"> Local Gov't</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Indian Nation" onchange="updateDropdownLabel('opClass')"> Indian Nation</label>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Carrier Operation -->
-                <div style="flex: 1; min-width: 200px;">
-                    <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px;">Carrier Operation:</div>
-                    <div id="filterCarrierOpContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Interstate"> Interstate</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Intrastate Only (HM)"> Intrastate Only (HM)</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Intrastate Only (Non-HM)"> Intrastate Only (Non-HM)</label>
+                <!-- Carrier Operation Dropdown with Checkboxes -->
+                <div style="flex: 1; min-width: 220px; position: relative;">
+                    <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Carrier Operation:</label>
+                    <div onclick="toggleSaferDropdown('carrierOpDropdownContent', event)" style="background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="carrierOpDropdownLabel">Select Carrier Operations ▼</span>
+                        <span style="font-size: 10px; color: #666;">▼</span>
+                    </div>
+                    <div id="carrierOpDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 10000; width: 100%; top: 100%; left: 0; margin-top: 4px; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;" id="filterCarrierOpContainer">
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Interstate" onchange="updateDropdownLabel('carrierOp')"> Interstate</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Intrastate Only (HM)" onchange="updateDropdownLabel('carrierOp')"> Intrastate Only (HM)</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Intrastate Only (Non-HM)" onchange="updateDropdownLabel('carrierOp')"> Intrastate Only (Non-HM)</label>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Cargo Carried -->
-                <div style="flex: 1.5; min-width: 260px;">
-                    <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px;">Cargo Carried:</div>
-                    <div id="filterCargoContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="General Freight"> General Freight</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Household Goods"> Household Goods</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Metal: sheets, coils, rolls"> Metal: sheets, coils, rolls</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Motor Vehicles"> Motor Vehicles</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Drive/Tow away"> Drive/Tow away</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Logs, Poles, Beams, Lumber"> Logs, Poles, Beams, Lumber</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Building Materials"> Building Materials</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Mobile Homes"> Mobile Homes</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Machinery, Large Objects"> Machinery, Large Objects</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Fresh Produce"> Fresh Produce</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Liquids/Gases"> Liquids/Gases</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Intermodal Cont."> Intermodal Cont.</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Passengers"> Passengers</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Oilfield Equipment"> Oilfield Equipment</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Livestock"> Livestock</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Grain, Feed, Hay"> Grain, Feed, Hay</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Coal/Coke"> Coal/Coke</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Meat"> Meat</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Garbage/Refuse"> Garbage/Refuse</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="US Mail"> US Mail</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Chemicals"> Chemicals</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Commodities Dry Bulk"> Commodities Dry Bulk</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Refrigerated Food"> Refrigerated Food</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Beverages"> Beverages</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Paper Products"> Paper Products</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Utilities"> Utilities</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Agricultural/Farm Supplies"> Agricultural/Farm Supplies</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Construction"> Construction</label>
-                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Water Well"> Water Well</label>
+                <!-- Cargo Carried Dropdown with Checkboxes -->
+                <div style="flex: 1.2; min-width: 260px; position: relative;">
+                    <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 4px;">Cargo Carried:</label>
+                    <div onclick="toggleSaferDropdown('cargoDropdownContent', event)" style="background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="cargoDropdownLabel">Select Cargo Carried ▼</span>
+                        <span style="font-size: 10px; color: #666;">▼</span>
+                    </div>
+                    <div id="cargoDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; z-index: 10000; width: 100%; top: 100%; left: 0; margin-top: 4px; box-sizing: border-box; max-height: 220px; overflow-y: auto;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;" id="filterCargoContainer">
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="General Freight" onchange="updateDropdownLabel('cargo')"> General Freight</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Household Goods" onchange="updateDropdownLabel('cargo')"> Household Goods</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Metal: sheets, coils, rolls" onchange="updateDropdownLabel('cargo')"> Metal: sheets, coils, rolls</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Motor Vehicles" onchange="updateDropdownLabel('cargo')"> Motor Vehicles</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Drive/Tow away" onchange="updateDropdownLabel('cargo')"> Drive/Tow away</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Logs, Poles, Beams, Lumber" onchange="updateDropdownLabel('cargo')"> Logs, Poles, Beams, Lumber</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Building Materials" onchange="updateDropdownLabel('cargo')"> Building Materials</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Mobile Homes" onchange="updateDropdownLabel('cargo')"> Mobile Homes</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Machinery, Large Objects" onchange="updateDropdownLabel('cargo')"> Machinery, Large Objects</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Fresh Produce" onchange="updateDropdownLabel('cargo')"> Fresh Produce</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Liquids/Gases" onchange="updateDropdownLabel('cargo')"> Liquids/Gases</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Intermodal Cont." onchange="updateDropdownLabel('cargo')"> Intermodal Cont.</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Passengers" onchange="updateDropdownLabel('cargo')"> Passengers</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Oilfield Equipment" onchange="updateDropdownLabel('cargo')"> Oilfield Equipment</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Livestock" onchange="updateDropdownLabel('cargo')"> Livestock</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Grain, Feed, Hay" onchange="updateDropdownLabel('cargo')"> Grain, Feed, Hay</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Coal/Coke" onchange="updateDropdownLabel('cargo')"> Coal/Coke</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Meat" onchange="updateDropdownLabel('cargo')"> Meat</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Garbage/Refuse" onchange="updateDropdownLabel('cargo')"> Garbage/Refuse</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="US Mail" onchange="updateDropdownLabel('cargo')"> US Mail</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Chemicals" onchange="updateDropdownLabel('cargo')"> Chemicals</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Commodities Dry Bulk" onchange="updateDropdownLabel('cargo')"> Commodities Dry Bulk</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Refrigerated Food" onchange="updateDropdownLabel('cargo')"> Refrigerated Food</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Beverages" onchange="updateDropdownLabel('cargo')"> Beverages</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Paper Products" onchange="updateDropdownLabel('cargo')"> Paper Products</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Utilities" onchange="updateDropdownLabel('cargo')"> Utilities</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Agricultural/Farm Supplies" onchange="updateDropdownLabel('cargo')"> Agricultural/Farm Supplies</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Construction" onchange="updateDropdownLabel('cargo')"> Construction</label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Water Well" onchange="updateDropdownLabel('cargo')"> Water Well</label>
+                        </div>
                     </div>
                 </div>
+
             </div>
         `;
         let targetRef = document.getElementById('status') || startBtn.parentNode;
         targetRef.parentNode.insertBefore(saferFilterPanel, targetRef);
+
+        // Global click listener to close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            ['opClassDropdownContent', 'carrierOpDropdownContent', 'cargoDropdownContent'].forEach(id => {
+                let dropdown = document.getElementById(id);
+                if (dropdown && dropdown.style.display === 'block') {
+                    let parentContainer = dropdown.parentNode;
+                    if (!parentContainer.contains(e.target)) {
+                        dropdown.style.display = 'none';
+                    }
+                }
+            });
+        });
     }
 
     if (!document.getElementById('dlHistoryDrawer')) {
@@ -803,8 +839,49 @@ function injectHistoryUIFramework() {
     injectEmailProposalPanel();
 }
 
+window.toggleSaferDropdown = function(dropdownId, e) {
+    e.stopPropagation();
+    let dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+
+    // Close any other open safer dropdowns first
+    ['opClassDropdownContent', 'carrierOpDropdownContent', 'cargoDropdownContent'].forEach(id => {
+        if (id !== dropdownId) {
+            let other = document.getElementById(id);
+            if (other) other.style.display = 'none';
+        }
+    });
+
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+};
+
+window.updateDropdownLabel = function(type) {
+    let containerId = type === 'opClass' ? 'filterOpClassContainer' : type === 'carrierOp' ? 'filterCarrierOpContainer' : 'filterCargoContainer';
+    let labelId = type === 'opClass' ? 'opClassDropdownLabel' : type === 'carrierOp' ? 'carrierOpDropdownLabel' : 'cargoDropdownLabel';
+    let defaultText = type === 'opClass' ? 'Select Operation Classifications ▼' : type === 'carrierOp' ? 'Select Carrier Operations ▼' : 'Select Cargo Carried ▼';
+
+    let checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`);
+    let labelSpan = document.getElementById(labelId);
+
+    if (!labelSpan) return;
+
+    if (checkboxes.length === 0) {
+        labelSpan.innerText = defaultText;
+    } else if (checkboxes.length === 1) {
+        labelSpan.innerText = checkboxes[0].value;
+    } else {
+        labelSpan.innerText = `${checkboxes.length} Selected`;
+    }
+};
+
 window.clearAllSaferFilters = function() {
     document.querySelectorAll('#saferAdvancedFiltersPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    ['opClassDropdownLabel', 'carrierOpDropdownLabel', 'cargoDropdownLabel'].forEach((id, idx) => {
+        let span = document.getElementById(id);
+        if (span) {
+            span.innerText = idx === 0 ? 'Select Operation Classifications ▼' : idx === 1 ? 'Select Carrier Operations ▼' : 'Select Cargo Carried ▼';
+        }
+    });
     showPremiumNotification("🔄 Safer scraper filters cleared!", 2500);
 };
 
@@ -2928,10 +3005,8 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             let opClassList = [];
             const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
             possibleOpClasses.forEach(op => {
-                // If the keyword appears near an 'x' or checked indicator in the snapshot page
                 let regex = new RegExp(`[xX]\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
                 if (regex.test(fullTextContent) || (fullTextContent.includes(op) && fullTextContent.includes("Operation Classification"))) {
-                    // Let's do a more precise check if possible, or include if present and checked
                     opClassList.push(op);
                 }
             });
