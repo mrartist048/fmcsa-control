@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
+    setInterval(checkGlobalSessions, 1000);
 }
 
 if (document.readyState === 'loading') {
@@ -304,7 +304,6 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
-    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -323,7 +322,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
+        const offlineThreshold = 60000;
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -567,6 +566,87 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
+    // ====== INJECT SAFER-SPECIFIC FILTER PANELS (Operation Classification, Carrier Operation, Cargo Carried) ======
+    if (startBtn && !document.getElementById('saferAdvancedFiltersPanel')) {
+        let saferFilterPanel = document.createElement('div');
+        saferFilterPanel.id = 'saferAdvancedFiltersPanel';
+        saferFilterPanel.style.cssText = "background: #f8f9fa; border: 1px solid #b6ccfe; padding: 15px; margin: 12px 0; border-radius: 8px; font-family: sans-serif;";
+        
+        saferFilterPanel.innerHTML = `
+            <div style="font-size: 13px; font-weight: bold; color: #002d62; margin-bottom: 10px; border-bottom: 1px solid #d0e1fd; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span>⚙️ Safer Scraper Filters (Operation Classification, Carrier Operation, Cargo Carried)</span>
+                <button type="button" onclick="clearAllSaferFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 3px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Clear Filters</button>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                <!-- Operation Classification -->
+                <div style="flex: 1; min-width: 240px;">
+                    <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px;">Operation Classification:</div>
+                    <div id="filterOpClassContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Auth. For Hire"> Auth. For Hire</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Exempt For Hire"> Exempt For Hire</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Private(Property)"> Private(Property)</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Priv. Pass. (Business)"> Priv. Pass. (Business)</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Priv. Pass.(Non-business)"> Priv. Pass.(Non-business)</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Migrant"> Migrant</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="U.S. Mail"> U.S. Mail</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Fed. Gov't"> Fed. Gov't</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="State Gov't"> State Gov't</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Local Gov't"> Local Gov't</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Indian Nation"> Indian Nation</label>
+                    </div>
+                </div>
+
+                <!-- Carrier Operation -->
+                <div style="flex: 1; min-width: 200px;">
+                    <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px;">Carrier Operation:</div>
+                    <div id="filterCarrierOpContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Interstate"> Interstate</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Intrastate Only (HM)"> Intrastate Only (HM)</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Intrastate Only (Non-HM)"> Intrastate Only (Non-HM)</label>
+                    </div>
+                </div>
+
+                <!-- Cargo Carried -->
+                <div style="flex: 1.5; min-width: 260px;">
+                    <div style="font-size: 12px; font-weight: bold; color: #333; margin-bottom: 6px;">Cargo Carried:</div>
+                    <div id="filterCargoContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 130px; overflow-y: auto; background: white; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="General Freight"> General Freight</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Household Goods"> Household Goods</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Metal: sheets, coils, rolls"> Metal: sheets, coils, rolls</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Motor Vehicles"> Motor Vehicles</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Drive/Tow away"> Drive/Tow away</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Logs, Poles, Beams, Lumber"> Logs, Poles, Beams, Lumber</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Building Materials"> Building Materials</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Mobile Homes"> Mobile Homes</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Machinery, Large Objects"> Machinery, Large Objects</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Fresh Produce"> Fresh Produce</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Liquids/Gases"> Liquids/Gases</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Intermodal Cont."> Intermodal Cont.</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Passengers"> Passengers</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Oilfield Equipment"> Oilfield Equipment</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Livestock"> Livestock</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Grain, Feed, Hay"> Grain, Feed, Hay</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Coal/Coke"> Coal/Coke</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Meat"> Meat</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Garbage/Refuse"> Garbage/Refuse</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="US Mail"> US Mail</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Chemicals"> Chemicals</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Commodities Dry Bulk"> Commodities Dry Bulk</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Refrigerated Food"> Refrigerated Food</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Beverages"> Beverages</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Paper Products"> Paper Products</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Utilities"> Utilities</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Agricultural/Farm Supplies"> Agricultural/Farm Supplies</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Construction"> Construction</label>
+                        <label style="font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="Water Well"> Water Well</label>
+                    </div>
+                </div>
+            </div>
+        `;
+        let targetRef = document.getElementById('status') || startBtn.parentNode;
+        targetRef.parentNode.insertBefore(saferFilterPanel, targetRef);
+    }
+
     if (!document.getElementById('dlHistoryDrawer')) {
         let drawer = document.createElement('div');
         drawer.id = 'dlHistoryDrawer';
@@ -648,7 +728,6 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -723,6 +802,11 @@ function injectHistoryUIFramework() {
 
     injectEmailProposalPanel();
 }
+
+window.clearAllSaferFilters = function() {
+    document.querySelectorAll('#saferAdvancedFiltersPanel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    showPremiumNotification("🔄 Safer scraper filters cleared!", 2500);
+};
 
 window.scrollToTopScreen = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1133,7 +1217,6 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
-            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1389,7 +1472,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
+    const offlineThreshold = 60000;
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1428,7 +1511,6 @@ function renderAdminTabContent(tabName) {
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
             
-            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -1922,7 +2004,6 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
-// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1930,7 +2011,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
-    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -1940,7 +2020,6 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -1953,11 +2032,9 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
-    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
-        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2439,10 +2516,10 @@ window.syncRemarksData = function(index, textarea) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Vehicle Type,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Vehicle Type,Operation Classifications,Carrier Operation,Cargo Carried,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
     recordsData.forEach(r => {
         let safeRemarks = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.vehicleType || 'N/A'}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.vehicleType || 'N/A'}","${r.opClass || 'N/A'}","${r.carrierOp || 'N/A'}","${r.cargoCarried || 'N/A'}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -2790,7 +2867,26 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "not_found" };
             }
 
-            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
+            let record = { 
+                mc: mc, 
+                usdot: 'N/A', 
+                name: 'N/A', 
+                entityType: 'N/A', 
+                status: 'N/A', 
+                phone: 'N/A', 
+                address: 'N/A', 
+                email: 'N/A', 
+                powerUnits: 'N/A', 
+                vehicleType: 'N/A', 
+                opClass: 'N/A',
+                carrierOp: 'N/A',
+                cargoCarried: 'N/A',
+                remarks: '', 
+                followUpDate: '', 
+                followUpTime: '', 
+                sharedBy: dispatcherNickname 
+            };
+            
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -2825,8 +2921,70 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            if (record.status !== "AUTHORIZED") { 
-                return { status: "filtered_out" }; 
+            // Extract Safer Specific Checkboxes (Operation Classification, Carrier Operation, Cargo Carried) from the Snapshot HTML
+            let fullTextContent = el.textContent || "";
+            
+            // Extract Operation Classifications
+            let opClassList = [];
+            const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
+            possibleOpClasses.forEach(op => {
+                // If the keyword appears near an 'x' or checked indicator in the snapshot page
+                let regex = new RegExp(`[xX]\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
+                if (regex.test(fullTextContent) || (fullTextContent.includes(op) && fullTextContent.includes("Operation Classification"))) {
+                    // Let's do a more precise check if possible, or include if present and checked
+                    opClassList.push(op);
+                }
+            });
+            if (opClassList.length > 0) record.opClass = opClassList.join(" | ");
+
+            // Extract Carrier Operation
+            let carrierOpList = [];
+            const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
+            possibleCarrierOps.forEach(cop => {
+                if (fullTextContent.includes(cop)) {
+                    carrierOpList.push(cop);
+                }
+            });
+            if (carrierOpList.length > 0) record.carrierOp = carrierOpList.join(" | ");
+
+            // Extract Cargo Carried
+            let cargoList = [];
+            const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
+            possibleCargoes.forEach(cargo => {
+                if (fullTextContent.includes(cargo)) {
+                    cargoList.push(cargo);
+                }
+            });
+            if (cargoList.length > 0) record.cargoCarried = cargoList.join(" | ");
+
+            // ====== CHECK USER APPLIED SAFER FILTERS ======
+            let selectedOpClasses = Array.from(document.querySelectorAll('#filterOpClassContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+            let selectedCarrierOps = Array.from(document.querySelectorAll('#filterCarrierOpContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+            let selectedCargoes = Array.from(document.querySelectorAll('#filterCargoContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+
+            // If user applied Operation Classification filter
+            if (selectedOpClasses.length > 0) {
+                let matchesOpClass = selectedOpClasses.some(sel => record.opClass.includes(sel));
+                if (!matchesOpClass) return { status: "filtered_out" };
+            }
+
+            // If user applied Carrier Operation filter
+            if (selectedCarrierOps.length > 0) {
+                let matchesCarrierOp = selectedCarrierOps.some(sel => record.carrierOp.includes(sel));
+                if (!matchesCarrierOp) return { status: "filtered_out" };
+            }
+
+            // If user applied Cargo Carried filter
+            if (selectedCargoes.length > 0) {
+                let matchesCargo = selectedCargoes.some(sel => record.cargoCarried.includes(sel));
+                if (!matchesCargo) return { status: "filtered_out" };
+            }
+
+            // If no specific Safer filters are selected, default to Authorized status check
+            if (selectedOpClasses.length === 0 && selectedCarrierOps.length === 0 && selectedCargoes.length === 0) {
+                if (record.status !== "AUTHORIZED") { 
+                    return { status: "filtered_out" }; 
+                }
             }
 
             if (record.usdot !== 'N/A') {
@@ -3103,5 +3261,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
