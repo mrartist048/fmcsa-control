@@ -566,7 +566,6 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    // ====== PLACING SAFER-SPECIFIC FILTERS RIGHT ABOVE START SCANNING / HISTORY / FOLLOW-UPS WITHOUT HEADER LINE ======
     let existingFilterPanel = document.getElementById('saferAdvancedFiltersPanel');
     if (existingFilterPanel) existingFilterPanel.remove();
 
@@ -2939,7 +2938,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            // ====== ROBUST SAFER HTML PARSING & EXACT EXTRACTION ======
+            // ====== ADVANCED & ROBUST SAFER HTML PARSING ======
             let opClassList = [];
             let carrierOpList = [];
             let cargoList = [];
@@ -2970,24 +2969,21 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 });
             });
 
-            // Fallback full text scan if table parsing misses any marked items
+            // Comprehensive full page check for checkboxes
             let fullTextContent = el.textContent || "";
             if (opClassList.length === 0) {
                 possibleOpClasses.forEach(op => {
-                    let regex = new RegExp(`[xX]\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
-                    if (regex.test(fullTextContent) || fullTextContent.includes(op)) opClassList.push(op);
+                    if (fullTextContent.includes(op)) opClassList.push(op);
                 });
             }
             if (carrierOpList.length === 0) {
                 possibleCarrierOps.forEach(cop => {
-                    let regex = new RegExp(`[xX]\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
-                    if (regex.test(fullTextContent) || fullTextContent.includes(cop)) carrierOpList.push(cop);
+                    if (fullTextContent.includes(cop)) carrierOpList.push(cop);
                 });
             }
             if (cargoList.length === 0) {
                 possibleCargoes.forEach(cargo => {
-                    let regex = new RegExp(`[xX]\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
-                    if (regex.test(fullTextContent)) cargoList.push(cargo);
+                    if (fullTextContent.includes(cargo)) cargoList.push(cargo);
                 });
             }
 
@@ -2995,7 +2991,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             record.carrierOp = carrierOpList.length > 0 ? carrierOpList.join(" | ") : 'N/A';
             record.cargoCarried = cargoList.length > 0 ? cargoList.join(" | ") : 'N/A';
 
-            // ====== DYNAMIC FILTER LOGIC (RESPECTS INDIVIDUAL & MULTIPLE DROPDOWNS) ======
+            // ====== FLEXIBLE FILTER LOGIC (SUPPORTS INDIVIDUAL & MULTIPLE FILTERS) ======
             let selectedOpClass = (document.getElementById('filterOpClassSelect')?.value || "").trim();
             let selectedCarrierOp = (document.getElementById('filterCarrierOpSelect')?.value || "").trim();
             let selectedCargo = (document.getElementById('filterCargoSelect')?.value || "").trim();
@@ -3005,26 +3001,24 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // If Operation Classification filter is selected, carrier must match it exactly
+            // Agar koi bhi filter select kiya gaya hai, toh woh match hona lazmi hai. 
+            // Agar koi filter select nahi kiya (matlab blank hain), toh sabka data aayega.
             if (selectedOpClass !== "") {
                 let opArr = record.opClass.split(" | ").map(s => s.trim());
                 if (!opArr.includes(selectedOpClass)) return { status: "filtered_out" };
             }
 
-            // If Carrier Operation filter is selected, carrier must match it exactly
             if (selectedCarrierOp !== "") {
                 let carArr = record.carrierOp.split(" | ").map(s => s.trim());
                 if (!carArr.includes(selectedCarrierOp)) return { status: "filtered_out" };
             }
 
-            // If Cargo Carried filter is selected, carrier must match it exactly
             if (selectedCargo !== "") {
                 let cargoArr = record.cargoCarried.split(" | ").map(s => s.trim());
                 if (!cargoArr.includes(selectedCargo)) return { status: "filtered_out" };
             }
 
             if (record.usdot !== 'N/A') {
-                // ====== ENHANCED VEHICLE TYPE EXTRACTION ======
                 try {
                     const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
                     const brokerRes = await fetch(brokerSnapshotUrl);
@@ -3274,7 +3268,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
-                        ${latestErrorText}
+                        ${latestErrorTest}
                     </div>
                 </div>
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
