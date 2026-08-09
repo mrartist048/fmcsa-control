@@ -566,7 +566,7 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    // ====== PLACING SAFER-SPECIFIC FILTERS RIGHT ABOVE START SCANNING / HISTORY / FOLLOW-UPS WITH CLEAN UI ======
+    // ====== PLACING SAFER-SPECIFIC FILTERS RIGHT ABOVE START SCANNING / HISTORY / FOLLOW-UPS WITHOUT HEADER LINE ======
     let existingFilterPanel = document.getElementById('saferAdvancedFiltersPanel');
     if (existingFilterPanel) existingFilterPanel.remove();
 
@@ -578,7 +578,7 @@ function injectHistoryUIFramework() {
         saferFilterPanel.innerHTML = `
             <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
                 
-                <!-- Operation Classification Dropdown (Single Selection) -->
+                <!-- Operation Classification Dropdown -->
                 <div style="flex: 1; min-width: 250px;">
                     <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Operation Classification:</label>
                     <select id="filterOpClassSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
@@ -597,7 +597,7 @@ function injectHistoryUIFramework() {
                     </select>
                 </div>
 
-                <!-- Carrier Operation Dropdown (Single Selection) -->
+                <!-- Carrier Operation Dropdown -->
                 <div style="flex: 1; min-width: 220px;">
                     <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Carrier Operation:</label>
                     <select id="filterCarrierOpSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
@@ -608,7 +608,7 @@ function injectHistoryUIFramework() {
                     </select>
                 </div>
 
-                <!-- Cargo Carried Dropdown (Single Selection) -->
+                <!-- Cargo Carried Dropdown -->
                 <div style="flex: 1.2; min-width: 260px;">
                     <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Cargo Carried:</label>
                     <select id="filterCargoSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
@@ -2939,60 +2939,52 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            // ====== PRECISE EXTRACTION & MAPPING OF SAFER CATEGORIES ======
+            // ====== ROBUST SAFER HTML PARSING & EXACT EXTRACTION ======
             let opClassList = [];
             let carrierOpList = [];
             let cargoList = [];
 
+            const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
+            const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
+            const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
+
             let tables = el.querySelectorAll('table');
             tables.forEach(table => {
-                let textAll = table.textContent || "";
-                if (textAll.includes("Operation Classification") || textAll.includes("Carrier Operation") || textAll.includes("Cargo Carried")) {
-                    let rows = table.querySelectorAll('tr');
-                    rows.forEach(row => {
-                        let cellsInRow = row.querySelectorAll('td, th');
-                        cellsInRow.forEach(cell => {
-                            let cellHtml = cell.innerHTML || "";
-                            let cellText = cell.textContent.trim();
-                            let hasMark = /\b[Xx]\b/.test(cellText) || cellHtml.includes("<b>X</b>") || cellHtml.includes("<b>x</b>") || cellHtml.includes(">X<") || cellHtml.includes(">x<");
-                            
-                            if (hasMark) {
-                                const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
-                                const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
-                                const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
-
-                                possibleOpClasses.forEach(op => {
-                                    if (cellText.includes(op) && !opClassList.includes(op)) opClassList.push(op);
-                                });
-                                possibleCarrierOps.forEach(cop => {
-                                    if (cellText.includes(cop) && !carrierOpList.includes(cop)) carrierOpList.push(cop);
-                                });
-                                possibleCargoes.forEach(cargo => {
-                                    if (cellText.includes(cargo) && !cargoList.includes(cargo)) cargoList.push(cargo);
-                                });
-                            }
+                let rows = table.querySelectorAll('tr');
+                rows.forEach(row => {
+                    let rowText = row.textContent.replace(/\s+/g, ' ');
+                    let rowHtml = row.innerHTML;
+                    let hasX = /\b[Xx]\b/.test(rowText) || rowHtml.includes("<b>X</b>") || rowHtml.includes("<b>x</b>") || rowHtml.includes(">X<") || rowHtml.includes(">x<");
+                    
+                    if (hasX) {
+                        possibleOpClasses.forEach(op => {
+                            if (rowText.includes(op) && !opClassList.includes(op)) opClassList.push(op);
                         });
-                    });
-                }
+                        possibleCarrierOps.forEach(cop => {
+                            if (rowText.includes(cop) && !carrierOpList.includes(cop)) carrierOpList.push(cop);
+                        });
+                        possibleCargoes.forEach(cargo => {
+                            if (rowText.includes(cargo) && !cargoList.includes(cargo)) cargoList.push(cargo);
+                        });
+                    }
+                });
             });
 
+            // Fallback full text scan if table parsing misses any marked items
             let fullTextContent = el.textContent || "";
             if (opClassList.length === 0) {
-                const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
                 possibleOpClasses.forEach(op => {
                     let regex = new RegExp(`[xX]\\s*${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
-                    if (regex.test(fullTextContent)) opClassList.push(op);
+                    if (regex.test(fullTextContent) || fullTextContent.includes(op)) opClassList.push(op);
                 });
             }
             if (carrierOpList.length === 0) {
-                const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
                 possibleCarrierOps.forEach(cop => {
                     let regex = new RegExp(`[xX]\\s*${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${cop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
                     if (regex.test(fullTextContent) || fullTextContent.includes(cop)) carrierOpList.push(cop);
                 });
             }
             if (cargoList.length === 0) {
-                const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
                 possibleCargoes.forEach(cargo => {
                     let regex = new RegExp(`[xX]\\s*${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${cargo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[xX]`, 'i');
                     if (regex.test(fullTextContent)) cargoList.push(cargo);
@@ -3003,7 +2995,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             record.carrierOp = carrierOpList.length > 0 ? carrierOpList.join(" | ") : 'N/A';
             record.cargoCarried = cargoList.length > 0 ? cargoList.join(" | ") : 'N/A';
 
-            // ====== STRICT SINGLE SELECTION FILTER LOGIC (FIXED EXACT MATCHING) ======
+            // ====== DYNAMIC FILTER LOGIC (RESPECTS INDIVIDUAL & MULTIPLE DROPDOWNS) ======
             let selectedOpClass = (document.getElementById('filterOpClassSelect')?.value || "").trim();
             let selectedCarrierOp = (document.getElementById('filterCarrierOpSelect')?.value || "").trim();
             let selectedCargo = (document.getElementById('filterCargoSelect')?.value || "").trim();
@@ -3013,19 +3005,19 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // If user selected an Operation Classification filter, carrier MUST match it exactly
+            // If Operation Classification filter is selected, carrier must match it exactly
             if (selectedOpClass !== "") {
                 let opArr = record.opClass.split(" | ").map(s => s.trim());
                 if (!opArr.includes(selectedOpClass)) return { status: "filtered_out" };
             }
 
-            // If user selected a Carrier Operation filter, carrier MUST match it exactly
+            // If Carrier Operation filter is selected, carrier must match it exactly
             if (selectedCarrierOp !== "") {
                 let carArr = record.carrierOp.split(" | ").map(s => s.trim());
                 if (!carArr.includes(selectedCarrierOp)) return { status: "filtered_out" };
             }
 
-            // If user selected a Cargo Carried filter, carrier MUST match it exactly (prevents general freight matching motor vehicles)
+            // If Cargo Carried filter is selected, carrier must match it exactly
             if (selectedCargo !== "") {
                 let cargoArr = record.cargoCarried.split(" | ").map(s => s.trim());
                 if (!cargoArr.includes(selectedCargo)) return { status: "filtered_out" };
