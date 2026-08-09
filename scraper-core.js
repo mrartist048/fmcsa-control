@@ -265,7 +265,7 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000);
+    setInterval(checkGlobalSessions, 1000); // 1 second fast interval for instant online status
 }
 
 if (document.readyState === 'loading') {
@@ -304,6 +304,7 @@ async function checkGlobalSessions() {
     const url = `${FIREBASE_DB_URL}sessions/${currentClient}.json`;
     const now = Date.now();
     
+    // Fixed Login Time Logic: Locked to first session login time until logged out/refreshed
     let timeKey = `dl_fixed_login_time_${currentClient}_${dispatcherNickname}`;
     let loginTimeString = localStorage.getItem(timeKey);
     let todayDateKey = getCurrentShiftDateKey();
@@ -322,7 +323,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000;
+        const offlineThreshold = 60000; // Reduced to exactly 1 minute for offline delay
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -566,95 +567,6 @@ function injectHistoryUIFramework() {
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
 
-    let existingFilterPanel = document.getElementById('saferAdvancedFiltersPanel');
-    if (existingFilterPanel) existingFilterPanel.remove();
-
-    if (startBtn) {
-        let saferFilterPanel = document.createElement('div');
-        saferFilterPanel.id = 'saferAdvancedFiltersPanel';
-        saferFilterPanel.style.cssText = "background: #f8f9fa; border: 1px solid #b6ccfe; padding: 15px; margin: 15px 0; border-radius: 8px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,45,98,0.05);";
-        
-        saferFilterPanel.innerHTML = `
-            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
-                
-                <!-- Operation Classification Dropdown -->
-                <div style="flex: 1; min-width: 250px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Operation Classification:</label>
-                    <select id="filterOpClassSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
-                        <option value="">All Operation Classifications</option>
-                        <option value="Auth. For Hire">Auth. For Hire</option>
-                        <option value="Exempt For Hire">Exempt For Hire</option>
-                        <option value="Private(Property)">Private(Property)</option>
-                        <option value="Priv. Pass. (Business)">Priv. Pass. (Business)</option>
-                        <option value="Priv. Pass.(Non-business)">Priv. Pass.(Non-business)</option>
-                        <option value="Migrant">Migrant</option>
-                        <option value="U.S. Mail">U.S. Mail</option>
-                        <option value="Fed. Gov't">Fed. Gov't</option>
-                        <option value="State Gov't">State Gov't</option>
-                        <option value="Local Gov't">Local Gov't</option>
-                        <option value="Indian Nation">Indian Nation</option>
-                    </select>
-                </div>
-
-                <!-- Carrier Operation Dropdown -->
-                <div style="flex: 1; min-width: 220px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Carrier Operation:</label>
-                    <select id="filterCarrierOpSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
-                        <option value="">All Carrier Operations</option>
-                        <option value="Interstate">Interstate</option>
-                        <option value="Intrastate Only (HM)">Intrastate Only (HM)</option>
-                        <option value="Intrastate Only (Non-HM)">Intrastate Only (Non-HM)</option>
-                    </select>
-                </div>
-
-                <!-- Cargo Carried Dropdown -->
-                <div style="flex: 1.2; min-width: 260px;">
-                    <label style="font-size: 12px; font-weight: bold; color: #002d62; display: block; margin-bottom: 4px;">Cargo Carried:</label>
-                    <select id="filterCargoSelect" onchange="updateSaferFilters()" style="width: 100%; background: white; border: 1px solid #b6ccfe; padding: 9px 12px; border-radius: 6px; font-size: 12px; color: #002d62; font-weight: bold; font-family: monospace; cursor: pointer;">
-                        <option value="">All Cargo Carried</option>
-                        <option value="General Freight">General Freight</option>
-                        <option value="Household Goods">Household Goods</option>
-                        <option value="Metal: sheets, coils, rolls">Metal: sheets, coils, rolls</option>
-                        <option value="Motor Vehicles">Motor Vehicles</option>
-                        <option value="Drive/Tow away">Drive/Tow away</option>
-                        <option value="Logs, Poles, Beams, Lumber">Logs, Poles, Beams, Lumber</option>
-                        <option value="Building Materials">Building Materials</option>
-                        <option value="Mobile Homes">Mobile Homes</option>
-                        <option value="Machinery, Large Objects">Machinery, Large Objects</option>
-                        <option value="Fresh Produce">Fresh Produce</option>
-                        <option value="Liquids/Gases">Liquids/Gases</option>
-                        <option value="Intermodal Cont.">Intermodal Cont.</option>
-                        <option value="Passengers">Passengers</option>
-                        <option value="Oilfield Equipment">Oilfield Equipment</option>
-                        <option value="Livestock">Livestock</option>
-                        <option value="Grain, Feed, Hay">Grain, Feed, Hay</option>
-                        <option value="Coal/Coke">Coal/Coke</option>
-                        <option value="Meat">Meat</option>
-                        <option value="Garbage/Refuse">Garbage/Refuse</option>
-                        <option value="US Mail">US Mail</option>
-                        <option value="Chemicals">Chemicals</option>
-                        <option value="Commodities Dry Bulk">Commodities Dry Bulk</option>
-                        <option value="Refrigerated Food">Refrigerated Food</option>
-                        <option value="Beverages">Beverages</option>
-                        <option value="Paper Products">Paper Products</option>
-                        <option value="Utilities">Utilities</option>
-                        <option value="Agricultural/Farm Supplies">Agricultural/Farm Supplies</option>
-                        <option value="Construction">Construction</option>
-                        <option value="Water Well">Water Well</option>
-                    </select>
-                </div>
-
-                <!-- Clear Filters Button -->
-                <div>
-                    <button type="button" onclick="clearAllSaferFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 9px 14px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; height: 38px;" title="Clear Filters">🔄 Clear</button>
-                </div>
-
-            </div>
-        `;
-        let startContainer = startBtn.parentNode;
-        startContainer.parentNode.insertBefore(saferFilterPanel, startContainer);
-    }
-
     if (!document.getElementById('dlHistoryDrawer')) {
         let drawer = document.createElement('div');
         drawer.id = 'dlHistoryDrawer';
@@ -736,6 +648,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
+    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
@@ -810,20 +723,6 @@ function injectHistoryUIFramework() {
 
     injectEmailProposalPanel();
 }
-
-window.updateSaferFilters = function() {
-    showPremiumNotification("⚙️ Safer scraper filters updated!", 2000);
-};
-
-window.clearAllSaferFilters = function() {
-    let opSel = document.getElementById('filterOpClassSelect');
-    let carSel = document.getElementById('filterCarrierOpSelect');
-    let carGO = document.getElementById('filterCargoSelect');
-    if (opSel) opSel.value = "";
-    if (carSel) carSel.value = "";
-    if (carGO) carGO.value = "";
-    showPremiumNotification("🔄 Safer scraper filters cleared!", 2500);
-};
 
 window.scrollToTopScreen = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1234,6 +1133,7 @@ async function renderAdvancedAdminModal() {
                 <button onclick="switchAdminTab('reports')" id="adminTabBtnReports" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 9px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s;">📋 Shift Reports</button>
             </div>
 
+            <!-- FILTER BAR CONTAINER -->
             <div id="adminFilterBarContainer" style="background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;"></div>
 
             <div id="adminReportsModalBody" style="padding: 20px; overflow-y: auto; flex: 1; text-align: center; color: #6c757d; background: #fafbfc;">
@@ -1489,7 +1389,7 @@ function renderAdminTabContent(tabName) {
     let allReportsGrouped = window.cachedAdminReportsGrouped || {};
     let dbCallLogs = window.cachedAdminDbCallLogs || {};
     let now = Date.now();
-    const offlineThreshold = 60000;
+    const offlineThreshold = 60000; // 1 minute threshold for precise offline status
 
     let startDate = window.adminStartDateStr || "2020-01-01";
     let endDate = window.adminEndDateStr || "2030-12-31";
@@ -1528,6 +1428,7 @@ function renderAdminTabContent(tabName) {
             
             let borderColor = isOnline ? "#28a745" : "#6c757d";
             
+            // Login time based directly on admin panel PC/client local clock format from session stored
             let loginInfo = sessionObj && sessionObj.loginTime ? `Login Time: <b>${sessionObj.loginTime}</b>` : `Status: <b>Inactive / Offline</b>`;
 
             usersHtml += `
@@ -2021,6 +1922,7 @@ window.confirmSendShiftReport = async function() {
     }
 };
 
+// ====== ROBUST DIALER & 3 SECOND DELAYED STATUS REVIEW TRIGGER ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -2028,6 +1930,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
     activeCallPhone = phoneNum;
     activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
@@ -2037,6 +1940,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2049,9 +1953,11 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     activeCallPhone = phoneNum;
     activeCallCellElement = cellElement;
 
+    // Trigger phone dialer
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
+        // 3 seconds delay before showing status review modal
         setTimeout(() => {
             openDispositionModal(phoneNum);
         }, 3000);
@@ -2533,10 +2439,10 @@ window.syncRemarksData = function(index, textarea) {
 };
 
 function generateCSVString(recordsData) {
-    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Vehicle Type,Operation Classifications,Carrier Operation,Cargo Carried,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
+    let csv = "MC Number,USDOT Number,Company Name,Entity Type,Operating Status,Phone,Address,Email,Power Units,Vehicle Type,Follow-Up Date,Follow-Up Time,Shared By,Remarks\n";
     recordsData.forEach(r => {
         let safeRemarks = r.remarks || "";
-        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.vehicleType || 'N/A'}","${r.opClass || 'N/A'}","${r.carrierOp || 'N/A'}","${r.cargoCarried || 'N/A'}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
+        csv += `${r.mc},${r.usdot},"${r.name}","${r.entityType}","${r.status}","${r.phone}","${r.address}","${r.email}","${r.powerUnits}","${r.vehicleType || 'N/A'}","${r.followUpDate || 'N/A'}","${r.followUpTime || 'N/A'}","${r.sharedBy || dispatcherNickname}","${safeRemarks.replace(/"/g, '""')}"\n`;
     });
     return csv;
 }
@@ -2884,26 +2790,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "not_found" };
             }
 
-            let record = { 
-                mc: mc, 
-                usdot: 'N/A', 
-                name: 'N/A', 
-                entityType: 'N/A', 
-                status: 'N/A', 
-                phone: 'N/A', 
-                address: 'N/A', 
-                email: 'N/A', 
-                powerUnits: 'N/A', 
-                vehicleType: 'N/A', 
-                opClass: 'N/A',
-                carrierOp: 'N/A',
-                cargoCarried: 'N/A',
-                remarks: '', 
-                followUpDate: '', 
-                followUpTime: '', 
-                sharedBy: dispatcherNickname 
-            };
-            
+            let record = { mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'N/A', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', remarks: '', followUpDate: '', followUpTime: '', sharedBy: dispatcherNickname };
             let el = document.createElement('html');
             el.innerHTML = htmlText;
             let cells = el.querySelectorAll('td, th');
@@ -2938,84 +2825,8 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            // ====== ADVANCED & ROBUST SAFER HTML PARSING ======
-            let opClassList = [];
-            let carrierOpList = [];
-            let cargoList = [];
-
-            const possibleOpClasses = ["Auth. For Hire", "Exempt For Hire", "Private(Property)", "Priv. Pass. (Business)", "Priv. Pass.(Non-business)", "Migrant", "U.S. Mail", "Fed. Gov't", "State Gov't", "Local Gov't", "Indian Nation"];
-            const possibleCarrierOps = ["Interstate", "Intrastate Only (HM)", "Intrastate Only (Non-HM)"];
-            const possibleCargoes = ["General Freight", "Household Goods", "Metal: sheets, coils, rolls", "Motor Vehicles", "Drive/Tow away", "Logs, Poles, Beams, Lumber", "Building Materials", "Mobile Homes", "Machinery, Large Objects", "Fresh Produce", "Liquids/Gases", "Intermodal Cont.", "Passengers", "Oilfield Equipment", "Livestock", "Grain, Feed, Hay", "Coal/Coke", "Meat", "Garbage/Refuse", "US Mail", "Chemicals", "Commodities Dry Bulk", "Refrigerated Food", "Beverages", "Paper Products", "Utilities", "Agricultural/Farm Supplies", "Construction", "Water Well"];
-
-            let tables = el.querySelectorAll('table');
-            tables.forEach(table => {
-                let rows = table.querySelectorAll('tr');
-                rows.forEach(row => {
-                    let rowText = row.textContent.replace(/\s+/g, ' ');
-                    let rowHtml = row.innerHTML;
-                    let hasX = /\b[Xx]\b/.test(rowText) || rowHtml.includes("<b>X</b>") || rowHtml.includes("<b>x</b>") || rowHtml.includes(">X<") || rowHtml.includes(">x<");
-                    
-                    if (hasX) {
-                        possibleOpClasses.forEach(op => {
-                            if (rowText.includes(op) && !opClassList.includes(op)) opClassList.push(op);
-                        });
-                        possibleCarrierOps.forEach(cop => {
-                            if (rowText.includes(cop) && !carrierOpList.includes(cop)) carrierOpList.push(cop);
-                        });
-                        possibleCargoes.forEach(cargo => {
-                            if (rowText.includes(cargo) && !cargoList.includes(cargo)) cargoList.push(cargo);
-                        });
-                    }
-                });
-            });
-
-            // Comprehensive full page check for checkboxes
-            let fullTextContent = el.textContent || "";
-            if (opClassList.length === 0) {
-                possibleOpClasses.forEach(op => {
-                    if (fullTextContent.includes(op)) opClassList.push(op);
-                });
-            }
-            if (carrierOpList.length === 0) {
-                possibleCarrierOps.forEach(cop => {
-                    if (fullTextContent.includes(cop)) carrierOpList.push(cop);
-                });
-            }
-            if (cargoList.length === 0) {
-                possibleCargoes.forEach(cargo => {
-                    if (fullTextContent.includes(cargo)) cargoList.push(cargo);
-                });
-            }
-
-            record.opClass = opClassList.length > 0 ? opClassList.join(" | ") : 'N/A';
-            record.carrierOp = carrierOpList.length > 0 ? carrierOpList.join(" | ") : 'N/A';
-            record.cargoCarried = cargoList.length > 0 ? cargoList.join(" | ") : 'N/A';
-
-            // ====== FLEXIBLE FILTER LOGIC (SUPPORTS INDIVIDUAL & MULTIPLE FILTERS) ======
-            let selectedOpClass = (document.getElementById('filterOpClassSelect')?.value || "").trim();
-            let selectedCarrierOp = (document.getElementById('filterCarrierOpSelect')?.value || "").trim();
-            let selectedCargo = (document.getElementById('filterCargoSelect')?.value || "").trim();
-
-            // Always enforce Authorized status check first
             if (record.status !== "AUTHORIZED") { 
                 return { status: "filtered_out" }; 
-            }
-
-            // Agar koi bhi filter select kiya gaya hai, toh woh match hona lazmi hai. 
-            // Agar koi filter select nahi kiya (matlab blank hain), toh sabka data aayega.
-            if (selectedOpClass !== "") {
-                let opArr = record.opClass.split(" | ").map(s => s.trim());
-                if (!opArr.includes(selectedOpClass)) return { status: "filtered_out" };
-            }
-
-            if (selectedCarrierOp !== "") {
-                let carArr = record.carrierOp.split(" | ").map(s => s.trim());
-                if (!carArr.includes(selectedCarrierOp)) return { status: "filtered_out" };
-            }
-
-            if (selectedCargo !== "") {
-                let cargoArr = record.cargoCarried.split(" | ").map(s => s.trim());
-                if (!cargoArr.includes(selectedCargo)) return { status: "filtered_out" };
             }
 
             if (record.usdot !== 'N/A') {
@@ -3051,28 +2862,10 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
                         if (vehicleList.length > 0) {
                             record.vehicleType = vehicleList.join(" | ");
-                        } else {
-                            let fullBrokerText = brokerEl.textContent || "";
-                            let foundTypes = [];
-                            if (fullBrokerText.includes("Tractors")) foundTypes.push("Power Only");
-                            if (fullBrokerText.includes("Trucks")) foundTypes.push("Box Truck");
-                            if (fullBrokerText.includes("Trailers")) foundTypes.push("Trailers");
-                            if (foundTypes.length > 0) {
-                                record.vehicleType = foundTypes.join(" | ");
-                            }
                         }
                     }
                 } catch (bErr) {
                     console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
-                }
-
-                if (record.vehicleType === 'N/A' && record.powerUnits !== 'N/A' && parseInt(record.powerUnits) > 0) {
-                    let pUnits = parseInt(record.powerUnits);
-                    if (record.cargoCarried.includes("General Freight") || record.cargoCarried.includes("Building Materials")) {
-                        record.vehicleType = pUnits > 1 ? `Box Truck / Trailers (${pUnits})` : "Box Truck";
-                    } else {
-                        record.vehicleType = `Power Only (${pUnits})`;
-                    }
                 }
 
                 try {
@@ -3268,7 +3061,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
-                        ${latestErrorTest}
+                        ${latestErrorText}
                     </div>
                 </div>
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -3310,3 +3103,5 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
+
