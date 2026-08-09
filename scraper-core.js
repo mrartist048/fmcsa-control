@@ -648,7 +648,7 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-    // ====== CALL DISPOSITION REVIEW MODAL ("What is Status of this call") ======
+    // ====== CALL DISPOSITION REVIEW MODAL ("Status of this call") ======
     if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
