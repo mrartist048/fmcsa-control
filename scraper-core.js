@@ -18,7 +18,7 @@ const allowedUsers = {
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
     "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
-    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 1, expires: "2026-08-30" },  
+    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30" },  
 };
 
 const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
