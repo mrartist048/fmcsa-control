@@ -19,6 +19,12 @@
         th { background: #e2eafc; color: #002d62; }
         .badge { background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
         #loadingMsg { text-align: center; padding: 30px; color: #6c757d; font-style: italic; }
+        
+        /* Clicked Row Highlight Styling */
+        tr.highlighted-row { background-color: #d1ecf1 !important; }
+        
+        .copy-btn { background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 2px 6px; font-size: 11px; border-radius: 3px; cursor: pointer; margin-left: 6px; font-weight: bold; }
+        .copy-btn:hover { background: #cfe2ff; }
     </style>
 </head>
 <body>
@@ -107,14 +113,22 @@
                         let powerUnits = r["Power Units"] || r["powerUnits"] || "N/A";
                         let vehicleType = r["Vehicle Type"] || r["vehicleType"] || "N/A";
 
+                        // Phone call link and copy formatting
+                        let phoneHtml = "N/A";
+                        if (phone !== "N/A" && phone.trim() !== "") {
+                            let cleanPhone = phone.trim();
+                            phoneHtml = `<a href="tel:${cleanPhone}" style="color: #002d62; text-decoration: none; font-weight: bold;" title="Click to Call">${cleanPhone}</a>` +
+                                        `<button class="copy-btn" onclick="copyText('${cleanPhone}', this)">📋 Copy</button>`;
+                        }
+
                         html += `
-                            <tr>
+                            <tr onclick="toggleRowHighlight(this)" style="cursor: pointer;">
                                 <td><b>${mcNum}</b></td>
                                 <td>${usdot}</td>
                                 <td>${name}</td>
                                 <td>${entityType}</td>
                                 <td><span class="badge">${status}</span></td>
-                                <td><b>${phone}</b></td>
+                                <td>${phoneHtml}</td>
                                 <td>${address}</td>
                                 <td>${email}</td>
                                 <td>${powerUnits}</td>
@@ -133,6 +147,29 @@
                 console.error("Fetch error:", err);
                 tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg" style="color:red;">Failed to fetch data. Check console.</td></tr>`;
             }
+        }
+
+        // Row click par light blue color highlight karne ka function
+        function toggleRowHighlight(row) {
+            row.classList.toggle('highlighted-row');
+        }
+
+        // Text copy karne aur button ka text temporary change karne ka function
+        function copyText(text, btn) {
+            event.stopPropagation(); // Row highlight toggle hone se rokne ke liye
+            navigator.clipboard.writeText(text).then(() => {
+                let originalText = btn.innerText;
+                btn.innerText = "✅ Copied";
+                btn.style.background = "#d4edda";
+                btn.style.color = "#155724";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = "#e2eafc";
+                    btn.style.color = "#002d62";
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
         }
     </script>
 </body>
