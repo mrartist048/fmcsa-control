@@ -276,7 +276,7 @@
                 exportBtn.onclick = exportFollowupsCSV;
             } else if (tab === 'audit') {
                 pageTitle.innerText = "Agent Activity & Audit Trail";
-                filterBar.style.display = 'none';
+                filterBar.style.display = 'flex'; // Audit trail par bhi ab date filter bar show hoga
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'none';
             }
@@ -340,6 +340,13 @@
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
             let dStr = dateVal.substring(0, 10);
+            if (filterMode === 'all') return true;
+            return dStr >= startDateStr && dStr <= endDateStr;
+        }
+
+        function isTimestampInRange(ts) {
+            if (!ts) return false;
+            let dStr = new Date(ts).toISOString().split('T')[0];
             if (filterMode === 'all') return true;
             return dStr >= startDateStr && dStr <= endDateStr;
         }
@@ -609,7 +616,7 @@
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'audit') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Detailed Agent Attendance, Session Audit Trail & Duration</div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail & Online Durations from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let agentAuditMap = {};
 
                 if (cachedSessions) {
@@ -619,20 +626,22 @@
                         let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
                         let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
 
-                        if (!agentAuditMap[name]) {
-                            agentAuditMap[name] = { 
-                                loginTimeStr: sObj?.loginTime || 'N/A', 
-                                loginTs: loginTs,
-                                lastActiveTs: lastActiveTs,
-                                totalActiveMs: 0
-                            };
-                        } else {
-                            if (loginTs && loginTs < agentAuditMap[name].loginTs) {
-                                agentAuditMap[name].loginTs = loginTs;
-                                if (sObj?.loginTime) agentAuditMap[name].loginTimeStr = sObj.loginTime;
-                            }
-                            if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
-                                agentAuditMap[name].lastActiveTs = lastActiveTs;
+                        // Filter sessions within selected date range
+                        if (isTimestampInRange(lastActiveTs) || isTimestampInRange(loginTs)) {
+                            if (!agentAuditMap[name]) {
+                                agentAuditMap[name] = { 
+                                    loginTimeStr: sObj?.loginTime || 'N/A', 
+                                    loginTs: loginTs,
+                                    lastActiveTs: lastActiveTs
+                                };
+                            } else {
+                                if (loginTs && loginTs < agentAuditMap[name].loginTs) {
+                                    agentAuditMap[name].loginTs = loginTs;
+                                    if (sObj?.loginTime) agentAuditMap[name].loginTimeStr = sObj.loginTime;
+                                }
+                                if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
+                                    agentAuditMap[name].lastActiveTs = lastActiveTs;
+                                }
                             }
                         }
                     });
@@ -640,7 +649,7 @@
 
                 let auditKeys = Object.keys(agentAuditMap);
                 if (auditKeys.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No audit trail logs found.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No audit trail logs found for the selected date range.</p>`;
                     return;
                 }
 
@@ -648,15 +657,15 @@
                     let data = agentAuditMap[name];
                     let lastActiveTime = data.lastActiveTs ? new Date(data.lastActiveTs).toLocaleTimeString() : 'N/A';
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
-                    let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Logged Out / Inactive</span>`;
+                    let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
-                    // Calculate total logged-in hours and minutes
+                    // Calculate total logged-in hours and minutes within range
                     let durationMs = (data.lastActiveTs && data.loginTs && data.lastActiveTs > data.loginTs) ? (data.lastActiveTs - data.loginTs) : 0;
                     let totalMins = Math.floor(durationMs / 60000);
                     let hours = Math.floor(totalMins / 60);
                     let mins = totalMins % 60;
                     let durationFormatted = hours > 0 ? `${hours} hrs ${mins} mins` : `${mins} mins`;
-                    if (totalMins <= 0) durationFormatted = "Less than 1 min";
+                    if (totalMins <= 0) durationFormatted = "1 min or less";
 
                     html += `
                         <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px;">
@@ -666,7 +675,7 @@
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
                                 <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
-                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Active Duration: ${durationFormatted}</span>
+                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Online Duration: ${durationFormatted}</span>
                             </div>
                         </div>`;
                 });
