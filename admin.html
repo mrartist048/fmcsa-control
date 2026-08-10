@@ -609,19 +609,30 @@
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'audit') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Detailed Agent Attendance & Session Audit Trail</div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Detailed Agent Attendance, Session Audit Trail & Duration</div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let agentAuditMap = {};
 
                 if (cachedSessions) {
                     Object.keys(cachedSessions).forEach(key => {
                         let sObj = cachedSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
+                        let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
+                        let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
+
                         if (!agentAuditMap[name]) {
-                            agentAuditMap[name] = { loginTime: sObj?.loginTime || 'N/A', lastActive: sObj?.timestamp || sObj?.lastActive || 0, status: 'Recorded' };
+                            agentAuditMap[name] = { 
+                                loginTimeStr: sObj?.loginTime || 'N/A', 
+                                loginTs: loginTs,
+                                lastActiveTs: lastActiveTs,
+                                totalActiveMs: 0
+                            };
                         } else {
-                            if ((sObj?.timestamp || 0) > agentAuditMap[name].lastActive) {
-                                agentAuditMap[name].lastActive = sObj?.timestamp || 0;
-                                if (sObj?.loginTime) agentAuditMap[name].loginTime = sObj.loginTime;
+                            if (loginTs && loginTs < agentAuditMap[name].loginTs) {
+                                agentAuditMap[name].loginTs = loginTs;
+                                if (sObj?.loginTime) agentAuditMap[name].loginTimeStr = sObj.loginTime;
+                            }
+                            if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
+                                agentAuditMap[name].lastActiveTs = lastActiveTs;
                             }
                         }
                     });
@@ -635,9 +646,17 @@
 
                 auditKeys.forEach(name => {
                     let data = agentAuditMap[name];
-                    let lastActiveTime = data.lastActive ? new Date(data.lastActive).toLocaleTimeString() : 'N/A';
-                    let isOnline = data.lastActive && (now - data.lastActive < 120000);
+                    let lastActiveTime = data.lastActiveTs ? new Date(data.lastActiveTs).toLocaleTimeString() : 'N/A';
+                    let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Logged Out / Inactive</span>`;
+
+                    // Calculate total logged-in hours and minutes
+                    let durationMs = (data.lastActiveTs && data.loginTs && data.lastActiveTs > data.loginTs) ? (data.lastActiveTs - data.loginTs) : 0;
+                    let totalMins = Math.floor(durationMs / 60000);
+                    let hours = Math.floor(totalMins / 60);
+                    let mins = totalMins % 60;
+                    let durationFormatted = hours > 0 ? `${hours} hrs ${mins} mins` : `${mins} mins`;
+                    if (totalMins <= 0) durationFormatted = "Less than 1 min";
 
                     html += `
                         <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px;">
@@ -645,8 +664,9 @@
                                 <b style="font-size: 15px; color: #0f172a;">👤 ${name}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
-                                <span>⏰ Login Time: <b>${data.loginTime}</b></span>
-                                <span>⏱️ Last Heartbeat / Activity: <b>${lastActiveTime}</b></span>
+                                <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
+                                <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
+                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Active Duration: ${durationFormatted}</span>
                             </div>
                         </div>`;
                 });
