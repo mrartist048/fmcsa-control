@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dispatch Link | Admin Dashboard</title>
+    <!-- Favicon Integration -->
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; }
@@ -160,7 +162,7 @@
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
         let currentClient = localStorage.getItem("dl_logged_client") || "Gslogisticsdispatch";
         let activeTab = 'online';
-        let onlineFilterMode = 'all'; // 'all', 'online', 'offline'
+        let onlineFilterMode = 'all'; 
         let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
 
         function toggleSidebar() {
@@ -301,11 +303,8 @@
 
             if (activeTab === 'online') {
                 let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
-                
-                // Aggregate all unique user nicknames map
                 let uniqueUsers = {};
 
-                // 1. Gather from sessions
                 if (cachedSessions) {
                     Object.keys(cachedSessions).forEach(key => {
                         let sObj = cachedSessions[key];
@@ -316,7 +315,6 @@
                     });
                 }
 
-                // 2. Gather from reports & call logs to ensure offline users also appear
                 Object.keys(cachedReports).forEach(n => {
                     if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
                 });
@@ -337,7 +335,6 @@
                     let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
-                    // Apply online/offline status filter
                     if (onlineFilterMode === 'online' && !isOnline) return;
                     if (onlineFilterMode === 'offline' && isOnline) return;
 
@@ -527,7 +524,6 @@
         setDateFilterPreset('today');
         fetchAdminData();
         
-        // Auto refresh data every 30 seconds for live monitoring
         setInterval(fetchAdminData, 30000);
     </script>
 </body>
