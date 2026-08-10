@@ -3,6 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Dispatch Link | Quick Lead Finder</title>
+    <!-- Dynamic Favicon Incorporator -->
+    <script>
+        (function injectFavicon() {
+            const faviconUrl = "https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png";
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.head.appendChild(link);
+            }
+            link.type = 'image/png';
+            link.href = faviconUrl;
+        })();
+    </script>
     <style>
         body { font-family: sans-serif; background: #f4f7fe; margin: 0; padding: 20px; box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #002d62; color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; }
@@ -280,7 +294,6 @@
             }
         }
 
-        // Remarks Functions (CRM Style)
         window.remarksFocus = function(index, textarea) {
             if (!textarea.value || textarea.value.trim() === "") {
                 textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -310,7 +323,6 @@
             }
         };
 
-        // Follow-Up Modal Functions
         window.addLeadToFollowUpList = function(index, buttonElement) {
             let record = fetchedLeadsArray[index];
             if (!record) return;
@@ -376,7 +388,6 @@
             return `${hours}:${minutes} ${ampm}`;
         }
 
-        // Call Interaction & Disposition Functions
         window.handlePhoneInteraction = function(cellElement, phoneNum) {
             activeCallPhone = phoneNum;
             activeCallCellElement = cellElement;
