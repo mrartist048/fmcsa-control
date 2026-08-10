@@ -587,22 +587,32 @@
                 Object.keys(cachedCallLogs).forEach(name => {
                     let logs = cachedCallLogs[name] || [];
                     if (Array.isArray(logs)) {
-                        let followups = logs.filter(l => (l.status === 'Follow up') && isDateInRange(l.shiftDate || l.date));
+                        let followups = logs.filter(l => {
+                            let isFollowUpStatus = (l.status === 'Follow up' || l.callStatus === 'Follow up' || l.type === 'Follow up');
+                            return isFollowUpStatus && isDateInRange(l.shiftDate || l.date || l.timestamp);
+                        });
+
                         followups.forEach(f => {
                             hasFollowups = true;
+                            // Sabhi possible field names check karega taaki data miss na ho
+                            let carrierOrMc = f.carrier || f.mc || f.mcNumber || f.carrierName || f.company || f.name || 'N/A';
+                            let phoneNum = f.phone || f.phoneNumber || f.tel || 'N/A';
+                            let callDate = f.shiftDate || f.date || (f.timestamp ? new Date(f.timestamp).toISOString().split('T')[0] : 'N/A');
+                            let remarksText = f.remarks || f.note || f.comment || f.description || 'No remarks provided.';
+
                             html += `
                                 <div class="card" style="border-left: 4px solid #f59e0b; flex-direction: column; align-items: flex-start; gap: 8px;">
-                                    <div style="display: flex; justify-content: space-width; width: 100%; justify-content: space-between;">
+                                    <div style="display: flex; justify-content: space-between; width: 100%;">
                                         <b style="color: #0f172a; font-size: 14px;">👤 Agent: ${name}</b>
                                         <span style="font-size: 11px; background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Follow Up</span>
                                     </div>
                                     <div style="font-size: 12px; color: #334155; display: flex; gap: 16px; flex-wrap: wrap;">
-                                        <span>🏢 Carrier/MC: <b>${f.carrier || f.mc || 'N/A'}</b></span>
-                                        <span>📞 Phone: <b>${f.phone || 'N/A'}</b></span>
-                                        <span>📅 Date: <b>${f.shiftDate || f.date || 'N/A'}</b></span>
+                                        <span>🏢 Carrier / MC: <b>${carrierOrMc}</b></span>
+                                        <span>📞 Phone: <b>${phoneNum}</b></span>
+                                        <span>📅 Date: <b>${callDate}</b></span>
                                     </div>
                                     <div style="font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 10px; border-radius: 6px; width: 100%;">
-                                        💬 Remarks: ${f.remarks || f.note || 'No remarks provided.'}
+                                        💬 Remarks: ${remarksText}
                                     </div>
                                 </div>`;
                         });
@@ -658,7 +668,6 @@
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
-                    // Real-time calculation: Agar agent abhi online hai, toh current time (now) tak ka duration add hota rahega
                     let effectiveEndTs = isOnline ? now : data.lastActiveTs;
                     let durationMs = (effectiveEndTs && data.loginTs && effectiveEndTs > data.loginTs) ? (effectiveEndTs - data.loginTs) : 0;
                     
@@ -734,9 +743,18 @@
             Object.keys(cachedCallLogs).forEach(name => {
                 let logs = cachedCallLogs[name] || [];
                 if (Array.isArray(logs)) {
-                    let followups = logs.filter(l => (l.status === 'Follow up') && isDateInRange(l.shiftDate || l.date));
+                    let followups = logs.filter(l => {
+                        let isFollowUpStatus = (l.status === 'Follow up' || l.callStatus === 'Follow up' || l.type === 'Follow up');
+                        return isFollowUpStatus && isDateInRange(l.shiftDate || l.date || l.timestamp);
+                    });
+
                     followups.forEach(f => {
-                        csv += `"${name}","${f.carrier || f.mc || 'N/A'}","${f.phone || 'N/A'}","${f.shiftDate || f.date || 'N/A'}","${(f.remarks || f.note || '').replace(/"/g, '""')}"\n`;
+                        let cName = f.carrier || f.mc || f.mcNumber || f.carrierName || f.company || f.name || 'N/A';
+                        let cPhone = f.phone || f.phoneNumber || f.tel || 'N/A';
+                        let cDate = f.shiftDate || f.date || (f.timestamp ? new Date(f.timestamp).toISOString().split('T')[0] : 'N/A');
+                        let cRemarks = (f.remarks || f.note || f.comment || f.description || '').replace(/"/g, '""');
+
+                        csv += `"${name}","${cName}","${cPhone}","${cDate}","${cRemarks}"\n`;
                     });
                 }
             });
@@ -751,7 +769,6 @@
         setDateFilterPreset('today');
         fetchAdminData();
         
-        // Auto refresh data every 30 seconds to keep live active durations ticking correctly
         setInterval(fetchAdminData, 30000);
     </script>
 </body>
