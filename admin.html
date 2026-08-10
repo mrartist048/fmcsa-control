@@ -131,7 +131,6 @@
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS & LEADERBOARD & PEAK HOURS -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 Date Filter:</span>
@@ -146,7 +145,6 @@
                 </div>
             </div>
 
-            <!-- FILTERS SPECIFICALLY FOR LIVE & OFFLINE USERS -->
             <div id="onlineFilterBar" class="filter-bar">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">👤 User Status Filter:</span>
@@ -176,9 +174,12 @@
             overlay.classList.toggle('active');
         }
 
+        // Shift Date Standardizer for 4 PM to 6 AM Shift Timing
         function getShiftDateStandardized() {
             let now = new Date();
-            if (now.getHours() < 10) { 
+            let hours = now.getHours();
+            // Agar raat 12 baje se subah 6 AM ke darmiyan hai, toh shift date pichle din ki consider hogi
+            if (hours < 6) {
                 now.setDate(now.getDate() - 1);
             }
             return now.toISOString().split('T')[0];
@@ -505,7 +506,6 @@
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'peak') {
-                // Peak Hours & Hourly Rate calculation
                 let hourlyMap = {};
                 for(let i=0; i<24; i++) hourlyMap[i] = 0;
                 let totalFilteredCalls = 0;
@@ -515,7 +515,7 @@
                     if (Array.isArray(logs)) {
                         logs.filter(l => isDateInRange(l.shiftDate || l.date)).forEach(l => {
                             let timeStr = l.timestamp || l.time;
-                            let hr = 10; // default working hour
+                            let hr = 16; 
                             if (timeStr) {
                                 let d = new Date(timeStr);
                                 if (!isNaN(d.getTime())) {
@@ -537,7 +537,14 @@
 
                 let maxCount = Math.max(...Object.values(hourlyMap), 1);
 
-                for(let h=8; h<=22; h++) {
+                for(let h=16; h<=23; h++) {
+                    renderHourBar(h);
+                }
+                for(let h=0; h<=6; h++) {
+                    renderHourBar(h);
+                }
+
+                function renderHourBar(h) {
                     let count = hourlyMap[h];
                     let percent = Math.round((count / maxCount) * 100);
                     let timeLabel = h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h-12} PM`;
