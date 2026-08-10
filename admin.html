@@ -594,25 +594,33 @@
 
                         followups.forEach(f => {
                             hasFollowups = true;
-                            // Sabhi possible field names check karega taaki data miss na ho
-                            let carrierOrMc = f.carrier || f.mc || f.mcNumber || f.carrierName || f.company || f.name || 'N/A';
+                            
+                            // Rich field mappings matching agent UI
+                            let companyName = f.carrierName || f.company || f.carrier || f.name || 'N/A';
+                            let mcNum = f.mc || f.mcNumber || f.carrierMC || 'N/A';
                             let phoneNum = f.phone || f.phoneNumber || f.tel || 'N/A';
-                            let callDate = f.shiftDate || f.date || (f.timestamp ? new Date(f.timestamp).toISOString().split('T')[0] : 'N/A');
+                            let emailAddr = f.email || f.mail || 'N/A';
+                            let savedTime = f.timestamp ? new Date(f.timestamp).toLocaleString() : (f.savedTime || 'N/A');
+                            let shiftDateVal = f.shiftDate || f.date || 'N/A';
                             let remarksText = f.remarks || f.note || f.comment || f.description || 'No remarks provided.';
 
                             html += `
-                                <div class="card" style="border-left: 4px solid #f59e0b; flex-direction: column; align-items: flex-start; gap: 8px;">
-                                    <div style="display: flex; justify-content: space-between; width: 100%;">
-                                        <b style="color: #0f172a; font-size: 14px;">👤 Agent: ${name}</b>
-                                        <span style="font-size: 11px; background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Follow Up</span>
+                                <div class="card" style="border-left: 4px solid #f59e0b; flex-direction: column; align-items: flex-start; gap: 10px;">
+                                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                                        <div style="font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase;">${companyName}</div>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Saved: ${savedTime}</span>
+                                            <span style="font-size: 11px; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📅 ${shiftDateVal}</span>
+                                            <span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 700;">👤 Sent by: ${name}</span>
+                                        </div>
                                     </div>
-                                    <div style="font-size: 12px; color: #334155; display: flex; gap: 16px; flex-wrap: wrap;">
-                                        <span>🏢 Carrier / MC: <b>${carrierOrMc}</b></span>
-                                        <span>📞 Phone: <b>${phoneNum}</b></span>
-                                        <span>📅 Date: <b>${callDate}</b></span>
+                                    <div style="font-size: 13px; color: #334155; display: flex; gap: 16px; flex-wrap: wrap;">
+                                        <span><b>MC:</b> ${mcNum}</span> | 
+                                        <span><b>Phone:</b> ${phoneNum}</span> | 
+                                        <span><b>Email:</b> ${emailAddr}</span>
                                     </div>
-                                    <div style="font-size: 12px; color: #64748b; background: #f8fafc; padding: 6px 10px; border-radius: 6px; width: 100%;">
-                                        💬 Remarks: ${remarksText}
+                                    <div style="font-size: 12px; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: 8px; width: 100%; border: 1px solid #e2e8f0; font-style: italic;">
+                                        <b>Remarks:</b> ${remarksText}
                                     </div>
                                 </div>`;
                         });
@@ -739,7 +747,7 @@
         }
 
         function exportFollowupsCSV() {
-            let csv = "Agent Name,Carrier/MC,Phone,Shift Date,Remarks\n";
+            let csv = "Agent Name,Company Name,MC,Phone,Email,Shift Date,Saved Time,Remarks\n";
             Object.keys(cachedCallLogs).forEach(name => {
                 let logs = cachedCallLogs[name] || [];
                 if (Array.isArray(logs)) {
@@ -749,12 +757,15 @@
                     });
 
                     followups.forEach(f => {
-                        let cName = f.carrier || f.mc || f.mcNumber || f.carrierName || f.company || f.name || 'N/A';
+                        let cName = f.carrierName || f.company || f.carrier || f.name || 'N/A';
+                        let mcNum = f.mc || f.mcNumber || f.carrierMC || 'N/A';
                         let cPhone = f.phone || f.phoneNumber || f.tel || 'N/A';
-                        let cDate = f.shiftDate || f.date || (f.timestamp ? new Date(f.timestamp).toISOString().split('T')[0] : 'N/A');
+                        let cEmail = f.email || f.mail || 'N/A';
+                        let cDate = f.shiftDate || f.date || 'N/A';
+                        let cSaved = f.timestamp ? new Date(f.timestamp).toLocaleString() : 'N/A';
                         let cRemarks = (f.remarks || f.note || f.comment || f.description || '').replace(/"/g, '""');
 
-                        csv += `"${name}","${cName}","${cPhone}","${cDate}","${cRemarks}"\n`;
+                        csv += `"${name}","${cName}","${mcNum}","${cPhone}","${cEmail}","${cDate}","${cSaved}","${cRemarks}"\n`;
                     });
                 }
             });
