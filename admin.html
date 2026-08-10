@@ -128,9 +128,6 @@
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
                     <span>📋</span> Shift Reports & Ratios
                 </button>
-                <button onclick="switchTab('followups')" id="tabFollowups" class="nav-btn">
-                    <span>📌</span> Team Follow-ups
-                </button>
                 <button onclick="switchTab('audit')" id="tabAudit" class="nav-btn">
                     <span>📊</span> Audit Trail & Logs
                 </button>
@@ -157,7 +154,7 @@
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS, LEADERBOARD, FOLLOWUPS & AUDIT -->
+            <!-- FILTERS FOR REPORTS, LEADERBOARD & AUDIT -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 Date Filter:</span>
@@ -267,13 +264,6 @@
                 exportBtn.style.display = 'block';
                 exportBtn.innerText = "📥 Export CSV";
                 exportBtn.onclick = exportCSV;
-            } else if (tab === 'followups') {
-                pageTitle.innerText = "Team Follow-ups Management";
-                filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'block';
-                exportBtn.innerText = "📥 Export Follow-ups";
-                exportBtn.onclick = exportFollowupsCSV;
             } else if (tab === 'audit') {
                 pageTitle.innerText = "Agent Activity & Audit Trail";
                 filterBar.style.display = 'flex';
@@ -362,6 +352,7 @@
             let allAgents = new Set([...Object.keys(cachedCallLogs), ...Object.keys(cachedReports)]);
             allAgents.forEach(name => {
                 let logs = cachedCallLogs[name] || [];
+                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let sales = filteredLogs.filter(l => l.status === 'Sale Closed').length;
                 
@@ -474,6 +465,7 @@
 
                 allUsers.forEach(name => {
                     let logs = cachedCallLogs[name];
+                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let count = 0;
                     if (Array.isArray(logs)) {
                         count = logs.filter(l => isDateInRange(l.shiftDate || l.date)).length;
@@ -520,6 +512,7 @@
 
                 allAgents.forEach(name => {
                     let logs = cachedCallLogs[name] || [];
+                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                     
                     let reps = cachedReports[name] || [];
@@ -576,80 +569,6 @@
 
                 if (!hasReports) {
                     container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports or call logs found for selected range.</p>`;
-                    return;
-                }
-                container.innerHTML = html + `</div>`;
-
-            } else if (activeTab === 'followups') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Follow-ups from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
-                let hasFollowups = false;
-
-                Object.keys(cachedCallLogs).forEach(name => {
-                    let logs = cachedCallLogs[name] || [];
-                    
-                    // Agar logs object ki form mein hain (Firebase keys), toh unhein array mein convert kar lein
-                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) {
-                        logs = Object.values(logs);
-                    }
-
-                    if (Array.isArray(logs)) {
-                        let followups = logs.filter(l => {
-                            if (!l) return false;
-                            let st = String(l.status || l.callStatus || l.type || "").toLowerCase();
-                            let isFollowUpStatus = st.includes('follow') || st === 'follow up';
-                            return isFollowUpStatus && isDateInRange(l.shiftDate || l.date || l.timestamp);
-                        });
-
-                        followups.forEach(f => {
-                            hasFollowups = true;
-                            
-                            // Advanced key inspection fallback so nothing is missed
-                            let companyName = f.carrierName || f.company || f.carrier || f.name || f.client || f.title || f.brokerName || 'N/A';
-                            let mcNum = f.mc || f.mcNumber || f.carrierMC || f.mc_number || f.docket || 'N/A';
-                            let phoneNum = f.phone || f.phoneNumber || f.tel || f.contact || 'N/A';
-                            let emailAddr = f.email || f.mail || f.contactEmail || 'N/A';
-                            let savedTime = f.timestamp ? new Date(f.timestamp).toLocaleString() : (f.savedTime || 'N/A');
-                            let shiftDateVal = f.shiftDate || f.date || 'N/A';
-                            let remarksText = f.remarks || f.note || f.notes || f.comment || f.description || f.summary || 'No remarks provided.';
-
-                            // Agar phir bhi companyName ya MC "N/A" aayein, toh poore object ko check karein
-                            if (companyName === 'N/A' || mcNum === 'N/A') {
-                                for (let key in f) {
-                                    let val = String(f[key] || '');
-                                    if (companyName === 'N/A' && (key.toLowerCase().includes('name') || key.toLowerCase().includes('company') || key.toLowerCase().includes('carrier')) && val.length > 2 && val !== 'Follow up') {
-                                        companyName = val;
-                                    }
-                                    if (mcNum === 'N/A' && (key.toLowerCase().includes('mc') || key.toLowerCase().includes('docket')) && val.length > 0) {
-                                        mcNum = val;
-                                    }
-                                }
-                            }
-
-                            html += `
-                                <div class="card" style="border-left: 4px solid #f59e0b; flex-direction: column; align-items: flex-start; gap: 10px;">
-                                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                                        <div style="font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase;">${companyName}</div>
-                                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                            <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Saved: ${savedTime}</span>
-                                            <span style="font-size: 11px; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📅 ${shiftDateVal}</span>
-                                            <span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 700;">👤 Sent by: ${name}</span>
-                                        </div>
-                                    </div>
-                                    <div style="font-size: 13px; color: #334155; display: flex; gap: 16px; flex-wrap: wrap;">
-                                        <span><b>MC:</b> ${mcNum}</span> | 
-                                        <span><b>Phone:</b> ${phoneNum}</span> | 
-                                        <span><b>Email:</b> ${emailAddr}</span>
-                                    </div>
-                                    <div style="font-size: 12px; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: 8px; width: 100%; border: 1px solid #e2e8f0; font-style: italic;">
-                                        <b>Remarks:</b> ${remarksText}
-                                    </div>
-                                </div>`;
-                        });
-                    }
-                });
-
-                if (!hasFollowups) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No follow-ups found for the selected date range (${startDateStr} to ${endDateStr}).</p>`;
                     return;
                 }
                 container.innerHTML = html + `</div>`;
@@ -765,41 +684,6 @@
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `DispatchLink_Reports_${startDateStr}_to_${endDateStr}.csv`;
-            link.click();
-        }
-
-        function exportFollowupsCSV() {
-            let csv = "Agent Name,Company Name,MC,Phone,Email,Shift Date,Saved Time,Remarks\n";
-            Object.keys(cachedCallLogs).forEach(name => {
-                let logs = cachedCallLogs[name] || [];
-                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-
-                if (Array.isArray(logs)) {
-                    let followups = logs.filter(l => {
-                        if (!l) return false;
-                        let st = String(l.status || l.callStatus || l.type || "").toLowerCase();
-                        let isFollowUpStatus = st.includes('follow') || st === 'follow up';
-                        return isFollowUpStatus && isDateInRange(l.shiftDate || l.date || l.timestamp);
-                    });
-
-                    followups.forEach(f => {
-                        let cName = f.carrierName || f.company || f.carrier || f.name || f.client || 'N/A';
-                        let mcNum = f.mc || f.mcNumber || f.carrierMC || f.mc_number || 'N/A';
-                        let cPhone = f.phone || f.phoneNumber || f.tel || 'N/A';
-                        let cEmail = f.email || f.mail || 'N/A';
-                        let cDate = f.shiftDate || f.date || 'N/A';
-                        let cSaved = f.timestamp ? new Date(f.timestamp).toLocaleString() : 'N/A';
-                        let cRemarks = (f.remarks || f.note || f.notes || f.comment || f.description || '').replace(/"/g, '""');
-
-                        csv += `"${name}","${cName}","${mcNum}","${cPhone}","${cEmail}","${cDate}","${cSaved}","${cRemarks}"\n`;
-                    });
-                }
-            });
-
-            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `DispatchLink_Followups_${startDateStr}_to_${endDateStr}.csv`;
             link.click();
         }
 
