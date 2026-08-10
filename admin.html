@@ -586,29 +586,50 @@
 
                 Object.keys(cachedCallLogs).forEach(name => {
                     let logs = cachedCallLogs[name] || [];
+                    
+                    // Agar logs object ki form mein hain (Firebase keys), toh unhein array mein convert kar lein
+                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) {
+                        logs = Object.values(logs);
+                    }
+
                     if (Array.isArray(logs)) {
                         let followups = logs.filter(l => {
-                            let isFollowUpStatus = (l.status === 'Follow up' || l.callStatus === 'Follow up' || l.type === 'Follow up');
+                            if (!l) return false;
+                            let st = String(l.status || l.callStatus || l.type || "").toLowerCase();
+                            let isFollowUpStatus = st.includes('follow') || st === 'follow up';
                             return isFollowUpStatus && isDateInRange(l.shiftDate || l.date || l.timestamp);
                         });
 
                         followups.forEach(f => {
                             hasFollowups = true;
                             
-                            // Rich field mappings matching agent UI
-                            let companyName = f.carrierName || f.company || f.carrier || f.name || 'N/A';
-                            let mcNum = f.mc || f.mcNumber || f.carrierMC || 'N/A';
-                            let phoneNum = f.phone || f.phoneNumber || f.tel || 'N/A';
-                            let emailAddr = f.email || f.mail || 'N/A';
+                            // Advanced key inspection fallback so nothing is missed
+                            let companyName = f.carrierName || f.company || f.carrier || f.name || f.client || f.title || f.brokerName || 'N/A';
+                            let mcNum = f.mc || f.mcNumber || f.carrierMC || f.mc_number || f.docket || 'N/A';
+                            let phoneNum = f.phone || f.phoneNumber || f.tel || f.contact || 'N/A';
+                            let emailAddr = f.email || f.mail || f.contactEmail || 'N/A';
                             let savedTime = f.timestamp ? new Date(f.timestamp).toLocaleString() : (f.savedTime || 'N/A');
                             let shiftDateVal = f.shiftDate || f.date || 'N/A';
-                            let remarksText = f.remarks || f.note || f.comment || f.description || 'No remarks provided.';
+                            let remarksText = f.remarks || f.note || f.notes || f.comment || f.description || f.summary || 'No remarks provided.';
+
+                            // Agar phir bhi companyName ya MC "N/A" aayein, toh poore object ko check karein
+                            if (companyName === 'N/A' || mcNum === 'N/A') {
+                                for (let key in f) {
+                                    let val = String(f[key] || '');
+                                    if (companyName === 'N/A' && (key.toLowerCase().includes('name') || key.toLowerCase().includes('company') || key.toLowerCase().includes('carrier')) && val.length > 2 && val !== 'Follow up') {
+                                        companyName = val;
+                                    }
+                                    if (mcNum === 'N/A' && (key.toLowerCase().includes('mc') || key.toLowerCase().includes('docket')) && val.length > 0) {
+                                        mcNum = val;
+                                    }
+                                }
+                            }
 
                             html += `
                                 <div class="card" style="border-left: 4px solid #f59e0b; flex-direction: column; align-items: flex-start; gap: 10px;">
                                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                                         <div style="font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase;">${companyName}</div>
-                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                             <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Saved: ${savedTime}</span>
                                             <span style="font-size: 11px; background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📅 ${shiftDateVal}</span>
                                             <span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 700;">👤 Sent by: ${name}</span>
@@ -707,6 +728,7 @@
 
             allAgents.forEach(name => {
                 let logs = cachedCallLogs[name] || [];
+                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let reps = cachedReports[name] || [];
                 let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
@@ -750,20 +772,24 @@
             let csv = "Agent Name,Company Name,MC,Phone,Email,Shift Date,Saved Time,Remarks\n";
             Object.keys(cachedCallLogs).forEach(name => {
                 let logs = cachedCallLogs[name] || [];
+                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
+
                 if (Array.isArray(logs)) {
                     let followups = logs.filter(l => {
-                        let isFollowUpStatus = (l.status === 'Follow up' || l.callStatus === 'Follow up' || l.type === 'Follow up');
+                        if (!l) return false;
+                        let st = String(l.status || l.callStatus || l.type || "").toLowerCase();
+                        let isFollowUpStatus = st.includes('follow') || st === 'follow up';
                         return isFollowUpStatus && isDateInRange(l.shiftDate || l.date || l.timestamp);
                     });
 
                     followups.forEach(f => {
-                        let cName = f.carrierName || f.company || f.carrier || f.name || 'N/A';
-                        let mcNum = f.mc || f.mcNumber || f.carrierMC || 'N/A';
+                        let cName = f.carrierName || f.company || f.carrier || f.name || f.client || 'N/A';
+                        let mcNum = f.mc || f.mcNumber || f.carrierMC || f.mc_number || 'N/A';
                         let cPhone = f.phone || f.phoneNumber || f.tel || 'N/A';
                         let cEmail = f.email || f.mail || 'N/A';
                         let cDate = f.shiftDate || f.date || 'N/A';
                         let cSaved = f.timestamp ? new Date(f.timestamp).toLocaleString() : 'N/A';
-                        let cRemarks = (f.remarks || f.note || f.comment || f.description || '').replace(/"/g, '""');
+                        let cRemarks = (f.remarks || f.note || f.notes || f.comment || f.description || '').replace(/"/g, '""');
 
                         csv += `"${name}","${cName}","${mcNum}","${cPhone}","${cEmail}","${cDate}","${cSaved}","${cRemarks}"\n`;
                     });
