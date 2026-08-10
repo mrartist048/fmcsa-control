@@ -31,11 +31,11 @@
     <div class="filter-container">
         <div class="filter-group">
             <label>Start MC Number:</label>
-            <input type="number" id="qStartMc" placeholder="e.g., 100000">
+            <input type="number" id="qStartMc" placeholder="e.g., 1723000">
         </div>
         <div class="filter-group">
             <label>End MC Number:</label>
-            <input type="number" id="qEndMc" placeholder="e.g., 100500">
+            <input type="number" id="qEndMc" placeholder="e.g., 1723500">
         </div>
         <button class="btn-search" onclick="fetchQuickLeads()">🔍 Fetch Leads Instantly</button>
     </div>
@@ -66,11 +66,11 @@
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
 
         async function fetchQuickLeads() {
-            let start = document.getElementById('qStartMc').value.trim();
-            let end = document.getElementById('qEndMc').value.trim();
+            let start = parseInt(document.getElementById('qStartMc').value.trim());
+            let end = parseInt(document.getElementById('qEndMc').value.trim());
             let tbody = document.getElementById('quickResultsTable');
 
-            if (!start || !end || parseInt(start) > parseInt(end)) {
+            if (isNaN(start) || isNaN(end) || start > end) {
                 alert("Please enter a valid start and end MC range.");
                 return;
             }
@@ -78,38 +78,60 @@
             tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">Fetching records from database... Please wait.</td></tr>`;
 
             try {
-                const url = `${FIREBASE_DB_URL}leads.json?orderBy="$key"&startAt="${start}"&endAt="${end}"`;
+                const url = `${FIREBASE_DB_URL}leads.json`;
                 let response = await fetch(url);
                 let data = await response.json();
 
-                if (!data || Object.keys(data).length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">No records found in this range.</td></tr>`;
+                if (!data) {
+                    tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">No records found in database.</td></tr>`;
                     return;
                 }
 
                 let html = "";
+                let matchCount = 0;
+
                 Object.keys(data).forEach(mcKey => {
                     let r = data[mcKey];
-                    html += `
-                        <tr>
-                            <td><b>${r.mc || mcKey}</b></td>
-                            <td>${r.usdot || 'N/A'}</td>
-                            <td>${r.name || 'N/A'}</td>
-                            <td>${r.entityType || 'N/A'}</td>
-                            <td><span class="badge">${r.status || 'AUTHORIZED'}</span></td>
-                            <td><b>${r.phone || 'N/A'}</b></td>
-                            <td>${r.address || 'N/A'}</td>
-                            <td>${r.email || 'N/A'}</td>
-                            <td>${r.powerUnits || 'N/A'}</td>
-                            <td><b>${r.vehicleType || 'N/A'}</b></td>
-                        </tr>
-                    `;
+                    let mcNum = parseInt(r["MC Number"] || r["mc"] || r["MC"] || mcKey);
+
+                    if (!isNaN(mcNum) && mcNum >= start && mcNum <= end) {
+                        matchCount++;
+                        
+                        let usdot = r["USDOT Number"] || r["usdot"] || r["USDOT"] || "N/A";
+                        let name = r["Company Name"] || r["name"] || r["Legal Name"] || "N/A";
+                        let entityType = r["Entity Type"] || r["entityType"] || "N/A";
+                        let status = r["Operating Status"] || r["status"] || "AUTHORIZED";
+                        let phone = r["Phone"] || r["phone"] || "N/A";
+                        let address = r["Address"] || r["address"] || "N/A";
+                        let email = r["Email"] || r["email"] || "N/A";
+                        let powerUnits = r["Power Units"] || r["powerUnits"] || "N/A";
+                        let vehicleType = r["Vehicle Type"] || r["vehicleType"] || "N/A";
+
+                        html += `
+                            <tr>
+                                <td><b>${mcNum}</b></td>
+                                <td>${usdot}</td>
+                                <td>${name}</td>
+                                <td>${entityType}</td>
+                                <td><span class="badge">${status}</span></td>
+                                <td><b>${phone}</b></td>
+                                <td>${address}</td>
+                                <td>${email}</td>
+                                <td>${powerUnits}</td>
+                                <td><b>${vehicleType}</b></td>
+                            </tr>
+                        `;
+                    }
                 });
 
-                tbody.innerHTML = html;
+                if (matchCount === 0) {
+                    tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">No records found in this range.</td></tr>`;
+                } else {
+                    tbody.innerHTML = html;
+                }
             } catch (err) {
                 console.error("Fetch error:", err);
-                tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg" style="color:red;">Failed to fetch data. Check your connection.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg" style="color:red;">Failed to fetch data. Check console.</td></tr>`;
             }
         }
     </script>
