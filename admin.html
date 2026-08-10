@@ -92,7 +92,6 @@
                     <h2>Dispatch Link</h2>
                     <span>Admin Control Dashboard</span>
                 </div>
-                <button onclick="toggleSidebar()" style="background:transparent; border:none; color:white; font-size:18px; cursor:pointer; display:none;" class="close-sidebar-btn">✕</button>
             </div>
 
             <div class="sidebar-menu">
@@ -207,7 +206,6 @@
             let activeBtnElem = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
             if (activeBtnElem) activeBtnElem.classList.add('active');
             
-            // Close mobile sidebar if open
             if(window.innerWidth <= 900) {
                 toggleSidebar();
             }
@@ -303,34 +301,40 @@
 
             if (activeTab === 'online') {
                 let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
-                let users = new Set();
                 
-                // Collect users from sessions object (keys or values mapping)
+                // Aggregate all unique user nicknames map
+                let uniqueUsers = {};
+
+                // 1. Gather from sessions
                 if (cachedSessions) {
-                    Object.values(cachedSessions).forEach(s => {
-                        if (s?.nickname) users.add(s.nickname);
-                    });
-                    // Also check keys if sessions are stored by unique ID or username keys
-                    Object.keys(cachedSessions).forEach(k => {
-                        users.add(k);
-                        if (cachedSessions[k]?.nickname) users.add(cachedSessions[k].nickname);
+                    Object.keys(cachedSessions).forEach(key => {
+                        let sObj = cachedSessions[key];
+                        let name = sObj?.nickname || sObj?.name || key;
+                        if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
+                            uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
+                        }
                     });
                 }
-                Object.keys(cachedReports).forEach(n => users.add(n));
-                Object.keys(cachedCallLogs).forEach(n => users.add(n));
 
-                if (users.size === 0) {
+                // 2. Gather from reports & call logs to ensure offline users also appear
+                Object.keys(cachedReports).forEach(n => {
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                });
+                Object.keys(cachedCallLogs).forEach(n => {
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                });
+
+                let userKeys = Object.keys(uniqueUsers);
+                if (userKeys.length === 0) {
                     container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users or agents detected in database.</p>`;
                     return;
                 }
 
                 let renderedCount = 0;
-                users.forEach(name => {
-                    // Find matching session object either by key match or nickname property match
-                    let sObj = cachedSessions[name] || Object.values(cachedSessions).find(s => s?.nickname === name);
-                    
-                    // Consider online if timestamp exists and difference is within 2 minutes (120000ms)
-                    let lastActiveTime = sObj?.timestamp || sObj?.lastActive || 0;
+                userKeys.forEach(nameKey => {
+                    let uData = uniqueUsers[nameKey];
+                    let displayName = uData.resolvedName || nameKey;
+                    let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
                     // Apply online/offline status filter
@@ -343,10 +347,10 @@
                     html += `
                         <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'};">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                                <b style="font-size: 15px; color: #0f172a;">${name}</b> ${badge}
+                                <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; border-top: 1px solid #f1f5f9; padding-top: 8px;">
-                                <span>Login: <b>${sObj?.loginTime || 'N/A'}</b></span>
+                                <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
                                 <span>Last Active: <b>${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'Never'}</b></span>
                             </div>
                         </div>`;
