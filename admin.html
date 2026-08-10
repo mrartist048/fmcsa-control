@@ -145,6 +145,13 @@
             }
         }
 
+        function isDateInRange(dateVal) {
+            if (!dateVal) return true; // Fallback if date is missing
+            let dStr = dateVal.substring(0, 10);
+            if (filterMode === 'all') return true;
+            return dStr >= startDateStr && dStr <= endDateStr;
+        }
+
         function renderContent() {
             let container = document.getElementById('adminBodyContent');
             let now = Date.now();
@@ -187,14 +194,11 @@
                     let logs = cachedCallLogs[name];
                     let count = 0;
                     if (Array.isArray(logs)) {
-                        count = logs.filter(l => {
-                            let d = l.shiftDate || "";
-                            return d >= startDateStr && d <= endDateStr;
-                        }).length;
+                        count = logs.filter(l => isDateInRange(l.shiftDate || l.date)).length;
                     }
                     if (count === 0 && cachedReports[name]) {
-                        let filteredReps = cachedReports[name].filter(r => r.date >= startDateStr && r.date <= endDateStr);
-                        count = filteredReps.reduce((sum, r) => sum + (r.totalCalls || 0), 0);
+                        let filteredReps = cachedReports[name].filter(r => isDateInRange(r.date));
+                        count = filteredReps.reduce((sum, r) => sum + (r.totalCalls || (r.logs ? r.logs.length : 0)), 0);
                     }
                     if (count > 0) {
                         perfMap[name] = count;
@@ -234,20 +238,27 @@
 
                 allAgents.forEach(name => {
                     let logs = cachedCallLogs[name] || [];
-                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr) : [];
+                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                     
                     let reps = cachedReports[name] || [];
-                    let filteredReps = Array.isArray(reps) ? reps.filter(r => r.date >= startDateStr && r.date <= endDateStr) : [];
+                    let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
-                    let combinedDates = new Set([...filteredLogs.map(l => l.shiftDate), ...filteredReps.map(r => r.date)]);
+                    // Group direct call logs by date if no explicit shift report exists
+                    let datesMap = {};
+                    filteredLogs.forEach(l => {
+                        let d = (l.shiftDate || l.date || startDateStr).substring(0, 10);
+                        if (!datesMap[d]) datesMap[d] = [];
+                        datesMap[d].push(l);
+                    });
 
-                    combinedDates.forEach(dateStr => {
+                    filteredReps.forEach(r => {
+                        let d = (r.date || startDateStr).substring(0, 10);
+                        if (!datesMap[d]) datesMap[d] = r.logs || [];
+                    });
+
+                    Object.keys(datesMap).forEach(dateStr => {
                         hasReports = true;
-                        let dayLogs = filteredLogs.filter(l => l.shiftDate === dateStr);
-                        let repObj = filteredReps.find(r => r.date === dateStr);
-                        let dayLogsFromRep = repObj ? (repObj.logs || []) : [];
-
-                        let finalLogs = dayLogs.length >= dayLogsFromRep.length ? dayLogs : dayLogsFromRep;
+                        let finalLogs = datesMap[dateStr];
 
                         let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                         finalLogs.forEach(l => {
@@ -256,7 +267,7 @@
                             else counts["Hung up"]++;
                         });
 
-                        let totalC = finalLogs.length > 0 ? finalLogs.length : (repObj ? (repObj.totalCalls || 0) : 0);
+                        let totalC = finalLogs.length;
                         let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
                         let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
@@ -296,17 +307,23 @@
 
             allAgents.forEach(name => {
                 let logs = cachedCallLogs[name] || [];
-                let filteredLogs = Array.isArray(logs) ? logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr) : [];
+                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let reps = cachedReports[name] || [];
-                let filteredReps = Array.isArray(reps) ? reps.filter(r => r.date >= startDateStr && r.date <= endDateStr) : [];
-                let combinedDates = new Set([...filteredLogs.map(l => l.shiftDate), ...filteredReps.map(r => r.date)]);
+                let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
-                combinedDates.forEach(dateStr => {
-                    let dayLogs = filteredLogs.filter(l => l.shiftDate === dateStr);
-                    let repObj = filteredReps.find(r => r.date === dateStr);
-                    let dayLogsFromRep = repObj ? (repObj.logs || []) : [];
-                    let finalLogs = dayLogs.length >= dayLogsFromRep.length ? dayLogs : dayLogsFromRep;
+                let datesMap = {};
+                filteredLogs.forEach(l => {
+                    let d = (l.shiftDate || l.date || startDateStr).substring(0, 10);
+                    if (!datesMap[d]) datesMap[d] = [];
+                    datesMap[d].push(l);
+                });
+                filteredReps.forEach(r => {
+                    let d = (r.date || startDateStr).substring(0, 10);
+                    if (!datesMap[d]) datesMap[d] = r.logs || [];
+                });
 
+                Object.keys(datesMap).forEach(dateStr => {
+                    let finalLogs = datesMap[dateStr];
                     let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                     finalLogs.forEach(l => {
                         let st = l.status || "Hung up";
@@ -314,7 +331,7 @@
                         else counts["Hung up"]++;
                     });
 
-                    let totalC = finalLogs.length > 0 ? finalLogs.length : (repObj ? (repObj.totalCalls || 0) : 0);
+                    let totalC = finalLogs.length;
                     let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
                     let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
