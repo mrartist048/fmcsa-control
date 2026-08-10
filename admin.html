@@ -1,115 +1,142 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dispatch Link | Admin Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #0f172a; margin: 0; padding: 24px; }
-        .admin-container { max-width: 1100px; margin: 0 auto; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; overflow: hidden; }
-        .admin-header { background: #0f172a; color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .admin-nav { display: flex; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; gap: 10px; }
-        .admin-nav button { flex: 1; padding: 10px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: #f1f5f9; color: #475569; transition: 0.2s; }
-        .admin-nav button.active { background: #0f172a; color: white; border: none; }
-        .admin-body { padding: 24px; min-height: 400px; background: #f8fafc; }
-        .card { background: white; border: 1px solid #e2e8f0; padding: 16px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .btn-primary { background: #0f172a; color: white; border: none; padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; }
-        .btn-success { background: #22c55e; color: white; border: none; padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; }
-    </style>
-</head>
-<body>
+<script>
+    const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+    let currentClient = localStorage.getItem("dl_logged_client") || "Gslogisticsdispatch";
+    let activeTab = 'online';
+    let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
 
-    <div class="admin-container">
-        <div class="admin-header">
-            <h2 style="margin: 0; font-size: 18px;">👑 Dispatch Link Admin Panel</h2>
-            <button onclick="fetchAdminData()" class="btn-primary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">🔄 Refresh Data</button>
-        </div>
-
-        <div class="admin-nav">
-            <button onclick="switchTab('online')" id="tabOnline" class="active">👥 Live & Offline Users</button>
-            <button onclick="switchTab('leaderboard')" id="tabLeaderboard">🏆 Team Calling Leaderboard</button>
-            <button onclick="switchTab('reports')" id="tabReports">📋 Shift Reports & Ratios</button>
-        </div>
-
-        <div id="filterBar" style="background: white; padding: 12px 24px; border-bottom: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-            <!-- Dynamic Filters -->
-        </div>
-
-        <div class="admin-body" id="adminBodyContent">
-            Loading admin statistics...
-        </div>
-
-        <div style="background: white; padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
-            <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">📥 Export Filtered CSV</button>
-            <span style="font-size: 12px; color: #64748b; align-self: center;">Secured Dispatch CRM Portal</span>
-        </div>
-    </div>
-
-    <script>
-        const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
-        let currentClient = localStorage.getItem("dl_logged_client") || "Gslogisticsdispatch";
-        let activeTab = 'online';
-        let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
-
-        async function fetchAdminData() {
-            try {
-                let [sRes, rRes, cRes] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
-                ]);
-                cachedSessions = await sRes.json() || {};
-                cachedReports = await rRes.json() || {};
-                cachedCallLogs = await cRes.json() || {};
-                renderContent();
-            } catch (e) {
-                document.getElementById('adminBodyContent').innerHTML = `<p style="color: red;">Failed to load data from Firebase.</p>`;
-            }
-        }
-
-        function switchTab(tab) {
-            activeTab = tab;
-            document.querySelectorAll('.admin-nav button').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-            
-            document.getElementById('exportBtn').style.display = tab === 'online' ? 'none' : 'block';
+    async function fetchAdminData() {
+        try {
+            let [sRes, rRes, cRes] = await Promise.all([
+                fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+                fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
+                fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
+            ]);
+            cachedSessions = await sRes.json() || {};
+            cachedReports = await rRes.json() || {};
+            cachedCallLogs = await cRes.json() || {};
             renderContent();
+        } catch (e) {
+            document.getElementById('adminBodyContent').innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Failed to load data from Firebase.</p>`;
         }
+    }
 
-        function renderContent() {
-            let container = document.getElementById('adminBodyContent');
-            let now = Date.now();
+    function switchTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.admin-nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        
+        document.getElementById('exportBtn').style.display = tab === 'online' ? 'none' : 'block';
+        renderContent();
+    }
 
-            if (activeTab === 'online') {
-                let html = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
-                let users = new Set();
-                Object.values(cachedSessions).forEach(s => s?.nickname && users.add(s.nickname));
-                Object.keys(cachedReports).forEach(n => users.add(n));
+    function renderContent() {
+        let container = document.getElementById('adminBodyContent');
+        let now = Date.now();
 
-                users.forEach(name => {
-                    let sObj = Object.values(cachedSessions).find(s => s?.nickname === name);
-                    let isOnline = sObj && (now - sObj.timestamp < 60000);
-                    let badge = isOnline ? `<span style="background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:6px; font-size:11px;">🟢 Online</span>` : `<span style="background:#f1f5f9; color:#64748b; padding:3px 8px; border-radius:6px; font-size:11px;">⚪ Offline</span>`;
-                    
-                    html += `
-                        <div class="card">
-                            <div>
-                                <b style="font-size: 15px;">${name}</b> ${badge}
-                                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Login Time: ${sObj?.loginTime || 'N/A'}</div>
-                            </div>
-                            <div style="font-size: 12px; color: #475569;">Last Active: ${sObj?.timestamp ? new Date(sObj.timestamp).toLocaleTimeString() : 'Never'}</div>
-                        </div>`;
-                });
-                container.innerHTML = html + `</div>`;
-            } else if (activeTab === 'leaderboard') {
-                container.innerHTML = `<p>Leaderboard view loaded based on shift call entries.</p>`;
-            } else {
-                container.innerHTML = `<p>Shift reports and pickup ratios breakdown.</p>`;
+        if (activeTab === 'online') {
+            let html = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+            let users = new Set();
+            Object.values(cachedSessions).forEach(s => s?.nickname && users.add(s.nickname));
+            Object.keys(cachedReports).forEach(n => users.add(n));
+            Object.keys(cachedCallLogs).forEach(n => users.add(n));
+
+            if (users.size === 0) {
+                container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No active users or agents found.</p>`;
+                return;
             }
-        }
 
-        fetchAdminData();
-    </script>
-</body>
-</html>
+            users.forEach(name => {
+                let sObj = Object.values(cachedSessions).find(s => s?.nickname === name);
+                let isOnline = sObj && (now - sObj.timestamp < 60000);
+                let badge = isOnline ? `<span style="background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600;">🟢 Online</span>` : `<span style="background:#f1f5f9; color:#64748b; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600;">⚪ Offline</span>`;
+                
+                html += `
+                    <div class="card">
+                        <div>
+                            <b style="font-size: 15px; color: #0f172a;">${name}</b> ${badge}
+                            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Login Time: ${sObj?.loginTime || 'N/A'}</div>
+                        </div>
+                        <div style="font-size: 12px; color: #475569; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">Last Active: ${sObj?.timestamp ? new Date(sObj.timestamp).toLocaleTimeString() : 'Never'}</div>
+                    </div>`;
+            });
+            container.innerHTML = html + `</div>`;
+
+        } else if (activeTab === 'leaderboard') {
+            let perfMap = {};
+            let allUsers = new Set();
+            Object.keys(cachedCallLogs).forEach(n => allUsers.add(n));
+            Object.keys(cachedReports).forEach(n => allUsers.add(n));
+
+            allUsers.forEach(name => {
+                let logs = cachedCallLogs[name];
+                let totalCalls = Array.isArray(logs) ? logs.length : 0;
+                if (totalCalls === 0 && cachedReports[name]) {
+                    totalCalls = cachedReports[name].reduce((sum, r) => sum + (r.totalCalls || 0), 0);
+                }
+                if (totalCalls > 0) {
+                    perfMap[name] = totalCalls;
+                }
+            });
+
+            let sorted = Object.keys(perfMap).sort((a, b) => perfMap[b] - perfMap[a]);
+            if (sorted.length === 0) {
+                container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling activity or leaderboard entries found.</p>`;
+                return;
+            }
+
+            let html = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+            sorted.forEach((name, idx) => {
+                let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx+1}`;
+                html += `
+                    <div class="card" style="border-left: 4px solid #3b82f6;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <span style="font-size: 18px; font-weight: 700; width: 30px; text-align: center;">${medal}</span>
+                            <div>
+                                <b style="font-size: 15px; color: #0f172a;">${name}</b>
+                                <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Active Calling Performance</div>
+                            </div>
+                        </div>
+                        <div style="background: #0f172a; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;">
+                            Total Calls: ${perfMap[name]}
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html + `</div>`;
+
+        } else if (activeTab === 'reports') {
+            let html = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+            let hasReports = false;
+
+            Object.keys(cachedReports).forEach(name => {
+                let reps = cachedReports[name];
+                if (Array.isArray(reps) && reps.length > 0) {
+                    hasReports = true;
+                    reps.forEach(rep => {
+                        html += `
+                            <div class="card" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; width: 100%;">
+                                    <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
+                                    <span style="font-size: 12px; color: #64748b;">Date: ${rep.date} (${rep.timestamp})</span>
+                                </div>
+                                <div style="font-size: 13px; color: #334155;">
+                                    <b>Total Calls Logged:</b> ${rep.totalCalls || 0}
+                                </div>
+                            </div>`;
+                    });
+                }
+            });
+
+            if (!hasReports) {
+                container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports submitted by agents yet.</p>`;
+                return;
+            }
+            container.innerHTML = html + `</div>`;
+        }
+    }
+
+    function exportCSV() {
+        alert("Exporting CSV report...");
+    }
+
+    fetchAdminData();
+</script>
