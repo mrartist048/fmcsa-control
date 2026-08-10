@@ -9,7 +9,7 @@
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         
-        .admin-layout { display: flex; height: 100vh; width: 100vw; }
+        .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
         
         /* SIDEBAR NAVIGATION */
         .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 10; }
@@ -17,25 +17,23 @@
         .sidebar-brand h2 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
         .sidebar-brand span { font-size: 11px; color: #38bdf8; font-weight: 600; display: block; margin-top: 2px; }
         
-        .sidebar-menu { padding: 20px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .sidebar-menu { padding: 20px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
         .menu-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; padding: 0 12px 6px 12px; font-weight: 700; }
         
         .nav-btn { background: transparent; color: #94a3b8; border: none; padding: 12px 16px; text-align: left; font-size: 13.5px; font-weight: 600; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s ease; width: 100%; }
         .nav-btn:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
         .nav-btn.active { background: #0284c7; color: white; box-shadow: 0 4px 12px rgba(2,132,199,0.35); }
-        
-        .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.15); }
-        .btn-refresh { width: 100%; background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.15); padding: 10px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-refresh:hover { background: rgba(255,255,255,0.15); }
 
         /* MAIN CONTENT AREA */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; }
         
         /* TOP BAR & FILTERS */
-        .top-header { height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .top-header { height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; }
         .header-title { font-size: 18px; font-weight: 700; color: #0f172a; }
         
-        .filter-bar { background: white; padding: 14px 32px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+
+        .filter-bar { background: white; padding: 14px 32px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
         .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .filter-btn:hover { background: #e2e8f0; }
@@ -57,7 +55,25 @@
         .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-success:hover { background: #15803d; }
 
+        .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-refresh-top:hover { background: #1e293b; }
+
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
+
+        /* RESPONSIVE DESIGN FOR MOBILE & TABLET */
+        @media (max-width: 900px) {
+            body { height: auto; overflow: auto; }
+            .admin-layout { flex-direction: column; height: auto; overflow: visible; }
+            .sidebar { width: 100%; height: auto; }
+            .sidebar-menu { flex-direction: row; flex-wrap: wrap; padding: 10px; gap: 6px; }
+            .menu-label { display: none; }
+            .nav-btn { flex: 1; min-width: 130px; justify-content: center; padding: 8px 10px; font-size: 12px; }
+            .main-wrapper { height: auto; overflow: visible; }
+            .top-header { padding: 0 16px; height: auto; min-height: 60px; flex-direction: column; gap: 10px; padding-bottom: 10px; padding-top: 10px; }
+            .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 12px; }
+            .admin-body { padding: 16px; overflow-y: visible; }
+            .card { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -84,23 +100,23 @@
                     <span>📋</span> Shift Reports & Ratios
                 </button>
             </div>
-
-            <div class="sidebar-footer">
-                <button onclick="fetchAdminData()" class="btn-refresh">
-                    <span>🔄</span> Refresh Portal Data
-                </button>
-            </div>
         </div>
 
         <!-- MAIN VIEW PORT -->
         <div class="main-wrapper">
             <div class="top-header">
                 <div class="header-title" id="pageTitle">Live & Offline Users</div>
-                <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">
-                    📥 Export Filtered Reports CSV
-                </button>
+                <div class="header-actions">
+                    <button onclick="fetchAdminData()" class="btn-refresh-top">
+                        <span>🔄</span> Refresh Data
+                    </button>
+                    <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">
+                        📥 Export CSV
+                    </button>
+                </div>
             </div>
 
+            <!-- FILTERS FOR REPORTS & LEADERBOARD -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 Date Filter:</span>
@@ -115,6 +131,16 @@
                 </div>
             </div>
 
+            <!-- FILTERS SPECIFICALLY FOR LIVE & OFFLINE USERS -->
+            <div id="onlineFilterBar" class="filter-bar">
+                <div class="filter-group">
+                    <span style="font-size: 12px; font-weight: 700; color: #0f172a;">👤 User Status Filter:</span>
+                    <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn active">All Users</button>
+                    <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn">🟢 Online Only</button>
+                    <button onclick="setOnlineFilter('offline')" id="statusOffline" class="filter-btn">⚪ Offline Only</button>
+                </div>
+            </div>
+
             <div class="admin-body" id="adminBodyContent">
                 Loading admin statistics...
             </div>
@@ -125,6 +151,7 @@
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
         let currentClient = localStorage.getItem("dl_logged_client") || "Gslogisticsdispatch";
         let activeTab = 'online';
+        let onlineFilterMode = 'all'; // 'all', 'online', 'offline'
         let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
 
         // Shift Date Standardizer (Handles 10 AM shift boundary)
@@ -163,22 +190,37 @@
             document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
             
             let filterBar = document.getElementById('filterBar');
+            let onlineFilterBar = document.getElementById('onlineFilterBar');
             let exportBtn = document.getElementById('exportBtn');
             let pageTitle = document.getElementById('pageTitle');
 
             if (tab === 'online') {
                 pageTitle.innerText = "Live & Offline Users Monitoring";
                 filterBar.style.display = 'none';
+                onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
             } else if (tab === 'leaderboard') {
                 pageTitle.innerText = "Team Calling Leaderboard";
                 filterBar.style.display = 'flex';
-                exportBtn.style.display = 'flex';
+                onlineFilterBar.style.display = 'none';
+                exportBtn.style.display = 'block';
             } else {
                 pageTitle.innerText = "Detailed Shift Reports & Ratios";
                 filterBar.style.display = 'flex';
-                exportBtn.style.display = 'flex';
+                onlineFilterBar.style.display = 'none';
+                exportBtn.style.display = 'block';
             }
+            renderContent();
+        }
+
+        function setOnlineFilter(mode) {
+            onlineFilterMode = mode;
+            ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => {
+                let b = document.getElementById(id);
+                if (b) b.classList.remove('active');
+            });
+            let activeBtn = document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1));
+            if (activeBtn) activeBtn.classList.add('active');
             renderContent();
         }
 
@@ -237,7 +279,7 @@
             let now = Date.now();
 
             if (activeTab === 'online') {
-                let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">`;
+                let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
                 let users = new Set();
                 Object.values(cachedSessions).forEach(s => s?.nickname && users.add(s.nickname));
                 Object.keys(cachedReports).forEach(n => users.add(n));
@@ -248,9 +290,16 @@
                     return;
                 }
 
+                let renderedCount = 0;
                 users.forEach(name => {
                     let sObj = Object.values(cachedSessions).find(s => s?.nickname === name);
                     let isOnline = sObj && (now - sObj.timestamp < 60000);
+
+                    // Apply online/offline status filter
+                    if (onlineFilterMode === 'online' && !isOnline) return;
+                    if (onlineFilterMode === 'offline' && isOnline) return;
+
+                    renderedCount++;
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Online</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
                     
                     html += `
@@ -264,6 +313,12 @@
                             </div>
                         </div>`;
                 });
+
+                if (renderedCount === 0) {
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match the selected status filter (${onlineFilterMode}).</p>`;
+                    return;
+                }
+
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'leaderboard') {
