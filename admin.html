@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch Link - Admin Dashboard</title>
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; color: #333; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .admin-modal { width: 95%; max-width: 1100px; height: 90vh; background: #fff; border-radius: 12px; box-shadow: 0 12px 35px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Header */
+        .admin-header { background: #002d62; color: white; padding: 18px 25px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-header h2 { font-size: 20px; display: flex; align-items: center; gap: 10px; }
+        .close-btn { background: none; border: none; color: white; font-size: 26px; cursor: pointer; font-weight: bold; }
+
+        /* Layout Body */
+        .admin-body { display: flex; flex: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .admin-sidebar { width: 260px; background: #f8f9fa; border-right: 1px solid #e0e0e0; padding: 20px 15px; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-btn { width: 100%; text-align: left; background: transparent; border: none; padding: 12px 15px; font-size: 14px; font-weight: 600; color: #495057; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .sidebar-btn:hover { background: #e9ecef; color: #002d62; }
+        .sidebar-btn.active { background: #002d62; color: white; }
+
+        /* Main Workspace */
+        .admin-content { flex: 1; padding: 25px; overflow-y: auto; background: #fafbfc; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Filter Control Bar */
+        .control-bar { background: white; padding: 15px 20px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .filter-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #555; }
+        .filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; outline: none; }
+
+        /* Data Cards Grid / List */
+        .cards-container { display: flex; flex-direction: column; gap: 12px; }
+        .data-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s; }
+        .data-card:hover { border-color: #b0c4de; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+
+        /* Footer Bar */
+        .admin-footer { background: #f8f9fa; border-top: 1px solid #e0e0e0; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #001f3f; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-online { background: #e8f5e9; color: #2e7d32; }
+        .badge-offline { background: #f1f3f4; color: #6c757d; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-modal">
+        <!-- Header -->
+        <div class="admin-header">
+            <h2>👑 Dispatch Link - Master Admin Dashboard</h2>
+            <button class="close-btn" onclick="window.close()">&times;</button>
+        </div>
+
+        <!-- Body Layout (Sidebar + Content) -->
+        <div class="admin-body">
+            <!-- Sidebar Navigation -->
+            <div class="admin-sidebar">
+                <button class="sidebar-btn active" id="menuOnline" onclick="switchAdminTab('online')">👥 Live & Offline Users</button>
+                <button class="sidebar-btn" id="menuLeaderboard" onclick="switchAdminTab('leaderboard')">🏆 Team Leaderboard</button>
+                <button class="sidebar-btn" id="menuReports" onclick="switchAdminTab('reports')">📋 Shift Reports & Ratios</button>
+                <hr style="border:0; border-top:1px solid #ddd; margin: 10px 0;">
+                <button class="sidebar-btn" onclick="refreshAdminData()">🔄 Refresh Database</button>
+            </div>
+
+            <!-- Main Workspace -->
+            <div class="admin-content">
+                <!-- Control / Filter Bar -->
+                <div class="control-bar" id="adminControlBar">
+                    <!-- Dynamically injected filters -->
+                </div>
+
+                <!-- Cards List Container -->
+                <div class="cards-container" id="adminDataList">
+                    <p style="text-align: center; color: #666; margin-top: 40px;">Loading data from Firebase...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="admin-footer">
+            <button class="btn" id="exportCsvBtn" onclick="downloadReportCSV()" style="display: none;">📥 Export Filtered CSV</button>
+            <button class="btn btn-secondary" onclick="window.close()">Close Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+        const MASTER_ADMIN_PASS = "admin890";
+
+        // Security Authentication Prompt
+        let passwordInput = prompt("Enter Master Admin Password:");
+        if (passwordInput !== MASTER_ADMIN_PASS) {
+            alert("Incorrect Password! Access Denied.");
+            window.location.href = "about:blank";
+        }
+
+        let currentClient = localStorage.getItem("dl_logged_client") || "dispatchloadify";
+        let activeTab = 'online';
+        let usersViewMode = 'all';
+        let dateFilterMode = 'today';
+        let startDateStr = new Date().toISOString().split('T')[0];
+        let endDateStr = new Date().toISOString().split('T')[0];
+
+        let cachedSessions = {};
+        let cachedReportsGrouped = {};
+        let cachedDbCallLogs = {};
+
+        async function initAdminPanel() {
+            try {
+                let [sessionsRes, reportsRes, callLogsRes] = await Promise.all([
+                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
+                ]);
+
+                cachedSessions = await sessionsRes.json() || {};
+                cachedReportsGrouped = await reportsRes.json() || {};
+                cachedDbCallLogs = await callLogsRes.json() || {};
+
+                renderActiveView();
+            } catch (err) {
+                console.error("Firebase connection error:", err);
+                document.getElementById('adminDataList').innerHTML = `<p style="color: red; text-align: center;">Failed to load data from Firebase database.</p>`;
+            }
+        }
+
+        function switchAdminTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+            if(tab === 'online') document.getElementById('menuOnline').classList.add('active');
+            if(tab === 'leaderboard') document.getElementById('menuLeaderboard').classList.add('active');
+            if(tab === 'reports') document.getElementById('menuReports').classList.add('active');
+
+            let exportBtn = document.getElementById('exportCsvBtn');
+            exportBtn.style.display = (tab === 'online') ? 'none' : 'block';
+
+            renderControlBar();
+            renderActiveView();
+        }
+
+        function renderControlBar() {
+            let bar = document.getElementById('adminControlBar');
+            if (activeTab === 'online') {
+                bar.innerHTML = `
+                    <div class="filter-group">
+                        <span>Filter Users:</span>
+                        <select id="userStatusFilter" onchange="setUsersViewMode(this.value)">
+                            <option value="all">All Users</option>
+                            <option value="online">Online Only</option>
+                            <option value="offline">Offline Only</option>
+                        </select>
+                    </div>
+                    <span style="font-size: 12px; color: #666;">Auto-tracks active sessions</span>
+                `;
+            } else {
+                bar.innerHTML = `
+                    <div class="filter-group">
+                        <span>Preset:</span>
+                        <select onchange="setDatePreset(this.value)">
+                            <option value="today">Today</option>
+                            <option value="week">Last 7 Days</option>
+                            <option value="month">This Month</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <span>From:</span> <input type="date" id="startDate" value="${startDateStr}" onchange="onDateChange()">
+                        <span>To:</span> <input type="date" id="endDate" value="${endDateStr}" onchange="onDateChange()">
+                    </div>
+                `;
+            }
+        }
+
+        function setUsersViewMode(mode) {
+            usersViewMode = mode;
+            renderActiveView();
+        }
+
+        function setDatePreset(preset) {
+            dateFilterMode = preset;
+            let today = new Date();
+            let todayStr = today.toISOString().split('T')[0];
+
+            if (preset === 'today') {
+                startDateStr = todayStr; endDateStr = todayStr;
+            } else if (preset === 'week') {
+                let past = new Date(); past.setDate(today.getDate() - 6);
+                startDateStr = past.toISOString().split('T')[0]; endDateStr = todayStr;
+            } else if (preset === 'month') {
+                startDateStr = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]; endDateStr = todayStr;
+            } else if (preset === 'all') {
+                startDateStr = "2020-01-01"; endDateStr = "2030-12-31";
+            }
+
+            let sInput = document.getElementById('startDate');
+            let eInput = document.getElementById('endDate');
+            if(sInput) sInput.value = startDateStr;
+            if(eInput) eInput.value = endDateStr;
+
+            renderActiveView();
+        }
+
+        function onDateChange() {
+            let sInput = document.getElementById('startDate');
+            let eInput = document.getElementById('endDate');
+            if(sInput && eInput) {
+                startDateStr = sInput.value;
+                endDateStr = eInput.value;
+                renderActiveView();
+            }
+        }
+
+        function renderActiveView() {
+            let container = document.getElementById('adminDataList');
+            let now = Date.now();
+            let offlineLimit = 60000; // 60 seconds
+
+            if (activeTab === 'online') {
+                let html = "";
+                let allUsers = new Set();
+                Object.keys(cachedSessions).forEach(k => { if(cachedSessions[k]?.nickname) allUsers.add(cachedSessions[k].nickname); });
+                Object.keys(cachedReportsGrouped).forEach(n => allUsers.add(n));
+                Object.keys(cachedDbCallLogs).forEach(n => allUsers.add(n));
+
+                let count = 0;
+                allUsers.forEach(name => {
+                    let sKey = Object.keys(cachedSessions).find(k => cachedSessions[k].nickname === name);
+                    let sObj = sKey ? cachedSessions[sKey] : null;
+                    let isOnline = sObj && sObj.timestamp && (now - sObj.timestamp < offlineLimit);
+
+                    if (usersViewMode === 'online' && !isOnline) return;
+                    if (usersViewMode === 'offline' && isOnline) return;
+                    count++;
+
+                    let badgeClass = isOnline ? 'badge-online' : 'badge-offline';
+                    let badgeText = isOnline ? '🟢 Online' : '⚪ Offline';
+
+                    html += `
+                        <div class="data-card" style="border-left: 4px solid ${isOnline ? '#28a745' : '#6c757d'};">
+                            <div>
+                                <div style="font-size: 15px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 10px;">
+                                    ${name} <span class="badge ${badgeClass}">${badgeText}</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">Login Time: <b>${sObj?.loginTime || 'N/A'}</b></div>
+                            </div>
+                            <div style="font-size: 12px; color: #444; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border: 1px solid #e9ecef; text-align: right;">
+                                Last Seen: <br><b>${sObj?.timestamp ? new Date(sObj.timestamp).toLocaleTimeString() : 'Never'}</b>
+                            </div>
+                        </div>
+                    `;
+                });
+                if(count === 0) html = `<p style="text-align: center; color: #666; padding: 40px;">No users match the selected view.</p>`;
+                container.innerHTML = html;
+
+            } else if (activeTab === 'leaderboard') {
+                let perfMap = {};
+                let allUsers = new Set();
+                Object.keys(cachedReportsGrouped).forEach(n => allUsers.add(n));
+                Object.keys(cachedDbCallLogs).forEach(n => allUsers.add(n));
+
+                allUsers.forEach(agent => {
+                    let logs = cachedDbCallLogs[agent] || [];
+                    let filtered = logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr);
+                    if (filtered.length > 0) {
+                        perfMap[agent] = filtered.length;
+                    }
+                });
+
+                let sorted = Object.keys(perfMap).sort((a, b) => perfMap[b] - perfMap[a]);
+                let html = "";
+
+                if(sorted.length === 0) {
+                    html = `<p style="text-align: center; color: #666; padding: 40px;">No call data available for this date range.</p>`;
+                } else {
+                    sorted.forEach((agent, idx) => {
+                        let rankIcon = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx+1}`;
+                        html += `
+                            <div class="data-card" style="border-left: 4px solid #ff9800;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span style="font-size: 20px; width: 30px; text-align: center;">${rankIcon}</span>
+                                    <span style="font-size: 15px; font-weight: bold; color: #002d62;">${agent}</span>
+                                </div>
+                                <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">
+                                    Total Calls: ${perfMap[agent]}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                container.innerHTML = html;
+
+            } else if (activeTab === 'reports') {
+                let html = "";
+                let allUsers = new Set();
+                Object.keys(cachedReportsGrouped).forEach(n => allUsers.add(n));
+                Object.keys(cachedDbCallLogs).forEach(n => allUsers.add(n));
+
+                let count = 0;
+                allUsers.forEach(agent => {
+                    let logs = cachedDbCallLogs[agent] || [];
+                    let filtered = logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr);
+                    if (filtered.length > 0) {
+                        count++;
+                        let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+                        filtered.forEach(l => { counts[l.status] = (counts[l.status] || 0) + 1; });
+                        let total = filtered.length;
+                        let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+                        let ratio = total > 0 ? Math.round((connected / total) * 100) : 0;
+
+                        html += `
+                            <div class="data-card" style="border-left: 4px solid #002d62; flex-direction: column; align-items: flex-start; gap: 10px;">
+                                <div style="font-size: 15px; font-weight: bold; color: #002d62;">👤 ${agent}</div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px;">
+                                    <span style="background: #ffebee; color: #c62828; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Hung up: ${counts["Hung up"]}</span>
+                                    <span style="background: #f3e5f5; color: #6a1b9a; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Voicemail: ${counts["Voicemail"]}</span>
+                                    <span style="background: #fff3e0; color: #ef6c00; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Not interested: ${counts["Not interested"]}</span>
+                                    <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Follow up: ${counts["Follow up"]}</span>
+                                    <span style="background: #e0f2f1; color: #00695c; padding: 4px 8px; border-radius: 4px; font-weight: bold;">Sale Closed: ${counts["Sale Closed"]}</span>
+                                    <span style="background: #002d62; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold;">Pickup Ratio: ${ratio}%</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                if(count === 0) html = `<p style="text-align: center; color: #666; padding: 40px;">No shift reports available for this date range.</p>`;
+                container.innerHTML = html;
+            }
+        }
+
+        async function refreshAdminData() {
+            alert("Refreshing data from Firebase...");
+            await initAdminPanel();
+            alert("Dashboard updated successfully!");
+        }
+
+        function downloadReportCSV() {
+            let csv = "Agent Name,Total Calls,Pickup Ratio\n";
+            let allUsers = new Set();
+            Object.keys(cachedDbCallLogs).forEach(n => allUsers.add(n));
+
+            allUsers.forEach(agent => {
+                let logs = cachedDbCallLogs[agent] || [];
+                let filtered = logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr);
+                if (filtered.length > 0) {
+                    let total = filtered.length;
+                    let connected = filtered.filter(l => l.status !== 'Hung up' && l.status !== 'Voicemail').length;
+                    let ratio = total > 0 ? Math.round((connected / total) * 100) : 0;
+                    csv += `"${agent}",${total},"${ratio}%"\n`;
+                }
+            });
+
+            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Admin_Team_Report_${startDateStr}_to_${endDateStr}.csv`;
+            link.click();
+        }
+
+        window.onload = initAdminPanel;
+    </script>
+</body>
+</html>
