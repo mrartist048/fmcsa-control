@@ -176,9 +176,9 @@
             <div id="onlineFilterBar" class="filter-bar">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">👤 User Status Filter:</span>
-                    <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn active">All Users</button>
-                    <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn">🟢 Online Only</button>
-                    <button onclick="setOnlineFilter('offline')" id="statusOffline" class="filter-btn">⚪ Offline Only</button>
+                    <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn active">Today All Users</button>
+                    <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn">🟢 Today Online</button>
+                    <button onclick="setOnlineFilter('offline')" id="statusOffline" class="filter-btn">⚪ Today Offline</button>
                 </div>
             </div>
 
@@ -217,6 +217,29 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
+        // Helper to check if a timestamp falls within Today's Shift (4:00 PM to Next Day 6:00 AM)
+        function isTimestampInTodayShift(timestamp) {
+            if (!timestamp) return false;
+            let d = new Date(timestamp);
+            if (isNaN(d.getTime())) return false;
+
+            let now = new Date();
+            let shiftStart = new Date();
+            shiftStart.setHours(16, 0, 0, 0); // Today 4:00 PM
+
+            let shiftEnd = new Date();
+            shiftEnd.setDate(shiftEnd.getDate() + 1);
+            shiftEnd.setHours(6, 0, 0, 0); // Tomorrow 6:00 AM
+
+            // Agar abhi time subah 4 AM hai, toh shift kal 4 PM shuru hui thi
+            if (now.getHours() < 6) {
+                shiftStart.setDate(shiftStart.getDate() - 1);
+                shiftEnd.setDate(shiftEnd.getDate() - 1);
+            }
+
+            return d >= shiftStart && d <= shiftEnd;
+        }
+
         async function fetchAdminData() {
             try {
                 let [sRes, rRes, cRes, nRes] = await Promise.all([
@@ -244,7 +267,7 @@
                     body: JSON.stringify({ message: msg, timestamp: Date.now() })
                 });
                 cachedNotice = msg;
-                alert("Announcement updated successfully! It will now flash on agents' dashboards.");
+                alert("Announcement updated successfully!");
                 renderContent();
             } catch (err) {
                 alert("Failed to save announcement.");
@@ -281,7 +304,7 @@
             let pageTitle = document.getElementById('pageTitle');
 
             if (tab === 'online') {
-                pageTitle.innerText = "Live & Offline Users Monitoring";
+                pageTitle.innerText = "Live & Today's Shift Users Monitoring";
                 filterBar.style.display = 'none';
                 onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
@@ -420,41 +443,51 @@
 
             if (activeTab === 'online') {
                 let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
-                let uniqueUsers = {};
+                let todayActiveUsers = {};
 
+                // Sirf un users ko lenge jinki activity ya session aaj ki shift ke andar ho
                 if (cachedSessions) {
                     Object.keys(cachedSessions).forEach(key => {
                         let sObj = cachedSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
-                        if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
-                            uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
+                        let lastActive = sObj?.timestamp || sObj?.lastActive || 0;
+                        
+                        // Check if active or logged in today's shift
+                        if (isTimestampInTodayShift(lastActive) || isTimestampInTodayShift(sObj?.loginTimestamp)) {
+                            if (!todayActiveUsers[name] || (lastActive > (todayActiveUsers[name].lastActive || 0))) {
+                                todayActiveUsers[name] = { ...sObj, resolvedName: name, lastActive: lastActive };
+                            }
                         }
                     });
                 }
 
-                Object.keys(cachedReports).forEach(n => {
-                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
-                });
+                // Check call logs for today's shift activity
                 Object.keys(cachedCallLogs).forEach(n => {
-                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                    let logs = cachedCallLogs[n];
+                    if (Array.isArray(logs)) {
+                        let hasTodayLog = logs.some(l => isTimestampInTodayShift(l.timestamp || l.time));
+                        if (hasTodayLog && !todayActiveUsers[n]) {
+                            todayActiveUsers[n] = { resolvedName: n, lastActive: Date.now(), loginTime: 'Active via Calls' };
+                        }
+                    }
                 });
 
-                let userKeys = Object.keys(uniqueUsers);
+                let userKeys = Object.keys(todayActiveUsers);
                 if (userKeys.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users or agents detected in database.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users active in today's shift yet.</p>`;
                     return;
                 }
 
                 let renderedCount = 0;
                 userKeys.forEach(nameKey => {
-                    let uData = uniqueUsers[nameKey];
+                    let uData = todayActiveUsers[nameKey];
                     let displayName = uData.resolvedName || nameKey;
                     let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
                     let inactiveMs = now - lastActiveTime;
-                    let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Offline / Never Active';
-                    let idleText = isOnline ? (inactiveMins < 1 ? 'Active just now' : `${inactiveMins} mins idle`) : `Offline`;
+                    let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 0;
+                    let idleText = isOnline ? (inactiveMins < 1 ? 'Active just now' : `${inactiveMins} mins idle`) : `Offline (Shift Muted)`;
 
                     if (onlineFilterMode === 'online' && !isOnline) return;
                     if (onlineFilterMode === 'offline' && isOnline) return;
@@ -468,7 +501,7 @@
                                 <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%;">
-                                <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
+                                <span>Login: <b>${uData.loginTime || 'Today Shift'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
                             <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%;">
@@ -478,7 +511,7 @@
                 });
 
                 if (renderedCount === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match the selected status filter (${onlineFilterMode}).</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match the selected status filter for today's shift (${onlineFilterMode}).</p>`;
                     return;
                 }
 
