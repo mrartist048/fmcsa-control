@@ -203,7 +203,7 @@
 
                 let sorted = Object.keys(perfMap).sort((a, b) => perfMap[b] - perfMap[a]);
                 if (sorted.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling activity found for the selected date range.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling activity found for the selected date range (${startDateStr} to ${endDateStr}).</p>`;
                     return;
                 }
 
@@ -227,50 +227,63 @@
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'reports') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 12px; font-weight: 500;">Shift Reports from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 12px; font-weight: 500;">Shift Reports & Ratios from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let hasReports = false;
 
-                Object.keys(cachedReports).forEach(name => {
-                    let reps = cachedReports[name];
-                    if (Array.isArray(reps)) {
-                        let filtered = reps.filter(r => r.date >= startDateStr && r.date <= endDateStr);
-                        if (filtered.length > 0) {
-                            hasReports = true;
-                            filtered.forEach(rep => {
-                                let logsArr = rep.logs || [];
-                                let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
-                                logsArr.forEach(l => {
-                                    let st = l.status || "Hung up";
-                                    if (counts[st] !== undefined) counts[st]++;
-                                    else counts["Hung up"]++;
-                                });
-                                let totalC = logsArr.length > 0 ? logsArr.length : (rep.totalCalls || 0);
-                                let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
-                                let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
+                let allAgents = new Set([...Object.keys(cachedCallLogs), ...Object.keys(cachedReports)]);
 
-                                html += `
-                                    <div class="card" style="flex-direction: column; align-items: flex-start; gap: 10px; border-left: 4px solid #22c55e;">
-                                        <div style="display: flex; justify-content: space-between; width: 100%;">
-                                            <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
-                                            <span style="font-size: 12px; color: #64748b; font-weight: 600;">Shift Date: ${rep.date}</span>
-                                        </div>
-                                        <div style="display: flex; gap: 8px; font-size: 11px; flex-wrap: wrap;">
-                                            <span style="background: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Hung up: ${counts["Hung up"]}</span>
-                                            <span style="background: #faf5ff; color: #6b21a8; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Voicemail: ${counts["Voicemail"]}</span>
-                                            <span style="background: #fffbeb; color: #92400e; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Not interested: ${counts["Not interested"]}</span>
-                                            <span style="background: #eff6ff; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Do not Call: ${counts["Do not Call"]}</span>
-                                            <span style="background: #f0fdf4; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Follow up: ${counts["Follow up"]}</span>
-                                            <span style="background: #f0fdfa; color: #115e59; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Sale Closed: ${counts["Sale Closed"]}</span>
-                                            <span style="background: #0f172a; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 600;">Ratio: ${ratio}%</span>
-                                        </div>
-                                    </div>`;
-                            });
-                        }
-                    }
+                allAgents.forEach(name => {
+                    let logs = cachedCallLogs[name] || [];
+                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr) : [];
+                    
+                    let reps = cachedReports[name] || [];
+                    let filteredReps = Array.isArray(reps) ? reps.filter(r => r.date >= startDateStr && r.date <= endDateStr) : [];
+
+                    let combinedDates = new Set([...filteredLogs.map(l => l.shiftDate), ...filteredReps.map(r => r.date)]);
+
+                    combinedDates.forEach(dateStr => {
+                        hasReports = true;
+                        let dayLogs = filteredLogs.filter(l => l.shiftDate === dateStr);
+                        let repObj = filteredReps.find(r => r.date === dateStr);
+                        let dayLogsFromRep = repObj ? (repObj.logs || []) : [];
+
+                        let finalLogs = dayLogs.length >= dayLogsFromRep.length ? dayLogs : dayLogsFromRep;
+
+                        let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+                        finalLogs.forEach(l => {
+                            let st = l.status || "Hung up";
+                            if (counts[st] !== undefined) counts[st]++;
+                            else counts["Hung up"]++;
+                        });
+
+                        let totalC = finalLogs.length > 0 ? finalLogs.length : (repObj ? (repObj.totalCalls || 0) : 0);
+                        let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+                        let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
+
+                        html += `
+                            <div class="card" style="flex-direction: column; align-items: flex-start; gap: 10px; border-left: 4px solid #22c55e;">
+                                <div style="display: flex; justify-content: space-between; width: 100%;">
+                                    <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
+                                    <span style="font-size: 12px; color: #64748b; font-weight: 600;">Shift Date: ${dateStr}</span>
+                                </div>
+                                <div style="font-size: 13px; color: #334155;">
+                                    <b>Total Calls:</b> ${totalC}
+                                </div>
+                                <div style="display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap;">
+                                    <span style="background: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Hung up: ${counts["Hung up"]}</span>
+                                    <span style="background: #faf5ff; color: #6b21a8; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Voicemail: ${counts["Voicemail"]}</span>
+                                    <span style="background: #fffbeb; color: #92400e; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Not interested: ${counts["Not interested"]}</span>
+                                    <span style="background: #eff6ff; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Do not Call: ${counts["Do not Call"]}</span>
+                                    <span style="background: #f0fdf4; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Follow up: ${counts["Follow up"]}</span>
+                                    <span style="background: #f0fdfa; color: #115e59; padding: 4px 8px; border-radius: 6px; font-weight: 600;">Sale Closed: ${counts["Sale Closed"]}</span>
+                                    <span style="background: #0f172a; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 600;">Pickup Ratio: ${ratio}%</span>
+                                </div>
+                            </div>`;
+                    });
                 });
 
                 if (!hasReports) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports found for the selected date range.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports or call logs found for the selected date range.</p>`;
                     return;
                 }
                 container.innerHTML = html + `</div>`;
@@ -278,15 +291,37 @@
         }
 
         function exportCSV() {
-            let csv = "Agent Name,Shift Date,Total Calls\n";
-            Object.keys(cachedReports).forEach(name => {
-                let reps = cachedReports[name];
-                if (Array.isArray(reps)) {
-                    reps.filter(r => r.date >= startDateStr && r.date <= endDateStr).forEach(r => {
-                        csv += `"${name}","${r.date}",${r.totalCalls || 0}\n`;
+            let csv = "Agent Name,Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
+            let allAgents = new Set([...Object.keys(cachedCallLogs), ...Object.keys(cachedReports)]);
+
+            allAgents.forEach(name => {
+                let logs = cachedCallLogs[name] || [];
+                let filteredLogs = Array.isArray(logs) ? logs.filter(l => l.shiftDate >= startDateStr && l.shiftDate <= endDateStr) : [];
+                let reps = cachedReports[name] || [];
+                let filteredReps = Array.isArray(reps) ? reps.filter(r => r.date >= startDateStr && r.date <= endDateStr) : [];
+                let combinedDates = new Set([...filteredLogs.map(l => l.shiftDate), ...filteredReps.map(r => r.date)]);
+
+                combinedDates.forEach(dateStr => {
+                    let dayLogs = filteredLogs.filter(l => l.shiftDate === dateStr);
+                    let repObj = filteredReps.find(r => r.date === dateStr);
+                    let dayLogsFromRep = repObj ? (repObj.logs || []) : [];
+                    let finalLogs = dayLogs.length >= dayLogsFromRep.length ? dayLogs : dayLogsFromRep;
+
+                    let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+                    finalLogs.forEach(l => {
+                        let st = l.status || "Hung up";
+                        if (counts[st] !== undefined) counts[st]++;
+                        else counts["Hung up"]++;
                     });
-                }
+
+                    let totalC = finalLogs.length > 0 ? finalLogs.length : (repObj ? (repObj.totalCalls || 0) : 0);
+                    let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+                    let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
+
+                    csv += `"${name}","${dateStr}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${ratio}%"\n`;
+                });
             });
+
             let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
