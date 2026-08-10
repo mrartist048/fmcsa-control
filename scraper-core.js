@@ -1104,7 +1104,7 @@ window.openAdminPanelPrompt = function() {
         alert("Incorrect Admin Password!");
         return;
     }
-    renderAdvancedAdminModal();
+    window.open('admin.html', '_blank');
 };
 
 async function renderAdvancedAdminModal() {
