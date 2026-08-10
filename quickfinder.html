@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dispatch Link | Quick Lead Finder</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7fe; margin: 0; padding: 20px; box-sizing: border-box; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #002d62; color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; }
+        .header h2 { margin: 0; font-size: 20px; }
+        .filter-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-size: 12px; font-weight: bold; color: #002d62; }
+        .filter-group input { padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; width: 160px; }
+        .btn-search { background: #002d62; color: white; border: none; padding: 9px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 18px; }
+        .btn-search:hover { background: #001a3a; }
+        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; text-align: left; }
+        th, td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #eee; white-space: nowrap; }
+        th { background: #e2eafc; color: #002d62; }
+        .badge { background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
+        #loadingMsg { text-align: center; padding: 30px; color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>⚡ Dispatch Link - Quick Lead Finder</h2>
+        <a href="index.html" style="color: white; text-decoration: none; font-size: 13px; font-weight: bold; background: #17a2b8; padding: 6px 12px; border-radius: 4px;">⬅️ Back to CRM</a>
+    </div>
+
+    <div class="filter-container">
+        <div class="filter-group">
+            <label>Start MC Number:</label>
+            <input type="number" id="qStartMc" placeholder="e.g., 100000">
+        </div>
+        <div class="filter-group">
+            <label>End MC Number:</label>
+            <input type="number" id="qEndMc" placeholder="e.g., 100500">
+        </div>
+        <button class="btn-search" onclick="fetchQuickLeads()">🔍 Fetch Leads Instantly</button>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>MC Number</th>
+                    <th>USDOT</th>
+                    <th>Company Name</th>
+                    <th>Entity Type</th>
+                    <th>Status</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Email</th>
+                    <th>Power Units</th>
+                    <th>Vehicle Type</th>
+                </tr>
+            </thead>
+            <tbody id="quickResultsTable">
+                <tr><td colspan="10" id="loadingMsg">Enter MC range above and click "Fetch Leads Instantly" to load pre-scraped data.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+
+        async function fetchQuickLeads() {
+            let start = document.getElementById('qStartMc').value.trim();
+            let end = document.getElementById('qEndMc').value.trim();
+            let tbody = document.getElementById('quickResultsTable');
+
+            if (!start || !end || parseInt(start) > parseInt(end)) {
+                alert("Please enter a valid start and end MC range.");
+                return;
+            }
+
+            tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">Fetching records from database... Please wait.</td></tr>`;
+
+            try {
+                const url = `${FIREBASE_DB_URL}leads.json?orderBy="$key"&startAt="${start}"&endAt="${end}"`;
+                let response = await fetch(url);
+                let data = await response.json();
+
+                if (!data || Object.keys(data).length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">No records found in this range.</td></tr>`;
+                    return;
+                }
+
+                let html = "";
+                Object.keys(data).forEach(mcKey => {
+                    let r = data[mcKey];
+                    html += `
+                        <tr>
+                            <td><b>${r.mc || mcKey}</b></td>
+                            <td>${r.usdot || 'N/A'}</td>
+                            <td>${r.name || 'N/A'}</td>
+                            <td>${r.entityType || 'N/A'}</td>
+                            <td><span class="badge">${r.status || 'AUTHORIZED'}</span></td>
+                            <td><b>${r.phone || 'N/A'}</b></td>
+                            <td>${r.address || 'N/A'}</td>
+                            <td>${r.email || 'N/A'}</td>
+                            <td>${r.powerUnits || 'N/A'}</td>
+                            <td><b>${r.vehicleType || 'N/A'}</b></td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error("Fetch error:", err);
+                tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg" style="color:red;">Failed to fetch data. Check your connection.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>
