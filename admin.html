@@ -94,12 +94,6 @@
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
         const MASTER_ADMIN_PASS = "admin890";
 
-        // Security Authentication Prompt
-        let passwordInput = prompt("Enter Master Admin Password:");
-        if (passwordInput !== MASTER_ADMIN_PASS) {
-            alert("Incorrect Password! Access Denied.");
-            window.location.href = "about:blank";
-        }
 
         let currentClient = localStorage.getItem("dl_logged_client") || "dispatchloadify";
         let activeTab = 'online';
