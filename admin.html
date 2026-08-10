@@ -276,7 +276,7 @@
                 exportBtn.onclick = exportFollowupsCSV;
             } else if (tab === 'audit') {
                 pageTitle.innerText = "Agent Activity & Audit Trail";
-                filterBar.style.display = 'flex'; // Audit trail par bhi ab date filter bar show hoga
+                filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'none';
             }
@@ -626,7 +626,6 @@
                         let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
                         let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
 
-                        // Filter sessions within selected date range
                         if (isTimestampInRange(lastActiveTs) || isTimestampInRange(loginTs)) {
                             if (!agentAuditMap[name]) {
                                 agentAuditMap[name] = { 
@@ -659,8 +658,10 @@
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
-                    // Calculate total logged-in hours and minutes within range
-                    let durationMs = (data.lastActiveTs && data.loginTs && data.lastActiveTs > data.loginTs) ? (data.lastActiveTs - data.loginTs) : 0;
+                    // Real-time calculation: Agar agent abhi online hai, toh current time (now) tak ka duration add hota rahega
+                    let effectiveEndTs = isOnline ? now : data.lastActiveTs;
+                    let durationMs = (effectiveEndTs && data.loginTs && effectiveEndTs > data.loginTs) ? (effectiveEndTs - data.loginTs) : 0;
+                    
                     let totalMins = Math.floor(durationMs / 60000);
                     let hours = Math.floor(totalMins / 60);
                     let mins = totalMins % 60;
@@ -675,7 +676,7 @@
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
                                 <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
-                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Online Duration: ${durationFormatted}</span>
+                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Online Duration: ${durationFormatted} ${isOnline ? '(Live 🟢)' : ''}</span>
                             </div>
                         </div>`;
                 });
@@ -750,6 +751,7 @@
         setDateFilterPreset('today');
         fetchAdminData();
         
+        // Auto refresh data every 30 seconds to keep live active durations ticking correctly
         setInterval(fetchAdminData, 30000);
     </script>
 </body>
