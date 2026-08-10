@@ -27,12 +27,29 @@
         .filter-group input { padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; width: 160px; }
         .btn-search { background: #002d62; color: white; border: none; padding: 9px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 18px; }
         .btn-search:hover { background: #001a3a; }
+
+        /* Exact CRM Style Filter Bar & Proposal Layout */
+        .advanced-filter-bar { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; border: 1px solid #e2eafc; }
+        .advanced-filter-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; flex: 1; }
+        .advanced-filter-right { display: flex; align-items: center; gap: 10px; }
         
-        /* Advanced Filter Bar Styling */
-        #advancedFilterWrapper { background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+        .crm-filter-item { display: flex; align-items: center; gap: 8px; }
+        .crm-filter-label { font-size: 13px; font-weight: bold; color: #002d62; white-space: nowrap; }
+        .crm-select-box { padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 6px; background: white; color: #002d62; font-weight: bold; outline: none; cursor: pointer; }
+        .crm-search-input { padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 6px; width: 280px; outline: none; }
         
-        /* Email Proposal Panel Styling */
-        #premiumProposalWrapper { background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; }
+        .crm-btn-reset { background: #002d62; color: white; border: none; padding: 9px 18px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s; }
+        .crm-btn-reset:hover { background: #001a3a; }
+        
+        .crm-record-counter { background: #002d62; color: white; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; white-space: nowrap; }
+
+        /* CRM Proposal Accordion Layout */
+        .proposal-card { background: white; border: 1px solid #e2eafc; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
+        .proposal-card-header { padding: 14px 20px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: background 0.2s; }
+        .proposal-card-header:hover { background: #edf2f7; }
+        .proposal-card-title { font-size: 14px; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 8px; }
+        .proposal-card-action { font-size: 13px; font-weight: bold; color: #002d62; }
+        .proposal-card-body { padding: 20px; background: white; display: none; border-top: 1px solid #e2eafc; }
 
         .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; text-align: left; }
@@ -41,7 +58,7 @@
         .badge { background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
         #loadingMsg { text-align: center; padding: 30px; color: #6c757d; font-style: italic; }
 
-        /* CRM Remarks Expandable Styling */
+        /* Remarks Expandable Styling */
         .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
         .remarks-input-field { 
             width: 100% !important; 
@@ -93,6 +110,7 @@
         <a href="index.html" style="color: white; text-decoration: none; font-size: 13px; font-weight: bold; background: #17a2b8; padding: 6px 12px; border-radius: 4px;">⬅️ Back to CRM</a>
     </div>
 
+    <!-- MC Range Filter Container -->
     <div class="filter-container">
         <div class="filter-group">
             <label>Start MC Number:</label>
@@ -105,50 +123,59 @@
         <button class="btn-search" onclick="fetchQuickLeads()">🔍 Fetch Leads Instantly</button>
     </div>
 
-    <!-- Advanced Filter Bar -->
-    <div id="advancedFilterWrapper">
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
-                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
+    <!-- CRM Advanced Filter Bar (Neat & Clean Layout) -->
+    <div class="advanced-filter-bar">
+        <div class="advanced-filter-left">
+            <div class="crm-filter-item">
+                <span class="crm-filter-label">📍 State:</span>
+                <select id="stateDropdownSelect" class="crm-select-box" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
             </div>
             <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
+                <button type="button" onclick="toggleVehicleDropdown(event)" class="crm-select-box">Select Vehicle Types ▼</button>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; border-radius: 8px; z-index: 1000; width: 180px; top: 100%; left: 0; margin-top: 6px; text-align: left; box-sizing: border-box;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList">
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;"><input type="checkbox" value="Box Truck" onchange="applyAdvancedFilters()"> Box Truck</label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;"><input type="checkbox" value="Power Only" onchange="applyAdvancedFilters()"> Power Only</label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;"><input type="checkbox" value="Trailers" onchange="applyAdvancedFilters()"> Trailers</label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Box Truck" onchange="applyAdvancedFilters()"> Box Truck</label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Power Only" onchange="applyAdvancedFilters()"> Power Only</label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px; cursor: pointer; color: #333;"><input type="checkbox" value="Trailers" onchange="applyAdvancedFilters()"> Trailers</label>
                     </div>
                 </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
-                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+            <div class="crm-filter-item" style="flex: 1; min-width: 250px;">
+                <span class="crm-filter-label">🔍 Search:</span>
+                <input type="text" id="universalSearchInput" class="crm-search-input" placeholder="Search by MC, Company Name, or Phone..." oninput="applyAdvancedFilters()">
             </div>
-            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
-        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
-            📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
-        </div>
-    </div>
-
-    <!-- Email Proposal Panel -->
-    <div id="premiumProposalWrapper">
-        <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
-            <span style="font-size: 12px; font-weight: bold; color: #002d62;">⚙️ Click to Edit</span>
-        </div>
-        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
-            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="Dispatch Service Proposal" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px;"></div>
-            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; padding: 8px;">Hello,</n><n>We found your profile via FMCSA. We offer dispatching services at 5% rate.</n><n>Best Regards.</textarea></div>
-            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">💾 Save Template</button>
+        <div class="advanced-filter-right">
+            <button onclick="resetAdvancedFilters()" class="crm-btn-reset">🔄 Reset</button>
+            <div class="crm-record-counter">📊 Showing: <span id="visibleRecordCountBadge">0</span> Records</div>
         </div>
     </div>
 
+    <!-- CRM Email Proposal Template Card -->
+    <div class="proposal-card">
+        <div class="proposal-card-header" onclick="toggleProposalAccordion()">
+            <div class="proposal-card-title">
+                <span>📋 Setup Email Proposal Template</span>
+            </div>
+            <div class="proposal-card-action" id="proposalToggleText">⚙️ Click to Edit</div>
+        </div>
+        <div class="proposal-card-body" id="proposalAccordionBody">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 5px;">Email Subject:</label>
+                <input type="text" id="propSubjectInput" value="Dispatch Service Proposal" style="width: 100%; padding: 9px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 6px; box-sizing: border-box; outline: none;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 12px; font-weight: bold; color: #002d62; margin-bottom: 5px;">Email Body Message:</label>
+                <textarea id="propBodyInput" style="width: 100%; height: 90px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 6px; padding: 10px 12px; box-sizing: border-box; outline: none; resize: vertical;">Hello,\n\nWe found your profile via FMCSA. We offer top-tier dispatching services at a 5% rate to maximize your revenue.\n\nBest Regards.</textarea>
+            </div>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 8px 20px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer;">💾 Save Template</button>
+        </div>
+    </div>
+
+    <!-- Results Table -->
     <div class="table-responsive">
         <table class="table">
             <thead>
@@ -232,6 +259,26 @@
             "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
             "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
         };
+
+        // Load saved proposal template on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            let savedSubj = localStorage.getItem(`dl_subj_${currentClient}`);
+            let savedBody = localStorage.getItem(`dl_body_${currentClient}`);
+            if(savedSubj) document.getElementById('propSubjectInput').value = savedSubj;
+            if(savedBody) document.getElementById('propBodyInput').value = savedBody;
+        });
+
+        function toggleProposalAccordion() {
+            let body = document.getElementById('proposalAccordionBody');
+            let toggleText = document.getElementById('proposalToggleText');
+            if (body.style.display === 'block') {
+                body.style.display = 'none';
+                toggleText.innerText = "⚙️ Click to Edit";
+            } else {
+                body.style.display = 'block';
+                toggleText.innerText = "🔼 Close Editor";
+            }
+        }
 
         function getCurrentShiftDateKey() {
             let now = new Date();
@@ -360,7 +407,7 @@
             }
         }
 
-        // State & Vehicle Filter Functions
+        // State Dropdown with Counts (Exact Layout Style)
         function populateStateDropdown() {
             let select = document.getElementById('stateDropdownSelect');
             if (!select) return;
@@ -446,12 +493,12 @@
             if (badge) badge.innerText = visibleCount;
         }
 
-        // Email Proposal Template Functions
         window.saveProposalTemplateSettings = function() {
             localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
             localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('propBodyInput').value);
             alert("Template saved successfully.");
-            document.getElementById('proposalInputsBlock').style.display = 'none';
+            document.getElementById('proposalAccordionBody').style.display = 'none';
+            document.getElementById('proposalToggleText').innerText = "⚙️ Click to Edit";
         };
 
         window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
@@ -473,7 +520,6 @@
             });
         };
 
-        // Remarks Functions
         window.remarksFocus = function(index, textarea) {
             if (!textarea.value || textarea.value.trim() === "") {
                 textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -498,10 +544,11 @@
         };
 
         window.syncRemarksData = function(index, textarea) {
-            if (fetchedLeadsArray[index]) fetchedLeadsArray[index].remarks = textarea.value;
+            if (fetchedLeadsArray[index]) {
+                fetchedLeadsArray[index].remarks = textarea.value;
+            }
         };
 
-        // Follow-Up Functions
         window.addLeadToFollowUpList = function(index, buttonElement) {
             let record = fetchedLeadsArray[index];
             if (!record) return;
@@ -545,7 +592,6 @@
             closeFollowUpModal();
         };
 
-        // Call Interaction & Disposition Functions
         window.handlePhoneInteraction = function(cellElement, phoneNum) {
             activeCallPhone = phoneNum;
             activeCallCellElement = cellElement;
@@ -616,7 +662,6 @@
             }
         };
 
-        // Close vehicle dropdown on outside click
         window.addEventListener('click', function(e) {
             let dropdown = document.getElementById('vehicleTypeDropdownContent');
             let btn = document.querySelector('button[onclick*="toggleVehicleDropdown"]');
