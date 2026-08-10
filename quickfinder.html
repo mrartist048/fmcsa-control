@@ -13,18 +13,29 @@
         .filter-group input { padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; width: 160px; }
         .btn-search { background: #002d62; color: white; border: none; padding: 9px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 18px; }
         .btn-search:hover { background: #001a3a; }
-        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 1000px; text-align: left; }
-        th, td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #eee; white-space: nowrap; }
-        th { background: #e2eafc; color: #002d62; }
+        .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; text-align: left; }
+        th, td { padding: 10px 12px !important; font-size: 13px !important; border-bottom: 1px solid #eee !important; white-space: nowrap !important; vertical-align: middle !important; }
+        th { background: #e2eafc !important; color: #002d62 !important; }
         .badge { background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
         #loadingMsg { text-align: center; padding: 30px; color: #6c757d; font-style: italic; }
+
+        /* CRM Specific Phone & Interactive Styles */
+        .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
+        .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; text-decoration: none !important; display: block; border-radius: 6px !important; }
+        .phone-clickable-cell:hover { background-color: #001a3a !important; }
+        .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
+        .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
+        .phone-clickable-cell.active-called-cell .clickable-phone-text { color: #0c5460 !important; font-weight: 900 !important; }
+        .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
+        .phone-icon-span { font-size: 14px; line-height: 1; }
+        .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
+        .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; z-index: 5; }
+        .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
+        .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
         
-        /* Clicked Row Highlight Styling */
-        tr.highlighted-row { background-color: #d1ecf1 !important; }
-        
-        .copy-btn { background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 2px 6px; font-size: 11px; border-radius: 3px; cursor: pointer; margin-left: 6px; font-weight: bold; }
-        .copy-btn:hover { background: #cfe2ff; }
+        .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; vertical-align: middle; cursor: pointer; }
+        .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -47,7 +58,7 @@
     </div>
 
     <div class="table-responsive">
-        <table>
+        <table class="table">
             <thead>
                 <tr>
                     <th>MC Number</th>
@@ -60,16 +71,52 @@
                     <th>Email</th>
                     <th>Power Units</th>
                     <th>Vehicle Type</th>
+                    <th>Remarks</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody id="quickResultsTable">
-                <tr><td colspan="10" id="loadingMsg">Enter MC range above and click "Fetch Leads Instantly" to load pre-scraped data.</td></tr>
+                <tr><td colspan="12" id="loadingMsg">Enter MC range above and click "Fetch Leads Instantly" to load pre-scraped data.</td></tr>
             </tbody>
         </table>
     </div>
 
+    <!-- Call Disposition Modal -->
+    <div id="dlDispositionModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 100000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;">
+        <div style="background: #ffffff; width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box;">
+            <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center;">What is the Status of this call?</h3>
+            <p style="font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 15px;">Select call status for <b id="dispTargetPhoneNum" style="color: #002d62;"></b></p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div onclick="submitCallDisposition('Hung up')" style="background: #ff5252; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>📞</span><span>Hung up</span></div>
+                </div>
+                <div onclick="submitCallDisposition('Voicemail')" style="background: #9c27b0; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>📭</span><span>Voicemail</span></div>
+                </div>
+                <div onclick="submitCallDisposition('Not interested')" style="background: #ff9800; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>👎</span><span>Not interested</span></div>
+                </div>
+                <div onclick="submitCallDisposition('Do not Call')" style="background: #2196f3; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>🚫</span><span>Do not Call</span></div>
+                </div>
+                <div onclick="submitCallDisposition('Follow up')" style="background: #4caf50; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>📅</span><span>Follow up</span></div>
+                </div>
+                <div onclick="submitCallDisposition('Sale Closed')" style="background: #009688; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;"><span>🤝</span><span>Sale Closed</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+        let currentClient = localStorage.getItem("dl_logged_client") || "testinguser";
+        let dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "User";
+        let activeCallPhone = null;
+        let pendingReviewPhone = null;
+        let activeCallCellElement = null;
+        let loadedQuickLeads = [];
 
         async function fetchQuickLeads() {
             let start = parseInt(document.getElementById('qStartMc').value.trim());
@@ -81,7 +128,7 @@
                 return;
             }
 
-            tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">Fetching records from database... Please wait.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" id="loadingMsg">Fetching records from database... Please wait.</td></tr>`;
 
             try {
                 const url = `${FIREBASE_DB_URL}leads.json`;
@@ -89,10 +136,11 @@
                 let data = await response.json();
 
                 if (!data) {
-                    tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">No records found in database.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="12" id="loadingMsg">No records found in database.</td></tr>`;
                     return;
                 }
 
+                loadedQuickLeads = [];
                 let html = "";
                 let matchCount = 0;
 
@@ -102,6 +150,7 @@
 
                     if (!isNaN(mcNum) && mcNum >= start && mcNum <= end) {
                         matchCount++;
+                        loadedQuickLeads.push(r);
                         
                         let usdot = r["USDOT Number"] || r["usdot"] || r["USDOT"] || "N/A";
                         let name = r["Company Name"] || r["name"] || r["Legal Name"] || "N/A";
@@ -113,64 +162,122 @@
                         let powerUnits = r["Power Units"] || r["powerUnits"] || "N/A";
                         let vehicleType = r["Vehicle Type"] || r["vehicleType"] || "N/A";
 
-                        // Phone call link and copy formatting
-                        let phoneHtml = "N/A";
-                        if (phone !== "N/A" && phone.trim() !== "") {
-                            let cleanPhone = phone.trim();
-                            phoneHtml = `<a href="tel:${cleanPhone}" style="color: #002d62; text-decoration: none; font-weight: bold;" title="Click to Call">${cleanPhone}</a>` +
-                                        `<button class="copy-btn" onclick="copyText('${cleanPhone}', this)">📋 Copy</button>`;
-                        }
+                        let phoneMarkup = phone !== "N/A" ? `
+                            <td class="phone-clickable-container">
+                                <a href="tel:${phone}" onclick="handlePhoneInteraction(this, '${phone}'); return false;" class="phone-clickable-cell" title="Click to Call">
+                                    <div class="phone-cell-content">
+                                        <span class="phone-icon-span">📞</span>
+                                        <span class="clickable-phone-text">${phone}</span>
+                                    </div>
+                                </a>
+                                <span class="phone-hover-copy-icon" onclick="copyPhoneToClipboardDirect(event, this, '${phone}')" title="Copy Number">📋</span>
+                            </td>
+                        ` : `<td style="color: #6c757d; text-align: center;">N/A</td>`;
+
+                        let emailMarkup = email !== "N/A" ? `
+                            <td style="position: relative; vertical-align: middle;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                    <span onclick="navigator.clipboard.writeText('${email}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${email}</span>
+                                    <a href="mailto:${email}" class="premium-pitch-btn">📤 Send</a>
+                                </div>
+                            </td>
+                        ` : `<td style="color: #6c757d;">N/A</td>`;
 
                         html += `
-                            <tr onclick="toggleRowHighlight(this)" style="cursor: pointer;">
+                            <tr>
                                 <td><b>${mcNum}</b></td>
                                 <td>${usdot}</td>
                                 <td>${name}</td>
                                 <td>${entityType}</td>
                                 <td><span class="badge">${status}</span></td>
-                                <td>${phoneHtml}</td>
+                                ${phoneMarkup}
                                 <td>${address}</td>
-                                <td>${email}</td>
+                                ${emailMarkup}
                                 <td>${powerUnits}</td>
                                 <td><b>${vehicleType}</b></td>
+                                <td><textarea style="width: 100%; height: 32px; border: 1px solid #b6ccfe; border-radius: 4px; font-size: 12px; padding: 4px;" placeholder="Remarks..."></textarea></td>
+                                <td><button onclick="alert('Lead available in Quick Finder')" class="premium-followup-btn">⭐ Follow</button></td>
                             </tr>
                         `;
                     }
                 });
 
                 if (matchCount === 0) {
-                    tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg">No records found in this range.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="12" id="loadingMsg">No records found in this range.</td></tr>`;
                 } else {
                     tbody.innerHTML = html;
                 }
             } catch (err) {
                 console.error("Fetch error:", err);
-                tbody.innerHTML = `<tr><td colspan="10" id="loadingMsg" style="color:red;">Failed to fetch data. Check console.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" id="loadingMsg" style="color:red;">Failed to fetch data. Check console.</td></tr>`;
             }
         }
 
-        // Row click par light blue color highlight karne ka function
-        function toggleRowHighlight(row) {
-            row.classList.toggle('highlighted-row');
-        }
-
-        // Text copy karne aur button ka text temporary change karne ka function
-        function copyText(text, btn) {
-            event.stopPropagation(); // Row highlight toggle hone se rokne ke liye
-            navigator.clipboard.writeText(text).then(() => {
-                let originalText = btn.innerText;
-                btn.innerText = "✅ Copied";
-                btn.style.background = "#d4edda";
-                btn.style.color = "#155724";
-                setTimeout(() => {
-                    btn.innerText = originalText;
-                    btn.style.background = "#e2eafc";
-                    btn.style.color = "#002d62";
-                }, 1500);
-            }).catch(err => {
-                console.error('Failed to copy: ', err);
+        window.handlePhoneInteraction = function(cellElement, phoneNum) {
+            activeCallPhone = phoneNum;
+            activeCallCellElement = cellElement;
+            document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
+            cellElement.classList.add('active-called-cell');
+            window.location.href = `tel:${phoneNum}`;
+            navigator.clipboard.writeText(phoneNum).then(() => {
+                setTimeout(() => { openDispositionModal(phoneNum); }, 3000);
             });
-        }
+        };
+
+        window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
+            event.stopPropagation();
+            activeCallPhone = phoneNum;
+            activeCallCellElement = containerElement.closest('td').querySelector('.phone-clickable-cell');
+            if (activeCallCellElement) {
+                document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
+                activeCallCellElement.classList.add('active-called-cell');
+            }
+            navigator.clipboard.writeText(phoneNum).then(() => {
+                let badge = document.createElement('span');
+                badge.className = 'phone-copy-badge';
+                badge.innerText = "Copied!";
+                containerElement.appendChild(badge);
+                setTimeout(() => badge.remove(), 1200);
+                setTimeout(() => { openDispositionModal(phoneNum); }, 3000);
+            });
+        };
+
+        window.openDispositionModal = function(phoneNum) {
+            pendingReviewPhone = phoneNum;
+            let dispModal = document.getElementById('dlDispositionModal');
+            let phoneSpan = document.getElementById('dispTargetPhoneNum');
+            if (phoneSpan) phoneSpan.innerText = phoneNum;
+            if (dispModal) dispModal.style.display = 'flex';
+        };
+
+        window.submitCallDisposition = async function(statusType) {
+            let dispModal = document.getElementById('dlDispositionModal');
+            if (dispModal) dispModal.style.display = 'none';
+
+            if (pendingReviewPhone) {
+                let callLogs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+                callLogs.push({
+                    phone: pendingReviewPhone,
+                    dispatcher: dispatcherNickname,
+                    date: new Date().toLocaleString(),
+                    status: statusType
+                });
+                localStorage.setItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`, JSON.stringify(callLogs));
+                
+                try {
+                    let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+                    await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
+                        method: 'PUT',
+                        body: JSON.stringify(callLogs)
+                    });
+                } catch (e) {
+                    console.error("Sync error:", e);
+                }
+                alert(`Call Logged: [${statusType}] for ${pendingReviewPhone}`);
+                pendingReviewPhone = null;
+                activeCallCellElement = null;
+            }
+        };
     </script>
 </body>
 </html>
