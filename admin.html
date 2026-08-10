@@ -94,7 +94,6 @@
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
         const MASTER_ADMIN_PASS = "admin890";
 
-
         let currentClient = localStorage.getItem("dl_logged_client") || "dispatchloadify";
         let activeTab = 'online';
         let usersViewMode = 'all';
@@ -109,19 +108,22 @@
         async function initAdminPanel() {
             try {
                 let [sessionsRes, reportsRes, callLogsRes] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
+                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`).catch(() => null)
                 ]);
 
-                cachedSessions = await sessionsRes.json() || {};
-                cachedReportsGrouped = await reportsRes.json() || {};
-                cachedDbCallLogs = await callLogsRes.json() || {};
+                cachedSessions = sessionsRes ? await sessionsRes.json() || {} : {};
+                cachedReportsGrouped = reportsRes ? await reportsRes.json() || {} : {};
+                cachedDbCallLogs = callLogsRes ? await callLogsRes.json() || {} : {};
 
                 renderActiveView();
             } catch (err) {
                 console.error("Firebase connection error:", err);
-                document.getElementById('adminDataList').innerHTML = `<p style="color: red; text-align: center;">Failed to load data from Firebase database.</p>`;
+                cachedSessions = {};
+                cachedReportsGrouped = {};
+                cachedDbCallLogs = {};
+                renderActiveView();
             }
         }
 
