@@ -9,10 +9,10 @@
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         
-        .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+        .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
         
         /* SIDEBAR NAVIGATION */
-        .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 10; }
+        .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 100; transition: transform 0.3s ease; }
         .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
         .sidebar-brand h2 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
         .sidebar-brand span { font-size: 11px; color: #38bdf8; font-weight: 600; display: block; margin-top: 2px; }
@@ -25,13 +25,17 @@
         .nav-btn.active { background: #0284c7; color: white; box-shadow: 0 4px 12px rgba(2,132,199,0.35); }
 
         /* MAIN CONTENT AREA */
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; }
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
         
         /* TOP BAR & FILTERS */
         .top-header { height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; }
+        .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
         .header-title { font-size: 18px; font-weight: 700; color: #0f172a; }
         
-        .header-actions { display: flex; align-items: center; gap: 12px; }
+        /* HAMBURGER MENU BUTTON FOR MOBILE */
+        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; }
+
+        .header-actions { display: flex; align-items: center; gap: 10px; }
 
         .filter-bar { background: white; padding: 14px 32px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
         .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -60,32 +64,35 @@
 
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
 
-        /* RESPONSIVE DESIGN FOR MOBILE & TABLET */
+        /* OVERLAY FOR MOBILE SIDEBAR */
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 90; }
+
+        /* RESPONSIVE DESIGN FOR MOBILE & TABLET (SLIDE-OUT DRAWER) */
         @media (max-width: 900px) {
-            body { height: auto; overflow: auto; }
-            .admin-layout { flex-direction: column; height: auto; overflow: visible; }
-            .sidebar { width: 100%; height: auto; }
-            .sidebar-menu { flex-direction: row; flex-wrap: wrap; padding: 10px; gap: 6px; }
-            .menu-label { display: none; }
-            .nav-btn { flex: 1; min-width: 130px; justify-content: center; padding: 8px 10px; font-size: 12px; }
-            .main-wrapper { height: auto; overflow: visible; }
-            .top-header { padding: 0 16px; height: auto; min-height: 60px; flex-direction: column; gap: 10px; padding-bottom: 10px; padding-top: 10px; }
+            .sidebar { position: fixed; top: 0; left: -280px; height: 100%; z-index: 100; transition: left 0.3s ease; }
+            .sidebar.open { left: 0; }
+            .sidebar-overlay.active { display: block; }
+            .menu-toggle { display: block; }
+            .top-header { padding: 0 16px; }
             .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 12px; }
-            .admin-body { padding: 16px; overflow-y: visible; }
+            .admin-body { padding: 16px; }
             .card { flex-direction: column; align-items: flex-start !important; gap: 10px; }
         }
     </style>
 </head>
 <body>
 
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <div class="admin-layout">
         <!-- SIDEBAR -->
-        <div class="sidebar">
+        <div class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div>
                     <h2>Dispatch Link</h2>
                     <span>Admin Control Dashboard</span>
                 </div>
+                <button onclick="toggleSidebar()" style="background:transparent; border:none; color:white; font-size:18px; cursor:pointer; display:none;" class="close-sidebar-btn">✕</button>
             </div>
 
             <div class="sidebar-menu">
@@ -105,10 +112,13 @@
         <!-- MAIN VIEW PORT -->
         <div class="main-wrapper">
             <div class="top-header">
-                <div class="header-title" id="pageTitle">Live & Offline Users</div>
+                <div class="header-title-wrapper">
+                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                    <div class="header-title" id="pageTitle">Live & Offline Users</div>
+                </div>
                 <div class="header-actions">
                     <button onclick="fetchAdminData()" class="btn-refresh-top">
-                        <span>🔄</span> Refresh Data
+                        <span>🔄</span> Refresh
                     </button>
                     <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">
                         📥 Export CSV
@@ -154,6 +164,13 @@
         let onlineFilterMode = 'all'; // 'all', 'online', 'offline'
         let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
 
+        function toggleSidebar() {
+            let sidebar = document.getElementById('appSidebar');
+            let overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
         // Shift Date Standardizer (Handles 10 AM shift boundary)
         function getShiftDateStandardized() {
             let now = new Date();
@@ -187,8 +204,14 @@
         function switchTab(tab) {
             activeTab = tab;
             document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+            let activeBtnElem = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (activeBtnElem) activeBtnElem.classList.add('active');
             
+            // Close mobile sidebar if open
+            if(window.innerWidth <= 900) {
+                toggleSidebar();
+            }
+
             let filterBar = document.getElementById('filterBar');
             let onlineFilterBar = document.getElementById('onlineFilterBar');
             let exportBtn = document.getElementById('exportBtn');
@@ -281,7 +304,18 @@
             if (activeTab === 'online') {
                 let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
                 let users = new Set();
-                Object.values(cachedSessions).forEach(s => s?.nickname && users.add(s.nickname));
+                
+                // Collect users from sessions object (keys or values mapping)
+                if (cachedSessions) {
+                    Object.values(cachedSessions).forEach(s => {
+                        if (s?.nickname) users.add(s.nickname);
+                    });
+                    // Also check keys if sessions are stored by unique ID or username keys
+                    Object.keys(cachedSessions).forEach(k => {
+                        users.add(k);
+                        if (cachedSessions[k]?.nickname) users.add(cachedSessions[k].nickname);
+                    });
+                }
                 Object.keys(cachedReports).forEach(n => users.add(n));
                 Object.keys(cachedCallLogs).forEach(n => users.add(n));
 
@@ -292,8 +326,12 @@
 
                 let renderedCount = 0;
                 users.forEach(name => {
-                    let sObj = Object.values(cachedSessions).find(s => s?.nickname === name);
-                    let isOnline = sObj && (now - sObj.timestamp < 60000);
+                    // Find matching session object either by key match or nickname property match
+                    let sObj = cachedSessions[name] || Object.values(cachedSessions).find(s => s?.nickname === name);
+                    
+                    // Consider online if timestamp exists and difference is within 2 minutes (120000ms)
+                    let lastActiveTime = sObj?.timestamp || sObj?.lastActive || 0;
+                    let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
                     // Apply online/offline status filter
                     if (onlineFilterMode === 'online' && !isOnline) return;
@@ -309,7 +347,7 @@
                             </div>
                             <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; border-top: 1px solid #f1f5f9; padding-top: 8px;">
                                 <span>Login: <b>${sObj?.loginTime || 'N/A'}</b></span>
-                                <span>Last Active: <b>${sObj?.timestamp ? new Date(sObj.timestamp).toLocaleTimeString() : 'Never'}</b></span>
+                                <span>Last Active: <b>${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'Never'}</b></span>
                             </div>
                         </div>`;
                 });
@@ -484,6 +522,9 @@
 
         setDateFilterPreset('today');
         fetchAdminData();
+        
+        // Auto refresh data every 30 seconds for live monitoring
+        setInterval(fetchAdminData, 30000);
     </script>
 </body>
 </html>
