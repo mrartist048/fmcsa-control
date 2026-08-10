@@ -27,6 +27,13 @@
         .filter-group input { padding: 8px 12px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; width: 160px; }
         .btn-search { background: #002d62; color: white; border: none; padding: 9px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 18px; }
         .btn-search:hover { background: #001a3a; }
+        
+        /* Advanced Filter Bar Styling */
+        #advancedFilterWrapper { background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+        
+        /* Email Proposal Panel Styling */
+        #premiumProposalWrapper { background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; }
+
         .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; text-align: left; }
         th, td { padding: 10px 12px !important; font-size: 13px !important; border-bottom: 1px solid #eee !important; white-space: nowrap !important; vertical-align: middle !important; }
@@ -96,6 +103,50 @@
             <input type="number" id="qEndMc" placeholder="e.g., 1723500">
         </div>
         <button class="btn-search" onclick="fetchQuickLeads()">🔍 Fetch Leads Instantly</button>
+    </div>
+
+    <!-- Advanced Filter Bar -->
+    <div id="advancedFilterWrapper">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
+                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
+                    <option value="">All States</option>
+                </select>
+            </div>
+            <div style="position: relative; display: inline-block;">
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
+                    <div id="vehicleCheckboxList">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;"><input type="checkbox" value="Box Truck" onchange="applyAdvancedFilters()"> Box Truck</label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;"><input type="checkbox" value="Power Only" onchange="applyAdvancedFilters()"> Power Only</label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; cursor: pointer; color: #333;"><input type="checkbox" value="Trailers" onchange="applyAdvancedFilters()"> Trailers</label>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
+                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+            </div>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
+        </div>
+        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+            📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
+        </div>
+    </div>
+
+    <!-- Email Proposal Panel -->
+    <div id="premiumProposalWrapper">
+        <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
+            <span style="font-size: 12px; font-weight: bold; color: #002d62;">⚙️ Click to Edit</span>
+        </div>
+        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
+            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="Dispatch Service Proposal" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px;"></div>
+            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; padding: 8px;">Hello,</n><n>We found your profile via FMCSA. We offer dispatching services at 5% rate.</n><n>Best Regards.</textarea></div>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">💾 Save Template</button>
+        </div>
     </div>
 
     <div class="table-responsive">
@@ -168,6 +219,19 @@
         let pendingFollowUpRecord = null;
 
         const DEFAULT_REMARKS_TEMPLATE = "Truck Type:\nLength:\nAccessories:\nLoad:\nZip Code:\nSummary:";
+
+        const usStatesMap = {
+            "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+            "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
+            "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
+            "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+            "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri",
+            "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
+            "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
+            "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
+            "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
+            "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
+        };
 
         function getCurrentShiftDateKey() {
             let now = new Date();
@@ -256,8 +320,8 @@
                         let emailMarkup = record.email !== "N/A" ? `
                             <td style="position: relative; vertical-align: middle;">
                                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                                    <span onclick="navigator.clipboard.writeText('${record.email}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${record.email}</span>
-                                    <a href="mailto:${record.email}" class="premium-pitch-btn">📤 Send</a>
+                                    <span onclick="copyEmailToClipboard(this.parentNode, '${record.email}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${record.email}</span>
+                                    <a href="#" onclick="triggerOneClickEmailPitch('${record.email}', '${record.name.replace(/'/g, "\\'")}'); return false;" class="premium-pitch-btn">📤 Send</a>
                                 </div>
                             </td>
                         ` : `<td style="color: #6c757d;">N/A</td>`;
@@ -288,12 +352,128 @@
                 } else {
                     tbody.innerHTML = html;
                 }
+                populateStateDropdown();
+                updateVisibleRecordCount();
             } catch (err) {
                 console.error("Fetch error:", err);
                 tbody.innerHTML = `<tr><td colspan="12" id="loadingMsg" style="color:red;">Failed to fetch data. Check console.</td></tr>`;
             }
         }
 
+        // State & Vehicle Filter Functions
+        function populateStateDropdown() {
+            let select = document.getElementById('stateDropdownSelect');
+            if (!select) return;
+            let stateCounts = {};
+            fetchedLeadsArray.forEach(r => {
+                let addr = (r.address || "").toUpperCase();
+                for (let code in usStatesMap) {
+                    let stateRegex = new RegExp(`\\b${code}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
+                    if (stateRegex.test(addr)) {
+                        stateCounts[code] = (stateCounts[code] || 0) + 1;
+                        break;
+                    }
+                }
+            });
+            let currentVal = select.value;
+            select.innerHTML = '<option value="">All States</option>';
+            let sortedCodes = Object.keys(stateCounts).sort((a, b) => (usStatesMap[a] || a).localeCompare(usStatesMap[b] || b));
+            sortedCodes.forEach(code => {
+                let opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = `${usStatesMap[code] || code} (${code}) — ${stateCounts[code]}`;
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
+
+        window.toggleVehicleDropdown = function(e) {
+            e.stopPropagation();
+            let dropdown = document.getElementById('vehicleTypeDropdownContent');
+            if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        };
+
+        window.applyAdvancedFilters = function() {
+            let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
+            let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
+            let selectedVehicles = [];
+            document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+                selectedVehicles.push(cb.value.toLowerCase());
+            });
+
+            let rows = document.querySelectorAll('#quickResultsTable tr');
+            rows.forEach(row => {
+                if(row.cells.length < 12) return;
+                let mcText = (row.cells[0]?.textContent || "").toLowerCase();
+                let nameText = (row.cells[2]?.textContent || "").toLowerCase();
+                let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
+                let addressText = (row.cells[6]?.textContent || "").toUpperCase();
+                let vehicleText = (row.cells[9]?.textContent || "").toLowerCase();
+
+                let matchesState = true;
+                if (selectedState !== "") {
+                    let stateRegex = new RegExp(`\\b${selectedState}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
+                    matchesState = stateRegex.test(addressText);
+                }
+
+                let matchesSearch = true;
+                if (searchQuery !== "") {
+                    matchesSearch = mcText.includes(searchQuery) || nameText.includes(searchQuery) || phoneText.includes(searchQuery);
+                }
+
+                let matchesVehicle = true;
+                if (selectedVehicles.length > 0) {
+                    matchesVehicle = selectedVehicles.some(sel => vehicleText.includes(sel));
+                }
+
+                row.style.display = (matchesState && matchesSearch && matchesVehicle) ? "" : "none";
+            });
+            updateVisibleRecordCount();
+        };
+
+        window.resetAdvancedFilters = function() {
+            document.getElementById('stateDropdownSelect').value = "";
+            document.getElementById('universalSearchInput').value = "";
+            document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
+            applyAdvancedFilters();
+        };
+
+        function updateVisibleRecordCount() {
+            let rows = document.querySelectorAll('#quickResultsTable tr');
+            let visibleCount = 0;
+            rows.forEach(r => { if(r.style.display !== 'none' && r.cells.length >= 12) visibleCount++; });
+            let badge = document.getElementById('visibleRecordCountBadge');
+            if (badge) badge.innerText = visibleCount;
+        }
+
+        // Email Proposal Template Functions
+        window.saveProposalTemplateSettings = function() {
+            localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
+            localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('propBodyInput').value);
+            alert("Template saved successfully.");
+            document.getElementById('proposalInputsBlock').style.display = 'none';
+        };
+
+        window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
+            if (!emailAddress || emailAddress === 'N/A') return;
+            let subj = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Service Proposal";
+            let body = localStorage.getItem(`dl_body_${currentClient}`) || "Hello";
+            let mailtoUrl = `mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+            window.open(mailtoUrl, '_blank');
+        };
+
+        window.copyEmailToClipboard = function(element, emailAddress) {
+            if (!emailAddress || emailAddress === 'N/A') return;
+            navigator.clipboard.writeText(emailAddress).then(() => {
+                let badge = document.createElement('span');
+                badge.style.cssText = "position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); font-weight: bold;";
+                badge.innerText = "Copied!";
+                element.appendChild(badge);
+                setTimeout(() => badge.remove(), 1200);
+            });
+        };
+
+        // Remarks Functions
         window.remarksFocus = function(index, textarea) {
             if (!textarea.value || textarea.value.trim() === "") {
                 textarea.value = DEFAULT_REMARKS_TEMPLATE;
@@ -318,28 +498,22 @@
         };
 
         window.syncRemarksData = function(index, textarea) {
-            if (fetchedLeadsArray[index]) {
-                fetchedLeadsArray[index].remarks = textarea.value;
-            }
+            if (fetchedLeadsArray[index]) fetchedLeadsArray[index].remarks = textarea.value;
         };
 
+        // Follow-Up Functions
         window.addLeadToFollowUpList = function(index, buttonElement) {
             let record = fetchedLeadsArray[index];
             if (!record) return;
-
             let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
             if (followUpStore.some(r => r.mc === record.mc)) {
                 return alert("This carrier is already added to your Follow-Up list.");
             }
-
             pendingFollowUpRecord = { ...record };
             pendingFollowUpRecord.rowButton = buttonElement;
 
-            let todayDateStr = new Date().toISOString().split('T')[0];
-            let nowTimeStr = new Date().toTimeString().substring(0, 5);
-
-            document.getElementById('dlModalDateInput').value = todayDateStr;
-            document.getElementById('dlModalTimeInput').value = nowTimeStr;
+            document.getElementById('dlModalDateInput').value = new Date().toISOString().split('T')[0];
+            document.getElementById('dlModalTimeInput').value = new Date().toTimeString().substring(0, 5);
             document.getElementById('dlDatePickerModal').style.display = 'flex';
         };
 
@@ -350,18 +524,13 @@
 
         window.confirmFollowUpSchedule = function() {
             if (!pendingFollowUpRecord) return;
-
             let selectedDate = document.getElementById('dlModalDateInput').value;
             let selectedTime = document.getElementById('dlModalTimeInput').value;
-
-            if (!selectedDate) {
-                alert("Please select a valid date.");
-                return;
-            }
+            if (!selectedDate) { alert("Please select a valid date."); return; }
 
             pendingFollowUpRecord.addedAt = new Date().toLocaleString();
             pendingFollowUpRecord.followUpDate = selectedDate;
-            pendingFollowUpRecord.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
+            pendingFollowUpRecord.followUpTime = selectedTime ? selectedTime : "N/A";
             pendingFollowUpRecord.sharedBy = dispatcherNickname;
 
             let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
@@ -369,25 +538,14 @@
             localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
 
             showPremiumNotification(`⭐ Added MC ${pendingFollowUpRecord.mc} for Follow-Up on ${pendingFollowUpRecord.followUpDate}`, 3500);
-
             if (pendingFollowUpRecord.rowButton) {
                 let row = pendingFollowUpRecord.rowButton.closest('tr');
                 if (row) row.style.background = "#d4edda";
             }
-
             closeFollowUpModal();
         };
 
-        function formatTime12Hour(time24) {
-            let parts = time24.split(':');
-            let hours = parseInt(parts[0]);
-            let minutes = parts[1];
-            let ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            return `${hours}:${minutes} ${ampm}`;
-        }
-
+        // Call Interaction & Disposition Functions
         window.handlePhoneInteraction = function(cellElement, phoneNum) {
             activeCallPhone = phoneNum;
             activeCallCellElement = cellElement;
@@ -432,7 +590,6 @@
             if (pendingReviewPhone) {
                 let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
                 let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
-                
                 let logEntry = {
                     phone: pendingReviewPhone,
                     dispatcher: dispatcherNickname,
@@ -440,7 +597,6 @@
                     date: new Date().toLocaleString(),
                     status: statusType
                 };
-                
                 callLogs.push(logEntry);
                 localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
@@ -455,11 +611,19 @@
                 }
 
                 showPremiumNotification(`✅ Call Logged [${statusType}] for ${pendingReviewPhone}`, 2500);
-
                 pendingReviewPhone = null;
                 activeCallCellElement = null;
             }
         };
+
+        // Close vehicle dropdown on outside click
+        window.addEventListener('click', function(e) {
+            let dropdown = document.getElementById('vehicleTypeDropdownContent');
+            let btn = document.querySelector('button[onclick*="toggleVehicleDropdown"]');
+            if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
