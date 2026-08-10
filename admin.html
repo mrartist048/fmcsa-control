@@ -64,6 +64,9 @@
         .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-info:hover { background: #0369a1; }
 
+        .btn-danger { background: #dc2626; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .btn-danger:hover { background: #b91c1c; }
+
         .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-refresh-top:hover { background: #1e293b; }
 
@@ -128,6 +131,9 @@
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
                     <span>📋</span> Shift Reports & Ratios
                 </button>
+                <button onclick="switchTab('notice')" id="tabNotice" class="nav-btn">
+                    <span>📢</span> Notice Board
+                </button>
             </div>
         </div>
 
@@ -187,7 +193,7 @@
         let currentClient = localStorage.getItem("dl_logged_client") || "Gslogisticsdispatch";
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
-        let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
+        let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {}, cachedNotice = "";
 
         function toggleSidebar() {
             let sidebar = document.getElementById('appSidebar');
@@ -213,17 +219,48 @@
 
         async function fetchAdminData() {
             try {
-                let [sRes, rRes, cRes] = await Promise.all([
+                let [sRes, rRes, cRes, nRes] = await Promise.all([
                     fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
                     fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}announcements/${currentClient}.json`)
                 ]);
                 cachedSessions = await sRes.json() || {};
                 cachedReports = await rRes.json() || {};
                 cachedCallLogs = await cRes.json() || {};
+                let noticeData = await nRes.json();
+                cachedNotice = (noticeData && typeof noticeData === 'object') ? (noticeData.message || "") : (noticeData || "");
                 renderContent();
             } catch (e) {
                 document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase server.</p>`;
+            }
+        }
+
+        async function saveAnnouncement() {
+            let msg = document.getElementById('announcementInput').value.trim();
+            try {
+                await fetch(`${FIREBASE_DB_URL}announcements/${currentClient}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ message: msg, timestamp: Date.now() })
+                });
+                cachedNotice = msg;
+                alert("Announcement updated successfully! It will now flash on agents' dashboards.");
+                renderContent();
+            } catch (err) {
+                alert("Failed to save announcement.");
+            }
+        }
+
+        async function clearAnnouncement() {
+            try {
+                await fetch(`${FIREBASE_DB_URL}announcements/${currentClient}.json`, {
+                    method: 'DELETE'
+                });
+                cachedNotice = "";
+                alert("Announcement cleared.");
+                renderContent();
+            } catch (err) {
+                alert("Failed to clear announcement.");
             }
         }
 
@@ -240,6 +277,7 @@
             let filterBar = document.getElementById('filterBar');
             let onlineFilterBar = document.getElementById('onlineFilterBar');
             let exportBtn = document.getElementById('exportBtn');
+            let summaryBtn = document.getElementById('summaryBtn');
             let pageTitle = document.getElementById('pageTitle');
 
             if (tab === 'online') {
@@ -247,16 +285,25 @@
                 filterBar.style.display = 'none';
                 onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
+                summaryBtn.style.display = 'flex';
             } else if (tab === 'leaderboard') {
                 pageTitle.innerText = "Team Calling Leaderboard";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
-            } else {
+                summaryBtn.style.display = 'flex';
+            } else if (tab === 'reports') {
                 pageTitle.innerText = "Detailed Shift Reports & Ratios";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
+                summaryBtn.style.display = 'flex';
+            } else if (tab === 'notice') {
+                pageTitle.innerText = "Admin Announcement Board";
+                filterBar.style.display = 'none';
+                onlineFilterBar.style.display = 'none';
+                exportBtn.style.display = 'none';
+                summaryBtn.style.display = 'none';
             }
             renderContent();
         }
@@ -550,6 +597,18 @@
                     return;
                 }
                 container.innerHTML = html + `</div>`;
+
+            } else if (activeTab === 'notice') {
+                container.innerHTML = `
+                    <div style="max-width: 600px; background: white; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                        <h3 style="margin-top: 0; color: #0f172a; font-size: 16px;">📢 Broadcast Announcement to Agents</h3>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Yahan jo message likh kar save karenge, woh sabhi agents ke dashboard par top par flash (show) hoga.</p>
+                        <textarea id="announcementInput" rows="4" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 16px; font-family: inherit;">${cachedNotice || ''}</textarea>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="saveAnnouncement()" class="btn-success">💾 Save & Broadcast</button>
+                            <button onclick="clearAnnouncement()" class="btn-danger">🗑️ Clear Notice</button>
+                        </div>
+                    </div>`;
             }
         }
 
