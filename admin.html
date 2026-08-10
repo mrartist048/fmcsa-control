@@ -351,7 +351,7 @@
                 <b>🏆 Top Performer:</b> ${topAgent} (${agentSummary[topAgent]?.calls || 0} calls)<br><br>
                 <b>👥 Agent Breakdown:</b><br>
                 <div style="max-height: 150px; overflow-y: auto; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    ${sorted.length === 0 ? 'No data' : sorted.map(a => `• ${a}: <b>${agentSummary[a].calls}</b> calls (${agentSummary[a].sales} sales)`).join('<br>')}
+                    ${sortedAgents.length === 0 ? 'No data' : sortedAgents.map(a => `• ${a}: <b>${agentSummary[a].calls}</b> calls (${agentSummary[a].sales} sales)`).join('<br>')}
                 </div>
             `;
             modal.style.display = 'flex';
@@ -405,7 +405,6 @@
                     let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
-                    // Idle / Inactivity calculation (in minutes)
                     let inactiveMs = now - lastActiveTime;
                     let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Offline / Never Active';
                     let idleText = isOnline ? (inactiveMins < 1 ? 'Active just now' : `${inactiveMins} mins idle`) : `Offline`;
