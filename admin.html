@@ -11,91 +11,6 @@
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         
-        /* AUTHENTICATION OVERLAY MODAL DESIGN */
-        #authOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .auth-card {
-            background: #ffffff;
-            padding: 36px 32px;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            text-align: center;
-            border: 1px solid #e2e8f0;
-        }
-        .auth-icon {
-            font-size: 38px;
-            margin-bottom: 16px;
-            background: #f0fdf4;
-            width: 70px;
-            height: 70px;
-            line-height: 70px;
-            border-radius: 50%;
-            display: inline-block;
-            border: 1px solid #dcfce7;
-        }
-        .auth-card h2 {
-            margin: 0 0 8px 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .auth-card p {
-            margin: 0 0 24px 0;
-            font-size: 13.5px;
-            color: #64748b;
-            line-height: 1.5;
-        }
-        .auth-input {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            outline: none;
-            margin-bottom: 16px;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-        .auth-input:focus {
-            border-color: #0284c7;
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
-        .auth-btn {
-            width: 100%;
-            background: #0f172a;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-        .auth-btn:hover {
-            background: #1e293b;
-        }
-        .auth-error {
-            color: #dc2626;
-            font-size: 12px;
-            margin-top: 10px;
-            font-weight: 600;
-            display: none;
-        }
-
         .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
         
         /* SIDEBAR NAVIGATION */
@@ -175,18 +90,6 @@
     </style>
 </head>
 <body>
-
-    <!-- PROFESSIONAL PASSWORD AUTHENTICATION OVERLAY -->
-    <div id="authOverlay">
-        <div class="auth-card">
-            <div class="auth-icon">🔒</div>
-            <h2>Admin Authorization</h2>
-            <p>Please enter the master admin password to securely access the Dispatch Link control panel.</p>
-            <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
-            <button onclick="verifyAdminPassword()" class="auth-btn">Access Dashboard</button>
-            <div id="authErrorMsg" class="auth-error">Incorrect Password! Access Denied.</div>
-        </div>
-    </div>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
@@ -288,28 +191,6 @@
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
         let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
-
-        // Password Verification Logic
-        function verifyAdminPassword() {
-            let passInput = document.getElementById('adminPasswordInput').value;
-            let errorMsg = document.getElementById('authErrorMsg');
-
-            if (passInput === "admin890") {
-                document.getElementById('authOverlay').style.display = 'none';
-                setDateFilterPreset('today');
-                fetchAdminData();
-                setInterval(fetchAdminData, 30000);
-            } else {
-                errorMsg.style.display = 'block';
-                document.getElementById('adminPasswordInput').style.borderColor = '#dc2626';
-            }
-        }
-
-        function handlePasswordKeypress(e) {
-            if (e.key === 'Enter') {
-                verifyAdminPassword();
-            }
-        }
 
         function toggleSidebar() {
             let sidebar = document.getElementById('appSidebar');
@@ -805,6 +686,13 @@
             link.download = `DispatchLink_Reports_${startDateStr}_to_${endDateStr}.csv`;
             link.click();
         }
+
+        setDateFilterPreset('today');
+        fetchAdminData();
+        
+        setInterval(fetchAdminData, 30000);
     </script>
 </body>
 </html>
+
+
