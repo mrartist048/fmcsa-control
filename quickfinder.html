@@ -18,7 +18,94 @@
         })();
     </script>
     <style>
-        body { font-family: sans-serif; background: #f4f7fe; margin: 0; padding: 20px; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f4f7fe; margin: 0; padding: 20px; box-sizing: border-box; }
+        
+        /* AUTHENTICATION OVERLAY MODAL DESIGN */
+        #authOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 9999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-card {
+            background: #ffffff;
+            padding: 40px 32px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .auth-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+            background: #f0fdf4;
+            width: 75px;
+            height: 75px;
+            line-height: 75px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid #dcfce7;
+        }
+        .auth-card h2 {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .auth-card p {
+            margin: 0 0 24px 0;
+            font-size: 13.5px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .auth-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            outline: none;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            box-sizing: border-box;
+        }
+        .auth-input:focus {
+            border-color: #002d62;
+            box-shadow: 0 0 0 3px rgba(0, 45, 98, 0.15);
+        }
+        .auth-btn {
+            width: 100%;
+            background: #002d62;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .auth-btn:hover {
+            background: #001a3a;
+        }
+        .auth-error {
+            color: #dc2626;
+            font-size: 12px;
+            margin-top: 12px;
+            font-weight: 700;
+            display: none;
+        }
+
         .header { display: flex; justify-content: space-between; align-items: center; background: #002d62; color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; }
         .header h2 { margin: 0; font-size: 20px; }
         .filter-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
@@ -104,6 +191,18 @@
     </style>
 </head>
 <body>
+
+    <!-- PASSWORD AUTHENTICATION OVERLAY -->
+    <div id="authOverlay">
+        <div class="auth-card">
+            <div class="auth-icon">🔒</div>
+            <h2>Quick Lead Finder</h2>
+            <p>Please enter the master password to access the secure lead finder portal.</p>
+            <input type="password" id="authPasswordInput" class="auth-input" placeholder="Enter password..." onkeypress="handleAuthKeypress(event)">
+            <button onclick="verifyPassword()" class="auth-btn">Unlock Portal</button>
+            <div id="authErrorMsg" class="auth-error">Incorrect Password! Access Denied.</div>
+        </div>
+    </div>
 
     <div class="header">
         <h2>⚡ Dispatch Link - Quick Lead Finder</h2>
@@ -260,6 +359,25 @@
             "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
         };
 
+        // Password Verification Logic
+        function verifyPassword() {
+            let passInput = document.getElementById('authPasswordInput').value;
+            let errorMsg = document.getElementById('authErrorMsg');
+
+            if (passInput === "dispatchlink#890") {
+                document.getElementById('authOverlay').style.display = 'none';
+            } else {
+                errorMsg.style.display = 'block';
+                document.getElementById('authPasswordInput').style.borderColor = '#dc2626';
+            }
+        }
+
+        function handleAuthKeypress(e) {
+            if (e.key === 'Enter') {
+                verifyPassword();
+            }
+        }
+
         // Load saved proposal template on startup
         window.addEventListener('DOMContentLoaded', () => {
             let savedSubj = localStorage.getItem(`dl_subj_${currentClient}`);
@@ -407,7 +525,7 @@
             }
         }
 
-        // State Dropdown with Counts (Exact Layout Style)
+        // State Dropdown with Counts
         function populateStateDropdown() {
             let select = document.getElementById('stateDropdownSelect');
             if (!select) return;
