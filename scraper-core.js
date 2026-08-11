@@ -82,7 +82,7 @@ function showLimitExceededModal(message) {
                 ${message}
             </p>
             <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
-                Need to increase your active device/tab limit? <br>Contact Admin: <b>03037654849</b>
+                Need to increase your active device/tab limit? <br>Contact Admin: <b>03700684849</b>
             </div>
             <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
         </div>
@@ -154,7 +154,7 @@ function renderLoginScreen() {
             <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
             
             <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
-                Need access? Contact Admin: <b>03037654849</b><br>
+                Need access? Contact Admin: <b>03700684849</b><br>
                 Email: <a href="mailto:info@dispatchlink.online" style="color: #6c757d; text-decoration: underline;">info@dispatchlink.online</a>
             </div>
         </div>
