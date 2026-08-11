@@ -67,14 +67,18 @@
             color: #64748b;
             line-height: 1.5;
         }
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 16px;
+        }
         .auth-input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px 42px 12px 16px;
             font-size: 14px;
             border: 1px solid #cbd5e1;
             border-radius: 10px;
             outline: none;
-            margin-bottom: 16px;
             transition: all 0.2s ease;
             font-weight: 500;
             box-sizing: border-box;
@@ -82,6 +86,18 @@
         .auth-input:focus {
             border-color: #002d62;
             box-shadow: 0 0 0 3px rgba(0, 45, 98, 0.15);
+        }
+        .eye-toggle-btn {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #64748b;
+            padding: 0;
         }
         .auth-btn {
             width: 100%;
@@ -198,7 +214,10 @@
             <div class="auth-icon">🔒</div>
             <h2>Quick Lead Finder</h2>
             <p>Please enter the master password to access the secure lead finder portal.</p>
-            <input type="password" id="authPasswordInput" class="auth-input" placeholder="Enter password..." onkeypress="handleAuthKeypress(event)">
+            <div class="password-wrapper">
+                <input type="password" id="authPasswordInput" class="auth-input" placeholder="Enter password..." onkeypress="handleAuthKeypress(event)">
+                <button type="button" class="eye-toggle-btn" id="eyeToggleBtn" onclick="togglePasswordVisibility()">👁️</button>
+            </div>
             <button onclick="verifyPassword()" class="auth-btn">Unlock Portal</button>
             <div id="authErrorMsg" class="auth-error">Incorrect Password! Access Denied.</div>
         </div>
@@ -222,7 +241,7 @@
         <button class="btn-search" onclick="fetchQuickLeads()">🔍 Fetch Leads Instantly</button>
     </div>
 
-    <!-- CRM Advanced Filter Bar (Neat & Clean Layout) -->
+    <!-- CRM Advanced Filter Bar -->
     <div class="advanced-filter-bar">
         <div class="advanced-filter-left">
             <div class="crm-filter-item">
@@ -359,7 +378,7 @@
             "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
         };
 
-        // Password Verification Logic
+        // Password Verification Logic & Eye Toggle
         function verifyPassword() {
             let passInput = document.getElementById('authPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
@@ -375,6 +394,18 @@
         function handleAuthKeypress(e) {
             if (e.key === 'Enter') {
                 verifyPassword();
+            }
+        }
+
+        function togglePasswordVisibility() {
+            let passwordInput = document.getElementById('authPasswordInput');
+            let eyeBtn = document.getElementById('eyeToggleBtn');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeBtn.innerText = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                eyeBtn.innerText = '👁️';
             }
         }
 
