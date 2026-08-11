@@ -24,6 +24,7 @@ const allowedUsers = {
 // ====== MULTI-PROJECT FIREBASE CONFIGURATION (UNLIMITED USERS LOAD BALANCING) ======
 const FIREBASE_PROJECTS = [
     "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/", // Project 1 (100 users limit)
+    "https://data-scraper-2-default-rtdb.firebaseio.com/",
     // Aap mazeed projects yahan add kar sakte hain taake mazeed users handle ho sakein:
     // "https://dispatch-link-db2-default-rtdb.firebaseio.com/",
     // "https://dispatch-link-db3-default-rtdb.firebaseio.com/"
