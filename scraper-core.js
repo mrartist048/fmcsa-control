@@ -21,7 +21,26 @@ const allowedUsers = {
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30" },  
 };
 
-const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
+// ====== MULTI-PROJECT FIREBASE CONFIGURATION (UNLIMITED USERS LOAD BALANCING) ======
+const FIREBASE_PROJECTS = [
+    "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/", // Project 1 (100 users limit)
+    // Aap mazeed projects yahan add kar sakte hain taake mazeed users handle ho sakein:
+    // "https://dispatch-link-db2-default-rtdb.firebaseio.com/",
+    // "https://dispatch-link-db3-default-rtdb.firebaseio.com/"
+];
+
+// User session ke liye automatic Firebase database project select/assign karna
+function getUserFirebaseUrl() {
+    let assignedUrl = localStorage.getItem("dl_assigned_db");
+    if (!assignedUrl || !FIREBASE_PROJECTS.includes(assignedUrl)) {
+        let randomIndex = Math.floor(Math.random() * FIREBASE_PROJECTS.length);
+        assignedUrl = FIREBASE_PROJECTS[randomIndex];
+        localStorage.setItem("dl_assigned_db", assignedUrl);
+    }
+    return assignedUrl;
+}
+
+const FIREBASE_DB_URL = getUserFirebaseUrl();
 const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
