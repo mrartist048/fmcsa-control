@@ -21,27 +21,7 @@ const allowedUsers = {
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30" },  
 };
 
-// ====== MULTI-PROJECT FIREBASE CONFIGURATION (UNLIMITED USERS LOAD BALANCING) ======
-const FIREBASE_PROJECTS = [
-    "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/", // Project 1 (100 users limit)
-    "https://data-scraper-2-default-rtdb.firebaseio.com/",
-    // Aap mazeed projects yahan add kar sakte hain taake mazeed users handle ho sakein:
-    // "https://dispatch-link-db2-default-rtdb.firebaseio.com/",
-    // "https://dispatch-link-db3-default-rtdb.firebaseio.com/"
-];
-
-// User session ke liye automatic Firebase database project select/assign karna
-function getUserFirebaseUrl() {
-    let assignedUrl = localStorage.getItem("dl_assigned_db");
-    if (!assignedUrl || !FIREBASE_PROJECTS.includes(assignedUrl)) {
-        let randomIndex = Math.floor(Math.random() * FIREBASE_PROJECTS.length);
-        assignedUrl = FIREBASE_PROJECTS[randomIndex];
-        localStorage.setItem("dl_assigned_db", assignedUrl);
-    }
-    return assignedUrl;
-}
-
-const FIREBASE_DB_URL = getUserFirebaseUrl();
+const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
 const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
@@ -1118,6 +1098,12 @@ window.openCallingDetailModal = function() {
 }
 
 window.openAdminPanelPrompt = function() {
+    let passInput = prompt("Enter Master Admin Password:");
+    if (passInput === null) return;
+    if (passInput !== MASTER_ADMIN_PASS) {
+        alert("Incorrect Admin Password!");
+        return;
+    }
     window.open('admin.html', '_blank');
 };
 
@@ -2304,3 +2290,4 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
