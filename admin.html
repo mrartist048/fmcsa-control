@@ -787,7 +787,7 @@
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'audit') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail & Online Durations from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let agentAuditMap = {};
 
                 if (cachedSessions) {
@@ -796,7 +796,6 @@
                         let name = sObj?.nickname || sObj?.name || key;
                         let loginTimeStr = sObj?.loginTime || 'N/A';
                         
-                        // Robust Timestamp Resolver (Falls back to parsing loginTime string if loginTimestamp is missing)
                         let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
                         if (!loginTs && loginTimeStr !== 'N/A') {
                             let parsedDate = new Date(`${startDateStr} ${loginTimeStr}`).getTime();
@@ -837,23 +836,6 @@
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
-                    // ACCURATE DURATION CALCULATION FROM REAL LOGIN TIMESTAMP TO NOW
-                    let effectiveEndTs = isOnline ? now : data.lastActiveTs;
-                    let durationMs = (effectiveEndTs && data.loginTs && effectiveEndTs > data.loginTs) ? (effectiveEndTs - data.loginTs) : 0;
-                    
-                    let totalMins = Math.floor(durationMs / 60000);
-                    let hours = Math.floor(totalMins / 60);
-                    let mins = totalMins % 60;
-                    
-                    let durationFormatted = "";
-                    if (hours > 0) {
-                        durationFormatted = `${hours} hrs ${mins} mins`;
-                    } else if (totalMins > 0) {
-                        durationFormatted = `${totalMins} mins`;
-                    } else {
-                        durationFormatted = "1 min";
-                    }
-
                     html += `
                         <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -862,7 +844,6 @@
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
                                 <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
-                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Total Online Duration: ${durationFormatted} ${isOnline ? '(Live 🟢)' : ''}</span>
                             </div>
                         </div>`;
                 });
