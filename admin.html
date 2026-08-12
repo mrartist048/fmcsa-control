@@ -61,11 +61,11 @@
         .password-wrapper {
             position: relative;
             width: 100%;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
         .auth-input {
             width: 100%;
-            padding: 12px 42px 12px 16px;
+            padding: 12px 16px;
             font-size: 14px;
             border: 1px solid #cbd5e1;
             border-radius: 10px;
@@ -73,22 +73,11 @@
             transition: all 0.2s ease;
             font-weight: 500;
             box-sizing: border-box;
+            margin-bottom: 12px;
         }
         .auth-input:focus {
             border-color: #0284c7;
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
-        .eye-toggle-btn {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            color: #64748b;
-            padding: 0;
         }
         .auth-btn {
             width: 100%;
@@ -136,9 +125,7 @@
         .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
         .header-title { font-size: 18px; font-weight: 700; color: #0f172a; word-break: break-word; }
         
-        /* HAMBURGER MENU BUTTON FOR MOBILE */
         .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; flex-shrink: 0; }
-
         .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
         .filter-bar { background: white; padding: 14px 24px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
@@ -148,11 +135,8 @@
         .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
 
         .date-input { padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 500; color: #0f172a; }
-        
-        /* BODY CONTAINER */
         .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
         
-        /* CARDS & UI COMPONENTS */
         .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease; }
         .card:hover { transform: translateY(-1px); }
         
@@ -174,14 +158,10 @@
 
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
 
-        /* MODAL STYLES FOR AUTOMATED SUMMARY */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 24px 32px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-
-        /* OVERLAY FOR MOBILE SIDEBAR */
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 90; }
 
-        /* RESPONSIVE DESIGN FOR MOBILE & TABLET */
         @media (max-width: 900px) {
             body { overflow: auto; height: auto; }
             .admin-layout { height: 100vh; overflow: hidden; }
@@ -203,18 +183,16 @@
 </head>
 <body>
 
-    <!-- PROFESSIONAL PASSWORD AUTHENTICATION OVERLAY WITH EYE TOGGLE -->
+    <!-- MULTI-CLIENT COMPANY ADMIN LOGIN OVERLAY -->
     <div id="authOverlay">
         <div class="auth-card">
-            <div class="auth-icon">🔒</div>
-            <h2>Admin Authorization</h2>
-            <p>Please enter the master admin password to securely access the Dispatch Link control panel.</p>
-            <div class="password-wrapper">
-                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
-                <button type="button" class="eye-toggle-btn" id="eyeToggleBtn" onclick="togglePasswordVisibility()">👁️</button>
-            </div>
+            <div class="auth-icon">🏢</div>
+            <h2>Company Admin Portal</h2>
+            <p>Enter your Company Name and Admin Password to view your designated agents.</p>
+            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchlodify, gslogistics)">
+            <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
             <button onclick="verifyAdminPassword()" class="auth-btn">Access Dashboard</button>
-            <div id="authErrorMsg" class="auth-error">Incorrect Password! Access Denied.</div>
+            <div id="authErrorMsg" class="auth-error">Invalid Company Name or Password!</div>
         </div>
     </div>
 
@@ -239,8 +217,8 @@
         <div class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div>
-                    <h2>Dispatch Link</h2>
-                    <span>Admin Control Dashboard</span>
+                    <h2 id="brandTitle">Dispatch Link</h2>
+                    <span id="brandSubtitle">Company Control Panel</span>
                 </div>
             </div>
 
@@ -315,17 +293,27 @@
 
     <script>
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+        let currentClient = localStorage.getItem("dl_logged_client") || "";
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
 
-        // Password Verification Logic & Eye Toggle
+        window.onload = function() {
+            if (currentClient) {
+                document.getElementById('adminCompanyInput').value = currentClient;
+            }
+        };
+
         function verifyAdminPassword() {
+            let companyInput = document.getElementById('adminCompanyInput').value.trim();
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
-            if (passInput === "admin890") {
+            if (companyInput && passInput === "admin890") {
+                currentClient = companyInput;
+                localStorage.setItem("dl_logged_client", currentClient);
                 document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
                 setDateFilterPreset('today');
                 fetchAdminData();
                 setInterval(fetchAdminData, 30000);
@@ -341,18 +329,6 @@
             }
         }
 
-        function togglePasswordVisibility() {
-            let passwordInput = document.getElementById('adminPasswordInput');
-            let eyeBtn = document.getElementById('eyeToggleBtn');
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeBtn.innerText = '🙈';
-            } else {
-                passwordInput.type = 'password';
-                eyeBtn.innerText = '👁️';
-            }
-        }
-
         function toggleSidebar() {
             let sidebar = document.getElementById('appSidebar');
             let overlay = document.getElementById('sidebarOverlay');
@@ -360,7 +336,6 @@
             overlay.classList.toggle('active');
         }
 
-        // Shift Date Standardizer for 4 PM to 6 AM Shift Timing
         function getShiftDateStandardized() {
             let now = new Date();
             let hours = now.getHours();
@@ -375,26 +350,18 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // Advanced Recursive Deep Flattener to unpack all nested company/client nodes (like jys, dispatchloadify, etc.)
-        function deepFlattenNode(data, result = {}) {
-            if (!data || typeof data !== 'object') return result;
-
-            Object.keys(data).forEach(key => {
-                let val = data[key];
-                if (val && typeof val === 'object' && !Array.isArray(val)) {
-                    if ('timestamp' in val || 'lastActive' in val || 'loginTime' in val || 'status' in val || 'totalCalls' in val || Array.isArray(val)) {
-                        result[key] = val;
-                    } else {
-                        deepFlattenNode(val, result);
-                    }
-                } else if (val !== null && val !== undefined) {
-                    result[key] = val;
-                }
-            });
-            return result;
+        // Smart flattener: Agar data direct agents ka hai ya company folder ke andar hai, dono ko handle karega
+        function extractCompanyData(rawData, clientName) {
+            if (!rawData) return {};
+            // Agar database mein direct agents hain ya client folder maujood hai
+            if (rawData[clientName] && typeof rawData[clientName] === 'object') {
+                return rawData[clientName];
+            }
+            return rawData; // Fallback agar data flat structure par save ho raha hai
         }
 
         async function fetchAdminData() {
+            if (!currentClient) return;
             try {
                 let [sRes, rRes, cRes] = await Promise.all([
                     fetch(`${FIREBASE_DB_URL}sessions.json`),
@@ -405,9 +372,9 @@
                 let rawR = await rRes.json() || {};
                 let rawC = await cRes.json() || {};
 
-                globalSessions = deepFlattenNode(rawS);
-                globalReports = deepFlattenNode(rawR);
-                globalCallLogs = deepFlattenNode(rawC);
+                globalSessions = extractCompanyData(rawS, currentClient);
+                globalReports = extractCompanyData(rawR, currentClient);
+                globalCallLogs = extractCompanyData(rawC, currentClient);
 
                 renderContent();
             } catch (e) {
@@ -417,45 +384,23 @@
         }
 
         async function deleteUserRecord(userName) {
-            if (!confirm(`Are you sure you want to delete user "${userName}"? This will permanently erase their records from all tabs.`)) {
-                return;
-            }
+            if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
 
             try {
-                let [sRes, cRes, rRes] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs.json`),
-                    fetch(`${FIREBASE_DB_URL}shift_reports.json`)
+                await Promise.all([
+                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    // Direct root fallback deletion
+                    fetch(`${FIREBASE_DB_URL}sessions/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${userName}.json`, { method: 'DELETE' })
                 ]);
-
-                let sessionsData = await sRes.json() || {};
-                let callLogsData = await cRes.json() || {};
-                let shiftReportsData = await rRes.json() || {};
-
-                let deletePromises = [];
-
-                function recursiveDelete(nodePath, dataObj) {
-                    if (!dataObj || typeof dataObj !== 'object') return;
-                    Object.keys(dataObj).forEach(key => {
-                        let item = dataObj[key];
-                        if (key.toLowerCase() === userName.toLowerCase()) {
-                            deletePromises.push(fetch(`${FIREBASE_DB_URL}${nodePath}/${key}.json`, { method: 'DELETE' }));
-                        } else if (item && typeof item === 'object') {
-                            recursiveDelete(`${nodePath}/${key}`, item);
-                        }
-                    });
-                }
-
-                recursiveDelete('sessions', sessionsData);
-                recursiveDelete('call_logs', callLogsData);
-                recursiveDelete('shift_reports', shiftReportsData);
-
-                await Promise.all(deletePromises);
                 alert(`User "${userName}" has been successfully deleted.`);
                 fetchAdminData();
             } catch (err) {
                 console.error("Delete error:", err);
-                alert("Failed to delete user completely.");
+                alert("Failed to delete user.");
             }
         }
 
@@ -465,9 +410,7 @@
             let activeBtnElem = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
             if (activeBtnElem) activeBtnElem.classList.add('active');
             
-            if(window.innerWidth <= 900) {
-                toggleSidebar();
-            }
+            if(window.innerWidth <= 900) toggleSidebar();
 
             let filterBar = document.getElementById('filterBar');
             let onlineFilterBar = document.getElementById('onlineFilterBar');
@@ -548,10 +491,6 @@
             let eInp = document.getElementById('customEndDate').value;
             if (sInp && eInp) {
                 startDateStr = sInp; endDateStr = eInp;
-                ['presetToday', 'presetWeek', 'presetMonth', 'presetAll'].forEach(id => {
-                    let b = document.getElementById(id);
-                    if (b) b.classList.remove('active');
-                });
                 renderContent();
             }
         }
@@ -574,8 +513,7 @@
             let modal = document.getElementById('summaryModal');
             let body = document.getElementById('modalSummaryBody');
             
-            let totalCallsAll = 0;
-            let totalSalesAll = 0;
+            let totalCallsAll = 0, totalSalesAll = 0;
             let agentSummary = {};
 
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
@@ -594,25 +532,18 @@
             let topAgent = sortedAgents.length > 0 ? sortedAgents[0] : 'None';
 
             body.innerHTML = `
-                <b>📅 Shift Date Range:</b> ${startDateStr} to ${endDateStr}<br>
-                <b>📞 Total Calls Logged:</b> ${totalCallsAll}<br>
-                <b>💰 Total Sales Closed:</b> ${totalSalesAll}<br>
-                <b>🏆 Top Performer:</b> ${topAgent} (${agentSummary[topAgent]?.calls || 0} calls)<br><br>
-                <b>👥 Agent Breakdown:</b><br>
-                <div style="max-height: 150px; overflow-y: auto; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    ${sortedAgents.length === 0 ? 'No data' : sortedAgents.map(a => `• ${a}: <b>${agentSummary[a].calls}</b> calls (${agentSummary[a].sales} sales)`).join('<br>')}
-                </div>
+                <b>🏢 Company:</b> ${currentClient.toUpperCase()}<br>
+                <b>📅 Shift Range:</b> ${startDateStr} to ${endDateStr}<br>
+                <b>📞 Total Calls:</b> ${totalCallsAll}<br>
+                <b>💰 Total Sales:</b> ${totalSalesAll}<br>
+                <b>🏆 Top Performer:</b> ${topAgent} (${agentSummary[topAgent]?.calls || 0} calls)<br>
             `;
             modal.style.display = 'flex';
         }
 
-        function closeSummaryModal() {
-            document.getElementById('summaryModal').style.display = 'none';
-        }
-
+        function closeSummaryModal() { document.getElementById('summaryModal').style.display = 'none'; }
         function copySummaryText() {
-            let text = document.getElementById('modalSummaryBody').innerText;
-            navigator.clipboard.writeText(text);
+            navigator.clipboard.writeText(document.getElementById('modalSummaryBody').innerText);
             alert("Summary copied to clipboard!");
         }
 
@@ -634,16 +565,12 @@
                     });
                 }
 
-                Object.keys(globalReports).forEach(n => {
-                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
-                });
-                Object.keys(globalCallLogs).forEach(n => {
-                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
-                });
+                Object.keys(globalReports).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; });
+                Object.keys(globalCallLogs).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; });
 
                 let userKeys = Object.keys(uniqueUsers);
                 if (userKeys.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users or agents detected in database.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users detected for company: <b>${currentClient}</b></p>`;
                     return;
                 }
 
@@ -655,7 +582,7 @@
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
                     let inactiveMs = now - lastActiveTime;
-                    let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Offline / Never Active';
+                    let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Never Active';
                     let idleText = isOnline ? (inactiveMins < 1 ? 'Active just now' : `${inactiveMins} mins idle`) : `Offline`;
 
                     if (onlineFilterMode === 'online' && !isOnline) return;
@@ -675,76 +602,62 @@
                             </div>
                             <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
                                 <span>Last Active: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
-                                <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger" title="Delete User">🗑️ Remove User</button>
+                                <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger">🗑️ Remove</button>
                             </div>
                         </div>`;
                 });
 
                 if (renderedCount === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match the selected status filter (${onlineFilterMode}).</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match filter (${onlineFilterMode}).</p>`;
                     return;
                 }
-
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'leaderboard') {
                 let perfMap = {};
-                let allUsers = new Set();
-                Object.keys(globalCallLogs).forEach(n => allUsers.add(n));
-                Object.keys(globalReports).forEach(n => allUsers.add(n));
+                let allUsers = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allUsers.forEach(name => {
                     let logs = globalCallLogs[name];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let count = 0;
-                    if (Array.isArray(logs)) {
-                        count = logs.filter(l => isDateInRange(l.shiftDate || l.date)).length;
-                    }
+                    if (Array.isArray(logs)) count = logs.filter(l => isDateInRange(l.shiftDate || l.date)).length;
                     if (count === 0 && globalReports[name]) {
                         let filteredReps = globalReports[name].filter(r => isDateInRange(r.date));
                         count = filteredReps.reduce((sum, r) => sum + (r.totalCalls || (r.logs ? r.logs.length : 0)), 0);
                     }
-                    if (count > 0) {
-                        perfMap[name] = count;
-                    }
+                    if (count > 0) perfMap[name] = count;
                 });
 
                 let sorted = Object.keys(perfMap).sort((a, b) => perfMap[b] - perfMap[a]);
                 if (sorted.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling activity found for selected shift range (${startDateStr} to ${endDateStr}).</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling activity found.</p>`;
                     return;
                 }
 
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Showing performance from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Leaderboard for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 sorted.forEach((name, idx) => {
                     let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx+1}`;
                     html += `
                         <div class="card" style="border-left: 4px solid #0284c7; width: 100%;">
                             <div style="display: flex; align-items: center; gap: 16px;">
                                 <span style="font-size: 20px; font-weight: 800; width: 32px; text-align: center;">${medal}</span>
-                                <div>
-                                    <b style="font-size: 15px; color: #0f172a;">${name}</b>
-                                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Tracked Shift Performance</div>
-                                </div>
+                                <div><b style="font-size: 15px; color: #0f172a;">${name}</b></div>
                             </div>
-                            <div style="background: #0f172a; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;">
-                                Total Calls: ${perfMap[name]}
-                            </div>
+                            <div style="background: #0f172a; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;">Total Calls: ${perfMap[name]}</div>
                         </div>`;
                 });
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'reports') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Shift Reports from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Shift Reports for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let hasReports = false;
-
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allAgents.forEach(name => {
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
-                    
                     let reps = globalReports[name] || [];
                     let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
@@ -754,7 +667,6 @@
                         if (!datesMap[d]) datesMap[d] = [];
                         datesMap[d].push(l);
                     });
-
                     filteredReps.forEach(r => {
                         let d = (r.date || startDateStr).substring(0, 10);
                         if (!datesMap[d]) datesMap[d] = r.logs || [];
@@ -763,7 +675,6 @@
                     Object.keys(datesMap).forEach(dateStr => {
                         hasReports = true;
                         let finalLogs = datesMap[dateStr];
-
                         let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                         finalLogs.forEach(l => {
                             let st = l.status || "Hung up";
@@ -777,13 +688,11 @@
 
                         html += `
                             <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a; width: 100%;">
-                                <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap;">
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
-                                    <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Shift Date: ${dateStr}</span>
+                                    <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Date: ${dateStr}</span>
                                 </div>
-                                <div style="font-size: 13px; color: #334155;">
-                                    <b>Total Calls Logged:</b> ${totalC}
-                                </div>
+                                <div style="font-size: 13px; color: #334155;"><b>Total Calls:</b> ${totalC}</div>
                                 <div style="display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap; width: 100%;">
                                     <span class="stat-chip" style="background: #fef2f2; color: #991b1b;">Hung up: ${counts["Hung up"]}</span>
                                     <span class="stat-chip" style="background: #faf5ff; color: #6b21a8;">Voicemail: ${counts["Voicemail"]}</span>
@@ -791,20 +700,20 @@
                                     <span class="stat-chip" style="background: #eff6ff; color: #1e40af;">Do not Call: ${counts["Do not Call"]}</span>
                                     <span class="stat-chip" style="background: #f0fdf4; color: #166534;">Follow up: ${counts["Follow up"]}</span>
                                     <span class="stat-chip" style="background: #f0fdfa; color: #115e59;">Sale Closed: ${counts["Sale Closed"]}</span>
-                                    <span class="stat-chip" style="background: #0f172a; color: white; margin-left: auto;">Pickup Ratio: ${ratio}%</span>
+                                    <span class="stat-chip" style="background: #0f172a; color: white; margin-left: auto;">Ratio: ${ratio}%</span>
                                 </div>
                             </div>`;
                     });
                 });
 
                 if (!hasReports) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports or call logs found for selected range.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports found.</p>`;
                     return;
                 }
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'audit') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let agentAuditMap = {};
 
                 if (globalSessions) {
@@ -812,33 +721,19 @@
                         let sObj = globalSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
                         let loginTimeStr = sObj?.loginTime || 'N/A';
-                        
-                        let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
                         let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
 
-                        if (isTimestampInRange(lastActiveTs) || isTimestampInRange(loginTs) || isDateInRange(startDateStr)) {
-                            if (!agentAuditMap[name]) {
-                                agentAuditMap[name] = { 
-                                    loginTimeStr: loginTimeStr, 
-                                    loginTs: loginTs,
-                                    lastActiveTs: lastActiveTs
-                                };
-                            } else {
-                                if (loginTs && (loginTs < agentAuditMap[name].loginTs || !agentAuditMap[name].loginTs)) {
-                                    agentAuditMap[name].loginTs = loginTs;
-                                    if (loginTimeStr !== 'N/A') agentAuditMap[name].loginTimeStr = loginTimeStr;
-                                }
-                                if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
-                                    agentAuditMap[name].lastActiveTs = lastActiveTs;
-                                }
-                            }
+                        if (!agentAuditMap[name]) {
+                            agentAuditMap[name] = { loginTimeStr: loginTimeStr, lastActiveTs: lastActiveTs };
+                        } else if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
+                            agentAuditMap[name].lastActiveTs = lastActiveTs;
                         }
                     });
                 }
 
                 let auditKeys = Object.keys(agentAuditMap);
                 if (auditKeys.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No audit trail logs found for the selected date range.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No audit logs found.</p>`;
                     return;
                 }
 
@@ -846,7 +741,7 @@
                     let data = agentAuditMap[name];
                     let lastActiveTime = data.lastActiveTs ? new Date(data.lastActiveTs).toLocaleTimeString() : 'N/A';
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
-                    let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
+                    let badge = isOnline ? `<span class="badge badge-online">🟢 Active</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
                     html += `
                         <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
@@ -905,7 +800,7 @@
             let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `DispatchLink_Reports_${startDateStr}_to_${endDateStr}.csv`;
+            link.download = `${currentClient}_Reports_${startDateStr}_to_${endDateStr}.csv`;
             link.click();
         }
     </script>
