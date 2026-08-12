@@ -353,10 +353,11 @@
             overlay.classList.toggle('active');
         }
 
-        // Shift Date Standardizer for 4 PM to 6 AM Shift Timing
+        // Shift Date Standardizer for 4 PM to 6 AM Shift Timing (Does NOT reset at midnight 12 AM)
         function getShiftDateStandardized() {
             let now = new Date();
             let hours = now.getHours();
+            // If current time is between midnight (0) and 6 AM, it still belongs to the previous day's 4 PM shift
             if (hours < 6) {
                 now.setDate(now.getDate() - 1);
             }
@@ -755,36 +756,8 @@
                         });
 
                         let totalC = finalLogs.length;
-                        // CORRECTED PICKUP RATIO LOGIC: Total minus Voicemail = Connected / Answered calls
                         let connected = totalC - counts["Voicemail"];
                         let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
-
-                        // AVERAGE CALL DELAY CALCULATION (Gap between call timestamps)
-                        let avgDelayFormatted = "N/A";
-                        if (finalLogs.length > 1) {
-                            // Sort logs by timestamp if available
-                            let sortedLogs = [...finalLogs].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-                            let totalGapMs = 0;
-                            let gapCount = 0;
-                            for (let i = 1; i < sortedLogs.length; i++) {
-                                let t1 = sortedLogs[i-1].timestamp;
-                                let t2 = sortedLogs[i].timestamp;
-                                if (t1 && t2 && t2 > t1) {
-                                    totalGapMs += (t2 - t1);
-                                    gapCount++;
-                                }
-                            }
-                            if (gapCount > 0) {
-                                let avgSecs = Math.round((totalGapMs / gapCount) / 1000);
-                                if (avgSecs < 60) {
-                                    avgDelayFormatted = `${avgSecs} secs`;
-                                } else {
-                                    let avM = Math.floor(avgSecs / 60);
-                                    let avS = avgSecs % 60;
-                                    avgDelayFormatted = `${avM}m ${avS}s`;
-                                }
-                            }
-                        }
 
                         html += `
                             <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a;">
@@ -792,9 +765,8 @@
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
                                     <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Shift Date: ${dateStr}</span>
                                 </div>
-                                <div style="font-size: 13px; color: #334155; display: flex; gap: 20px; flex-wrap: wrap;">
+                                <div style="font-size: 13px; color: #334155;">
                                     <b>Total Calls Logged:</b> ${totalC}
-                                    <span style="color: #0284c7;">⏱️ Avg Call Delay: <b>${avgDelayFormatted}</b></span>
                                 </div>
                                 <div style="display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap; width: 100%;">
                                     <span class="stat-chip" style="background: #fef2f2; color: #991b1b;">Hung up: ${counts["Hung up"]}</span>
@@ -858,6 +830,7 @@
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
+                    // ACCURATE ONLINE DURATION: Calculated from actual loginTimestamp to now (if online)
                     let effectiveEndTs = isOnline ? now : data.lastActiveTs;
                     let durationMs = (effectiveEndTs && data.loginTs && effectiveEndTs > data.loginTs) ? (effectiveEndTs - data.loginTs) : 0;
                     
@@ -865,7 +838,7 @@
                     let hours = Math.floor(totalMins / 60);
                     let mins = totalMins % 60;
                     let durationFormatted = hours > 0 ? `${hours} hrs ${mins} mins` : `${mins} mins`;
-                    if (totalMins <= 0) durationFormatted = "1 min or less";
+                    if (totalMins <= 0) durationFormatted = "1 min";
 
                     html += `
                         <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px;">
@@ -875,7 +848,7 @@
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
                                 <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
-                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Online Duration: ${durationFormatted} ${isOnline ? '(Live 🟢)' : ''}</span>
+                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Total Online Duration: ${durationFormatted} ${isOnline ? '(Live 🟢)' : ''}</span>
                             </div>
                         </div>`;
                 });
