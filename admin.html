@@ -755,8 +755,36 @@
                         });
 
                         let totalC = finalLogs.length;
-                        let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+                        // CORRECTED PICKUP RATIO LOGIC: Total minus Voicemail = Connected / Answered calls
+                        let connected = totalC - counts["Voicemail"];
                         let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
+
+                        // AVERAGE CALL DELAY CALCULATION (Gap between call timestamps)
+                        let avgDelayFormatted = "N/A";
+                        if (finalLogs.length > 1) {
+                            // Sort logs by timestamp if available
+                            let sortedLogs = [...finalLogs].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                            let totalGapMs = 0;
+                            let gapCount = 0;
+                            for (let i = 1; i < sortedLogs.length; i++) {
+                                let t1 = sortedLogs[i-1].timestamp;
+                                let t2 = sortedLogs[i].timestamp;
+                                if (t1 && t2 && t2 > t1) {
+                                    totalGapMs += (t2 - t1);
+                                    gapCount++;
+                                }
+                            }
+                            if (gapCount > 0) {
+                                let avgSecs = Math.round((totalGapMs / gapCount) / 1000);
+                                if (avgSecs < 60) {
+                                    avgDelayFormatted = `${avgSecs} secs`;
+                                } else {
+                                    let avM = Math.floor(avgSecs / 60);
+                                    let avS = avgSecs % 60;
+                                    avgDelayFormatted = `${avM}m ${avS}s`;
+                                }
+                            }
+                        }
 
                         html += `
                             <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a;">
@@ -764,8 +792,9 @@
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
                                     <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Shift Date: ${dateStr}</span>
                                 </div>
-                                <div style="font-size: 13px; color: #334155;">
+                                <div style="font-size: 13px; color: #334155; display: flex; gap: 20px; flex-wrap: wrap;">
                                     <b>Total Calls Logged:</b> ${totalC}
+                                    <span style="color: #0284c7;">⏱️ Avg Call Delay: <b>${avgDelayFormatted}</b></span>
                                 </div>
                                 <div style="display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap; width: 100%;">
                                     <span class="stat-chip" style="background: #fef2f2; color: #991b1b;">Hung up: ${counts["Hung up"]}</span>
@@ -774,7 +803,7 @@
                                     <span class="stat-chip" style="background: #eff6ff; color: #1e40af;">Do not Call: ${counts["Do not Call"]}</span>
                                     <span class="stat-chip" style="background: #f0fdf4; color: #166534;">Follow up: ${counts["Follow up"]}</span>
                                     <span class="stat-chip" style="background: #f0fdfa; color: #115e59;">Sale Closed: ${counts["Sale Closed"]}</span>
-                                    <span class="stat-chip" style="background: #0f172a; color: white; margin-left: auto;">Pickup Ratio: ${ratio}%</span>
+                                    <span class="stat-chip" style="background: #0f172a; color: white; margin-left: auto;">Pickup Ratio (Connected): ${ratio}%</span>
                                 </div>
                             </div>`;
                     });
@@ -886,7 +915,7 @@
                     });
 
                     let totalC = finalLogs.length;
-                    let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
+                    let connected = totalC - counts["Voicemail"];
                     let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
                     csv += `"${name}","${dateStr}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${ratio}%"\n`;
