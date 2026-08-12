@@ -293,20 +293,16 @@
 
     <script>
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
-        let currentClient = localStorage.getItem("dl_logged_client") || "";
+        let currentClient = "";
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
 
         window.onload = function() {
-            if (currentClient) {
-                document.getElementById('adminCompanyInput').value = currentClient;
-                // Agar pehle se logged in hai toh overlay hata kar data fetch kar lein
-                document.getElementById('authOverlay').style.display = 'none';
-                document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
-                setDateFilterPreset('today');
-                fetchAdminData();
-                setInterval(fetchAdminData, 30000);
+            // Popup hamesha visible rahega taake user password enter kare
+            let authOverlay = document.getElementById('authOverlay');
+            if (authOverlay) {
+                authOverlay.style.display = 'flex';
             }
         };
 
@@ -356,7 +352,6 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // UPDATED: Sirf specific current client ka data fetch hoga taake baaki companies mix na hon
         async function fetchAdminData() {
             if (!currentClient) return;
             try {
