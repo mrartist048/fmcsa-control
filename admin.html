@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dispatch Link | Admin Dashboard</title>
     <!-- Favicon Integration -->
     <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
@@ -58,37 +58,20 @@
             color: #64748b;
             line-height: 1.5;
         }
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-            margin-bottom: 16px;
-        }
         .auth-input {
             width: 100%;
-            padding: 12px 42px 12px 16px;
+            padding: 12px 16px;
             font-size: 14px;
             border: 1px solid #cbd5e1;
             border-radius: 10px;
             outline: none;
+            margin-bottom: 16px;
             transition: all 0.2s ease;
             font-weight: 500;
-            box-sizing: border-box;
         }
         .auth-input:focus {
             border-color: #0284c7;
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
-        .eye-toggle-btn {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            color: #64748b;
-            padding: 0;
         }
         .auth-btn {
             width: 100%;
@@ -132,25 +115,25 @@
         .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
         
         /* TOP BAR & FILTERS */
-        .top-header { height: auto; min-height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; gap: 12px; flex-wrap: wrap; }
+        .top-header { height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; }
         .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
-        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; word-break: break-word; }
+        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; }
         
         /* HAMBURGER MENU BUTTON FOR MOBILE */
-        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; flex-shrink: 0; }
+        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; }
 
-        .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .header-actions { display: flex; align-items: center; gap: 10px; }
 
-        .filter-bar { background: white; padding: 14px 24px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
-        .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .filter-bar { background: white; padding: 14px 32px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
+        .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .filter-btn:hover { background: #e2e8f0; }
         .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
 
         .date-input { padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 500; color: #0f172a; }
         
         /* BODY CONTAINER */
-        .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
+        .admin-body { flex: 1; padding: 32px; overflow-y: auto; background: #f8fafc; }
         
         /* CARDS & UI COMPONENTS */
         .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease; }
@@ -160,16 +143,13 @@
         .badge-online { background: #dcfce7; color: #15803d; }
         .badge-offline { background: #f1f5f9; color: #64748b; }
         
-        .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
+        .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-success:hover { background: #15803d; }
 
-        .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
+        .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-info:hover { background: #0369a1; }
 
-        .btn-danger { background: #dc2626; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
-        .btn-danger:hover { background: #b91c1c; }
-
-        .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
+        .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-refresh-top:hover { background: #1e293b; }
 
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
@@ -181,38 +161,28 @@
         /* OVERLAY FOR MOBILE SIDEBAR */
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 90; }
 
-        /* RESPONSIVE DESIGN FOR MOBILE & TABLET */
+        /* RESPONSIVE DESIGN FOR MOBILE & TABLET (SLIDE-OUT DRAWER) */
         @media (max-width: 900px) {
-            body { overflow: auto; height: auto; }
-            .admin-layout { height: 100vh; overflow: hidden; }
             .sidebar { position: fixed; top: 0; left: -280px; height: 100%; z-index: 100; transition: left 0.3s ease; }
             .sidebar.open { left: 0; }
             .sidebar-overlay.active { display: block; }
             .menu-toggle { display: block; }
-            .top-header { padding: 12px 16px; flex-direction: column; align-items: stretch; }
-            .header-title-wrapper { width: 100%; justify-content: flex-start; }
-            .header-actions { width: 100%; justify-content: space-between; }
-            .header-actions button { flex: 1; justify-content: center; font-size: 11.5px; padding: 8px 8px; }
-            .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
-            .filter-group { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
-            .filter-group span { width: 100%; margin-bottom: 2px; }
+            .top-header { padding: 0 16px; }
+            .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 12px; }
             .admin-body { padding: 16px; }
-            .card { flex-direction: column; align-items: flex-start !important; gap: 10px; width: 100%; }
+            .card { flex-direction: column; align-items: flex-start !important; gap: 10px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- PROFESSIONAL PASSWORD AUTHENTICATION OVERLAY WITH EYE TOGGLE -->
+    <!-- PROFESSIONAL PASSWORD AUTHENTICATION OVERLAY -->
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-icon">🔒</div>
             <h2>Admin Authorization</h2>
             <p>Please enter the master admin password to securely access the Dispatch Link control panel.</p>
-            <div class="password-wrapper">
-                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
-                <button type="button" class="eye-toggle-btn" id="eyeToggleBtn" onclick="togglePasswordVisibility()">👁️</button>
-            </div>
+            <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
             <button onclick="verifyAdminPassword()" class="auth-btn">Access Dashboard</button>
             <div id="authErrorMsg" class="auth-error">Incorrect Password! Access Denied.</div>
         </div>
@@ -291,7 +261,6 @@
                     <button onclick="setDateFilterPreset('all')" id="presetAll" class="filter-btn">All Time</button>
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
-                    <span style="width:100%;">Custom Range:</span>
                     <span>From:</span> <input type="date" id="customStartDate" class="date-input" onchange="onCustomDateChanged()">
                     <span>To:</span> <input type="date" id="customEndDate" class="date-input" onchange="onCustomDateChanged()">
                 </div>
@@ -300,7 +269,7 @@
             <!-- FILTERS SPECIFICALLY FOR LIVE & OFFLINE USERS -->
             <div id="onlineFilterBar" class="filter-bar">
                 <div class="filter-group">
-                    <span style="font-size: 12px; font-weight: 700; color: #0f172a; width: 100%;">👤 User Status Filter:</span>
+                    <span style="font-size: 12px; font-weight: 700; color: #0f172a;">👤 User Status Filter:</span>
                     <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn active">All Users</button>
                     <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn">🟢 Online Only</button>
                     <button onclick="setOnlineFilter('offline')" id="statusOffline" class="filter-btn">⚪ Offline Only</button>
@@ -320,6 +289,7 @@
         let onlineFilterMode = 'all'; 
         let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
 
+        // Password Verification Logic
         function verifyAdminPassword() {
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
@@ -341,18 +311,6 @@
             }
         }
 
-        function togglePasswordVisibility() {
-            let passwordInput = document.getElementById('adminPasswordInput');
-            let eyeBtn = document.getElementById('eyeToggleBtn');
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeBtn.innerText = '🙈';
-            } else {
-                passwordInput.type = 'password';
-                eyeBtn.innerText = '👁️';
-            }
-        }
-
         function toggleSidebar() {
             let sidebar = document.getElementById('appSidebar');
             let overlay = document.getElementById('sidebarOverlay');
@@ -360,6 +318,7 @@
             overlay.classList.toggle('active');
         }
 
+        // Shift Date Standardizer for 4 PM to 6 AM Shift Timing
         function getShiftDateStandardized() {
             let now = new Date();
             let hours = now.getHours();
@@ -374,70 +333,19 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // Universal flat extractor function to pull agent data from both client-specific or root structures
-        function extractFlatData(rawData) {
-            if (!rawData || typeof rawData !== 'object') return {};
-            // If data is stored directly under client node or flat root
-            if (rawData[currentClient] && typeof rawData[currentClient] === 'object') {
-                return rawData[currentClient];
-            }
-            return rawData;
-        }
-
         async function fetchAdminData() {
             try {
                 let [sRes, rRes, cRes] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions.json`),
-                    fetch(`${FIREBASE_DB_URL}shift_reports.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs.json`)
+                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
                 ]);
-                let rawS = await sRes.json() || {};
-                let rawR = await rRes.json() || {};
-                let rawC = await cRes.json() || {};
-
-                // Merge client-specific and root-level keys so nothing is missed
-                let clientS = rawS[currentClient] || {};
-                let clientR = rawR[currentClient] || {};
-                let clientC = rawC[currentClient] || {};
-
-                cachedSessions = { ...rawS, ...clientS };
-                cachedReports = { ...rawR, ...clientR };
-                cachedCallLogs = { ...rawC, ...clientC };
-
+                cachedSessions = await sRes.json() || {};
+                cachedReports = await rRes.json() || {};
+                cachedCallLogs = await cRes.json() || {};
                 renderContent();
             } catch (e) {
-                console.error("Fetch error:", e);
                 document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase server.</p>`;
-            }
-        }
-
-        // Perfected Universal Delete Function across all nodes and potential client paths
-        async function deleteUserRecord(userName) {
-            if (!confirm(`Are you sure you want to delete user "${userName}"? This will permanently erase their session, call logs, and shift reports.`)) {
-                return;
-            }
-
-            try {
-                let deletePromises = [
-                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}sessions/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${userName}.json`, { method: 'DELETE' })
-                ];
-
-                await Promise.all(deletePromises);
-                
-                if (cachedSessions) delete cachedSessions[userName];
-                if (cachedCallLogs) delete cachedCallLogs[userName];
-                if (cachedReports) delete cachedReports[userName];
-
-                alert(`User "${userName}" has been successfully deleted.`);
-                fetchAdminData();
-            } catch (err) {
-                console.error("Delete error:", err);
-                alert("Failed to delete user completely.");
             }
         }
 
@@ -457,26 +365,26 @@
             let pageTitle = document.getElementById('pageTitle');
 
             if (tab === 'online') {
-                pageTitle.innerText = "Live & Offline Users";
+                pageTitle.innerText = "Live & Offline Users Monitoring";
                 filterBar.style.display = 'none';
                 onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
             } else if (tab === 'leaderboard') {
-                pageTitle.innerText = "Team Calling";
+                pageTitle.innerText = "Team Calling Leaderboard";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
                 exportBtn.innerText = "📥 Export CSV";
                 exportBtn.onclick = exportCSV;
             } else if (tab === 'reports') {
-                pageTitle.innerText = "Shift Reports & Ratios";
+                pageTitle.innerText = "Detailed Shift Reports & Ratios";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
                 exportBtn.innerText = "📥 Export CSV";
                 exportBtn.onclick = exportCSV;
             } else if (tab === 'audit') {
-                pageTitle.innerText = "Audit Trail & Logs";
+                pageTitle.innerText = "Agent Activity & Audit Trail";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'none';
@@ -560,9 +468,8 @@
             let totalSalesAll = 0;
             let agentSummary = {};
 
-            let allAgents = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+            let allAgents = new Set([...Object.keys(cachedCallLogs), ...Object.keys(cachedReports)]);
             allAgents.forEach(name => {
-                if (name === currentClient) return; // Skip client grouping node if present
                 let logs = cachedCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -604,12 +511,11 @@
             let now = Date.now();
 
             if (activeTab === 'online') {
-                let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">`;
+                let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
                 let uniqueUsers = {};
 
                 if (cachedSessions) {
                     Object.keys(cachedSessions).forEach(key => {
-                        if (key === currentClient) return; // Skip client container
                         let sObj = cachedSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
                         if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
@@ -618,11 +524,11 @@
                     });
                 }
 
-                Object.keys(cachedReports || {}).forEach(n => {
-                    if (n !== currentClient && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                Object.keys(cachedReports).forEach(n => {
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
                 });
-                Object.keys(cachedCallLogs || {}).forEach(n => {
-                    if (n !== currentClient && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                Object.keys(cachedCallLogs).forEach(n => {
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
                 });
 
                 let userKeys = Object.keys(uniqueUsers);
@@ -649,17 +555,16 @@
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Online</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
                     
                     html += `
-                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'}; width: 100%;">
-                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 8px;">
+                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'};">
+                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                                 <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
                             </div>
-                            <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; gap: 8px; flex-wrap: wrap;">
+                            <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%;">
                                 <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
-                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span>Last Active: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
-                                <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger" title="Delete User">🗑️ Remove User</button>
+                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%;">
+                                Last Active Timestamp: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}
                             </div>
                         </div>`;
                 });
@@ -673,10 +578,11 @@
 
             } else if (activeTab === 'leaderboard') {
                 let perfMap = {};
-                let allUsers = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+                let allUsers = new Set();
+                Object.keys(cachedCallLogs).forEach(n => allUsers.add(n));
+                Object.keys(cachedReports).forEach(n => allUsers.add(n));
 
                 allUsers.forEach(name => {
-                    if (name === currentClient) return;
                     let logs = cachedCallLogs[name];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let count = 0;
@@ -702,7 +608,7 @@
                 sorted.forEach((name, idx) => {
                     let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx+1}`;
                     html += `
-                        <div class="card" style="border-left: 4px solid #0284c7; width: 100%;">
+                        <div class="card" style="border-left: 4px solid #0284c7;">
                             <div style="display: flex; align-items: center; gap: 16px;">
                                 <span style="font-size: 20px; font-weight: 800; width: 32px; text-align: center;">${medal}</span>
                                 <div>
@@ -721,10 +627,9 @@
                 let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Shift Reports from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let hasReports = false;
 
-                let allAgents = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+                let allAgents = new Set([...Object.keys(cachedCallLogs), ...Object.keys(cachedReports)]);
 
                 allAgents.forEach(name => {
-                    if (name === currentClient) return;
                     let logs = cachedCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -756,12 +661,12 @@
                         });
 
                         let totalC = finalLogs.length;
-                        let connected = totalC - counts["Voicemail"];
+                        let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
                         let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
                         html += `
-                            <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a; width: 100%;">
-                                <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 8px;">
+                            <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a;">
+                                <div style="display: flex; justify-content: space-between; width: 100%;">
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
                                     <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Shift Date: ${dateStr}</span>
                                 </div>
@@ -775,7 +680,7 @@
                                     <span class="stat-chip" style="background: #eff6ff; color: #1e40af;">Do not Call: ${counts["Do not Call"]}</span>
                                     <span class="stat-chip" style="background: #f0fdf4; color: #166534;">Follow up: ${counts["Follow up"]}</span>
                                     <span class="stat-chip" style="background: #f0fdfa; color: #115e59;">Sale Closed: ${counts["Sale Closed"]}</span>
-                                    <span class="stat-chip" style="background: #0f172a; color: white; margin-left: auto;">Pickup Ratio (Connected): ${ratio}%</span>
+                                    <span class="stat-chip" style="background: #0f172a; color: white; margin-left: auto;">Pickup Ratio: ${ratio}%</span>
                                 </div>
                             </div>`;
                     });
@@ -788,35 +693,27 @@
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'audit') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail & Online Durations from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let agentAuditMap = {};
 
                 if (cachedSessions) {
                     Object.keys(cachedSessions).forEach(key => {
-                        if (key === currentClient) return;
                         let sObj = cachedSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
-                        let loginTimeStr = sObj?.loginTime || 'N/A';
-                        
                         let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
-                        if (!loginTs && loginTimeStr !== 'N/A') {
-                            let parsedDate = new Date(`${startDateStr} ${loginTimeStr}`).getTime();
-                            if (!isNaN(parsedDate)) loginTs = parsedDate;
-                        }
-
                         let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
 
-                        if (isTimestampInRange(lastActiveTs) || isTimestampInRange(loginTs) || isDateInRange(startDateStr)) {
+                        if (isTimestampInRange(lastActiveTs) || isTimestampInRange(loginTs)) {
                             if (!agentAuditMap[name]) {
                                 agentAuditMap[name] = { 
-                                    loginTimeStr: loginTimeStr, 
+                                    loginTimeStr: sObj?.loginTime || 'N/A', 
                                     loginTs: loginTs,
                                     lastActiveTs: lastActiveTs
                                 };
                             } else {
-                                if (loginTs && (loginTs < agentAuditMap[name].loginTs || !agentAuditMap[name].loginTs)) {
+                                if (loginTs && loginTs < agentAuditMap[name].loginTs) {
                                     agentAuditMap[name].loginTs = loginTs;
-                                    if (loginTimeStr !== 'N/A') agentAuditMap[name].loginTimeStr = loginTimeStr;
+                                    if (sObj?.loginTime) agentAuditMap[name].loginTimeStr = sObj.loginTime;
                                 }
                                 if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
                                     agentAuditMap[name].lastActiveTs = lastActiveTs;
@@ -838,14 +735,24 @@
                     let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
+                    let effectiveEndTs = isOnline ? now : data.lastActiveTs;
+                    let durationMs = (effectiveEndTs && data.loginTs && effectiveEndTs > data.loginTs) ? (effectiveEndTs - data.loginTs) : 0;
+                    
+                    let totalMins = Math.floor(durationMs / 60000);
+                    let hours = Math.floor(totalMins / 60);
+                    let mins = totalMins % 60;
+                    let durationFormatted = hours > 0 ? `${hours} hrs ${mins} mins` : `${mins} mins`;
+                    if (totalMins <= 0) durationFormatted = "1 min or less";
+
                     html += `
-                        <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
+                        <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                                 <b style="font-size: 15px; color: #0f172a;">👤 ${name}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
                                 <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
+                                <span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⌛ Online Duration: ${durationFormatted} ${isOnline ? '(Live 🟢)' : ''}</span>
                             </div>
                         </div>`;
                 });
@@ -855,10 +762,9 @@
 
         function exportCSV() {
             let csv = "Agent Name,Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
-            let allAgents = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+            let allAgents = new Set([...Object.keys(cachedCallLogs), ...Object.keys(cachedReports)]);
 
             allAgents.forEach(name => {
-                if (name === currentClient) return;
                 let logs = cachedCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -886,7 +792,7 @@
                     });
 
                     let totalC = finalLogs.length;
-                    let connected = totalC - counts["Voicemail"];
+                    let connected = counts["Follow up"] + counts["Sale Closed"] + counts["Not interested"] + counts["Do not Call"];
                     let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
                     csv += `"${name}","${dateStr}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${ratio}%"\n`;
@@ -902,3 +808,4 @@
     </script>
 </body>
 </html>
+
