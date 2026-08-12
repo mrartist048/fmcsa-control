@@ -332,20 +332,21 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // Flatten helper to automatically pull agents whether stored flat or inside sub-client nodes
-        function flattenDatabaseNode(data) {
-            let result = {};
+        // Advanced Recursive Deep Flattener to unpack all nested company/client nodes
+        function deepFlattenNode(data, result = {}) {
             if (!data || typeof data !== 'object') return result;
 
             Object.keys(data).forEach(key => {
                 let val = data[key];
-                if (val && typeof val === 'object' && !val.timestamp && !val.lastActive && !val.loginTime && !Array.isArray(val)) {
-                    // This is a container node (like client name), unpack its children
-                    Object.keys(val).forEach(subKey => {
-                        result[subKey] = val[subKey];
-                    });
-                } else {
-                    // This is directly an agent record
+                if (val && typeof val === 'object' && !Array.isArray(val)) {
+                    // Check if this object contains actual user properties or is just a container folder
+                    if ('timestamp' in val || 'lastActive' in val || 'loginTime' in val || 'status' in val || 'totalCalls' in val || Array.isArray(val)) {
+                        result[key] = val;
+                    } else {
+                        // Recursively dive deeper into company/client folders (e.g., jys, dispatchloadify)
+                        deepFlattenNode(val, result);
+                    }
+                } else if (val !== null && val !== undefined) {
                     result[key] = val;
                 }
             });
@@ -364,9 +365,9 @@
                 let rawR = await rRes.json() || {};
                 let rawC = await cRes.json() || {};
 
-                globalSessions = flattenDatabaseNode(rawS);
-                globalReports = flattenDatabaseNode(rawR);
-                globalCallLogs = flattenDatabaseNode(rawC);
+                globalSessions = deepFlattenNode(rawS);
+                globalReports = deepFlattenNode(rawR);
+                globalCallLogs = deepFlattenNode(rawC);
 
                 renderContent();
             } catch (e) {
