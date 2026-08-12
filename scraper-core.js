@@ -13,7 +13,7 @@
 
 // ====== MULTI-PROJECT FIREBASE URLS ======
 const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
-const FIREBASE_DB_URL_2 = "https://data-scrapper-2-default-rtdb.firebaseio.com/"; // Yahan aapka dusra project link hai
+const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/"; // Yahan aapka dusra project link hai
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
