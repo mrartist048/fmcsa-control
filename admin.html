@@ -301,6 +301,12 @@
         window.onload = function() {
             if (currentClient) {
                 document.getElementById('adminCompanyInput').value = currentClient;
+                // Agar pehle se logged in hai toh overlay hata kar data fetch kar lein
+                document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
+                setDateFilterPreset('today');
+                fetchAdminData();
+                setInterval(fetchAdminData, 30000);
             }
         };
 
@@ -350,31 +356,19 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // Smart flattener: Agar data direct agents ka hai ya company folder ke andar hai, dono ko handle karega
-        function extractCompanyData(rawData, clientName) {
-            if (!rawData) return {};
-            // Agar database mein direct agents hain ya client folder maujood hai
-            if (rawData[clientName] && typeof rawData[clientName] === 'object') {
-                return rawData[clientName];
-            }
-            return rawData; // Fallback agar data flat structure par save ho raha hai
-        }
-
+        // UPDATED: Sirf specific current client ka data fetch hoga taake baaki companies mix na hon
         async function fetchAdminData() {
             if (!currentClient) return;
             try {
                 let [sRes, rRes, cRes] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions.json`),
-                    fetch(`${FIREBASE_DB_URL}shift_reports.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs.json`)
+                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
                 ]);
-                let rawS = await sRes.json() || {};
-                let rawR = await rRes.json() || {};
-                let rawC = await cRes.json() || {};
-
-                globalSessions = extractCompanyData(rawS, currentClient);
-                globalReports = extractCompanyData(rawR, currentClient);
-                globalCallLogs = extractCompanyData(rawC, currentClient);
+                
+                globalSessions = await sRes.json() || {};
+                globalReports = await rRes.json() || {};
+                globalCallLogs = await cRes.json() || {};
 
                 renderContent();
             } catch (e) {
@@ -390,11 +384,7 @@
                 await Promise.all([
                     fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    // Direct root fallback deletion
-                    fetch(`${FIREBASE_DB_URL}sessions/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${userName}.json`, { method: 'DELETE' })
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
                 ]);
                 alert(`User "${userName}" has been successfully deleted.`);
                 fetchAdminData();
@@ -806,4 +796,3 @@
     </script>
 </body>
 </html>
-
