@@ -58,20 +58,37 @@
             color: #64748b;
             line-height: 1.5;
         }
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 16px;
+        }
         .auth-input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px 42px 12px 16px;
             font-size: 14px;
             border: 1px solid #cbd5e1;
             border-radius: 10px;
             outline: none;
-            margin-bottom: 16px;
             transition: all 0.2s ease;
             font-weight: 500;
+            box-sizing: border-box;
         }
         .auth-input:focus {
             border-color: #0284c7;
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+        .eye-toggle-btn {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #64748b;
+            padding: 0;
         }
         .auth-btn {
             width: 100%;
@@ -149,6 +166,9 @@
         .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-info:hover { background: #0369a1; }
 
+        .btn-danger { background: #dc2626; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
+        .btn-danger:hover { background: #b91c1c; }
+
         .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
         .btn-refresh-top:hover { background: #1e293b; }
 
@@ -161,7 +181,7 @@
         /* OVERLAY FOR MOBILE SIDEBAR */
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 90; }
 
-        /* RESPONSIVE DESIGN FOR MOBILE & TABLET (SLIDE-OUT DRAWER) */
+        /* RESPONSIVE DESIGN FOR MOBILE & TABLET */
         @media (max-width: 900px) {
             .sidebar { position: fixed; top: 0; left: -280px; height: 100%; z-index: 100; transition: left 0.3s ease; }
             .sidebar.open { left: 0; }
@@ -176,13 +196,16 @@
 </head>
 <body>
 
-    <!-- PROFESSIONAL PASSWORD AUTHENTICATION OVERLAY -->
+    <!-- PROFESSIONAL PASSWORD AUTHENTICATION OVERLAY WITH EYE TOGGLE -->
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-icon">🔒</div>
             <h2>Admin Authorization</h2>
             <p>Please enter the master admin password to securely access the Dispatch Link control panel.</p>
-            <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
+            <div class="password-wrapper">
+                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
+                <button type="button" class="eye-toggle-btn" id="eyeToggleBtn" onclick="togglePasswordVisibility()">👁️</button>
+            </div>
             <button onclick="verifyAdminPassword()" class="auth-btn">Access Dashboard</button>
             <div id="authErrorMsg" class="auth-error">Incorrect Password! Access Denied.</div>
         </div>
@@ -289,7 +312,7 @@
         let onlineFilterMode = 'all'; 
         let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
 
-        // Password Verification Logic
+        // Password Verification Logic & Eye Toggle
         function verifyAdminPassword() {
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
@@ -308,6 +331,18 @@
         function handlePasswordKeypress(e) {
             if (e.key === 'Enter') {
                 verifyAdminPassword();
+            }
+        }
+
+        function togglePasswordVisibility() {
+            let passwordInput = document.getElementById('adminPasswordInput');
+            let eyeBtn = document.getElementById('eyeToggleBtn');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeBtn.innerText = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                eyeBtn.innerText = '👁️';
             }
         }
 
@@ -346,6 +381,35 @@
                 renderContent();
             } catch (e) {
                 document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase server.</p>`;
+            }
+        }
+
+        // Delete User Functionality across database nodes
+        async function deleteUserRecord(userName) {
+            if (!confirm(`Are you sure you want to delete user "${userName}"? This will remove their session, call logs, and shift reports permanently.`)) {
+                return;
+            }
+
+            try {
+                // Remove from sessions, call logs, and shift reports simultaneously
+                let safeKey = userName.replace(/[.#$\/\[\]]/g, "_");
+                await Promise.all([
+                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeKey}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
+                ]);
+
+                // Also check and clean if stored with safeKey in call_logs/reports
+                await Promise.all([
+                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeKey}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${safeKey}.json`, { method: 'DELETE' })
+                ]);
+
+                alert(`User "${userName}" successfully deleted.`);
+                fetchAdminData();
+            } catch (err) {
+                console.error("Delete error:", err);
+                alert("Failed to delete user. Check console for details.");
             }
         }
 
@@ -563,8 +627,9 @@
                                 <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
-                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%;">
-                                Last Active Timestamp: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}
+                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                                <span>Last Active: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
+                                <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger" title="Delete User">🗑️ Remove User</button>
                             </div>
                         </div>`;
                 });
@@ -808,4 +873,3 @@
     </script>
 </body>
 </html>
-
