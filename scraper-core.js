@@ -1098,12 +1098,6 @@ window.openCallingDetailModal = function() {
 }
 
 window.openAdminPanelPrompt = function() {
-    let passInput = prompt("Enter Master Admin Password:");
-    if (passInput === null) return;
-    if (passInput !== MASTER_ADMIN_PASS) {
-        alert("Incorrect Admin Password!");
-        return;
-    }
     window.open('admin.html', '_blank');
 };
 
