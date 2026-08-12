@@ -22,7 +22,8 @@ const allowedUsers = {
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01", dbUrl: FIREBASE_DB_URL_1 }, 
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 }, // Project 2
     "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 },          // Project 2
-    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },  
+    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },
+    "Loadlink": { pass: "Loadlink#trial", maxLaptops: 1, expires: "2026-08-14", dbUrl: FIREBASE_DB_URL_2 },
 };
 
 const MASTER_ADMIN_PASS = "admin890";
