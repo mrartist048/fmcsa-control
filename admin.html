@@ -11,151 +11,75 @@
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         
-        /* AUTHENTICATION OVERLAY MODAL DESIGN */
         #authOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
         }
         .auth-card {
-            background: #ffffff;
-            padding: 36px 32px;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            text-align: center;
-            border: 1px solid #e2e8f0;
+            background: #ffffff; padding: 36px 32px; border-radius: 16px;
+            width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            text-align: center; border: 1px solid #e2e8f0;
         }
         .auth-icon {
-            font-size: 38px;
-            margin-bottom: 16px;
-            background: #f0fdf4;
-            width: 70px;
-            height: 70px;
-            line-height: 70px;
-            border-radius: 50%;
-            display: inline-block;
-            border: 1px solid #dcfce7;
+            font-size: 38px; margin-bottom: 16px; background: #f0fdf4;
+            width: 70px; height: 70px; line-height: 70px; border-radius: 50%;
+            display: inline-block; border: 1px solid #dcfce7;
         }
-        .auth-card h2 {
-            margin: 0 0 8px 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .auth-card p {
-            margin: 0 0 24px 0;
-            font-size: 13.5px;
-            color: #64748b;
-            line-height: 1.5;
-        }
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-            margin-bottom: 12px;
-        }
+        .auth-card h2 { margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #0f172a; }
+        .auth-card p { margin: 0 0 24px 0; font-size: 13.5px; color: #64748b; line-height: 1.5; }
         .auth-input {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            outline: none;
-            transition: all 0.2s ease;
-            font-weight: 500;
-            box-sizing: border-box;
-            margin-bottom: 12px;
+            width: 100%; padding: 12px 16px; font-size: 14px; border: 1px solid #cbd5e1;
+            border-radius: 10px; outline: none; font-weight: 500; box-sizing: border-box; margin-bottom: 12px;
         }
-        .auth-input:focus {
-            border-color: #0284c7;
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
+        .auth-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
         .auth-btn {
-            width: 100%;
-            background: #0f172a;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s ease;
+            width: 100%; background: #0f172a; color: white; border: none; padding: 12px;
+            font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: background 0.2s;
         }
-        .auth-btn:hover {
-            background: #1e293b;
-        }
-        .auth-error {
-            color: #dc2626;
-            font-size: 12px;
-            margin-top: 10px;
-            font-weight: 600;
-            display: none;
-        }
+        .auth-btn:hover { background: #1e293b; }
+        .auth-error { color: #dc2626; font-size: 12px; margin-top: 10px; font-weight: 600; display: none; }
 
         .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
-        
-        /* SIDEBAR NAVIGATION */
         .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 100; transition: transform 0.3s ease; }
-        .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
-        .sidebar-brand h2 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
+        .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-brand h2 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; }
         .sidebar-brand span { font-size: 11px; color: #38bdf8; font-weight: 600; display: block; margin-top: 2px; }
         
         .sidebar-menu { padding: 20px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
         .menu-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; padding: 0 12px 6px 12px; font-weight: 700; }
         
-        .nav-btn { background: transparent; color: #94a3b8; border: none; padding: 12px 16px; text-align: left; font-size: 13.5px; font-weight: 600; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s ease; width: 100%; }
+        .nav-btn { background: transparent; color: #94a3b8; border: none; padding: 12px 16px; text-align: left; font-size: 13.5px; font-weight: 600; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; width: 100%; transition: 0.2s; }
         .nav-btn:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
         .nav-btn.active { background: #0284c7; color: white; box-shadow: 0 4px 12px rgba(2,132,199,0.35); }
 
-        /* MAIN CONTENT AREA */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
-        
-        /* TOP BAR & FILTERS */
-        .top-header { height: auto; min-height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; gap: 12px; flex-wrap: wrap; }
+        .top-header { min-height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; flex-shrink: 0; gap: 12px; flex-wrap: wrap; }
         .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
-        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; word-break: break-word; }
-        
-        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; flex-shrink: 0; }
+        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; }
         .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-        .filter-bar { background: white; padding: 14px 24px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
+        .filter-bar { background: white; padding: 14px 24px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
         .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; }
         .filter-btn:hover { background: #e2e8f0; }
         .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
-
-        .date-input { padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 500; color: #0f172a; }
-        .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
+        .date-input { padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; color: #0f172a; }
         
-        .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease; }
-        .card:hover { transform: translateY(-1px); }
+        .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
+        .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
         .badge-online { background: #dcfce7; color: #15803d; }
         .badge-offline { background: #f1f5f9; color: #64748b; }
         
-        .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
+        .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .btn-success:hover { background: #15803d; }
-
-        .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
+        .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .btn-info:hover { background: #0369a1; }
-
-        .btn-danger { background: #dc2626; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
-        .btn-danger:hover { background: #b91c1c; }
-
-        .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
-        .btn-refresh-top:hover { background: #1e293b; }
-
+        .btn-danger { background: #dc2626; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -163,27 +87,18 @@
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 90; }
 
         @media (max-width: 900px) {
-            body { overflow: auto; height: auto; }
-            .admin-layout { height: 100vh; overflow: hidden; }
             .sidebar { position: fixed; top: 0; left: -280px; height: 100%; z-index: 100; transition: left 0.3s ease; }
             .sidebar.open { left: 0; }
             .sidebar-overlay.active { display: block; }
             .menu-toggle { display: block; }
             .top-header { padding: 12px 16px; flex-direction: column; align-items: stretch; }
-            .header-title-wrapper { width: 100%; justify-content: flex-start; }
             .header-actions { width: 100%; justify-content: space-between; }
-            .header-actions button { flex: 1; justify-content: center; font-size: 11.5px; padding: 8px 8px; }
-            .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
-            .filter-group { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
-            .filter-group span { width: 100%; margin-bottom: 2px; }
-            .admin-body { padding: 16px; }
             .card { flex-direction: column; align-items: flex-start !important; gap: 10px; width: 100%; }
         }
     </style>
 </head>
 <body>
 
-    <!-- MULTI-CLIENT COMPANY ADMIN LOGIN OVERLAY -->
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-icon">🏢</div>
@@ -198,13 +113,10 @@
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <!-- SUMMARY REPORT MODAL -->
     <div class="modal-overlay" id="summaryModal">
         <div class="modal-content">
             <h3 style="margin-top:0; color:#0f172a; font-size:18px;">📋 Shift Automated Summary Report</h3>
-            <div id="modalSummaryBody" style="font-size:13px; color:#334155; line-height:1.6; margin-bottom:20px;">
-                Loading summary...
-            </div>
+            <div id="modalSummaryBody" style="font-size:13px; color:#334155; line-height:1.6; margin-bottom:20px;">Loading summary...</div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button onclick="copySummaryText()" class="btn-info">📋 Copy Summary</button>
                 <button onclick="closeSummaryModal()" class="filter-btn">Close</button>
@@ -213,33 +125,22 @@
     </div>
 
     <div class="admin-layout">
-        <!-- SIDEBAR -->
         <div class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div>
                     <h2 id="brandTitle">Dispatch Link</h2>
-                    <span id="brandSubtitle">Company Control Panel</span>
+                    <span id="brandSubtitle">Real-time Control Panel</span>
                 </div>
             </div>
-
             <div class="sidebar-menu">
                 <div class="menu-label">Navigation Menu</div>
-                <button onclick="switchTab('online')" id="tabOnline" class="nav-btn active">
-                    <span>👥</span> Live & Offline Users
-                </button>
-                <button onclick="switchTab('leaderboard')" id="tabLeaderboard" class="nav-btn">
-                    <span>🏆</span> Team Calling
-                </button>
-                <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
-                    <span>📋</span> Shift Reports & Ratios
-                </button>
-                <button onclick="switchTab('audit')" id="tabAudit" class="nav-btn">
-                    <span>📊</span> Audit Trail & Logs
-                </button>
+                <button onclick="switchTab('online')" id="tabOnline" class="nav-btn active"><span>👥</span> Live & Offline Users</button>
+                <button onclick="switchTab('leaderboard')" id="tabLeaderboard" class="nav-btn"><span>🏆</span> Team Calling</button>
+                <button onclick="switchTab('reports')" id="tabReports" class="nav-btn"><span>📋</span> Shift Reports & Ratios</button>
+                <button onclick="switchTab('audit')" id="tabAudit" class="nav-btn"><span>📊</span> Audit Trail & Logs</button>
             </div>
         </div>
 
-        <!-- MAIN VIEW PORT -->
         <div class="main-wrapper">
             <div class="top-header">
                 <div class="header-title-wrapper">
@@ -247,19 +148,12 @@
                     <div class="header-title" id="pageTitle">Live & Offline Users</div>
                 </div>
                 <div class="header-actions">
-                    <button onclick="openSummaryModal()" class="btn-info" id="summaryBtn" style="display: flex;">
-                        📊 Shift Summary
-                    </button>
-                    <button onclick="fetchAdminData()" class="btn-refresh-top">
-                        <span>🔄</span> Refresh
-                    </button>
-                    <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">
-                        📥 Export CSV
-                    </button>
+                    <button onclick="openSummaryModal()" class="btn-info" id="summaryBtn" style="display: flex;">📊 Shift Summary</button>
+                    <button onclick="fetchAdminDataOnce()" class="btn-refresh-top"><span>🔄</span> Refresh</button>
+                    <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">📥 Export CSV</button>
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS, LEADERBOARD & AUDIT -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 Date Filter:</span>
@@ -269,13 +163,11 @@
                     <button onclick="setDateFilterPreset('all')" id="presetAll" class="filter-btn">All Time</button>
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
-                    <span style="width:100%;">Custom Range:</span>
                     <span>From:</span> <input type="date" id="customStartDate" class="date-input" onchange="onCustomDateChanged()">
                     <span>To:</span> <input type="date" id="customEndDate" class="date-input" onchange="onCustomDateChanged()">
                 </div>
             </div>
 
-            <!-- FILTERS SPECIFICALLY FOR LIVE & OFFLINE USERS -->
             <div id="onlineFilterBar" class="filter-bar">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a; width: 100%;">👤 User Status Filter:</span>
@@ -285,9 +177,7 @@
                 </div>
             </div>
 
-            <div class="admin-body" id="adminBodyContent">
-                Loading admin statistics...
-            </div>
+            <div class="admin-body" id="adminBodyContent">Loading real-time data...</div>
         </div>
     </div>
 
@@ -297,6 +187,7 @@
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
+        let dbStream = null;
 
         window.onload = function() {
             if (currentClient) {
@@ -315,33 +206,23 @@
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
                 setDateFilterPreset('today');
-                fetchAdminData();
-                setInterval(fetchAdminData, 30000);
+                startRealtimeStream();
             } else {
                 errorMsg.style.display = 'block';
                 document.getElementById('adminPasswordInput').style.borderColor = '#dc2626';
             }
         }
 
-        function handlePasswordKeypress(e) {
-            if (e.key === 'Enter') {
-                verifyAdminPassword();
-            }
-        }
-
+        function handlePasswordKeypress(e) { if (e.key === 'Enter') verifyAdminPassword(); }
         function toggleSidebar() {
-            let sidebar = document.getElementById('appSidebar');
-            let overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
+            document.getElementById('appSidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
         }
 
         function getShiftDateStandardized() {
             let now = new Date();
             let hours = now.getHours();
-            if (hours < 6) {
-                now.setDate(now.getDate() - 1);
-            }
+            if (hours < 6) now.setDate(now.getDate() - 1);
             return now.toISOString().split('T')[0];
         }
 
@@ -350,17 +231,50 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // Smart flattener: Agar data direct agents ka hai ya company folder ke andar hai, dono ko handle karega
         function extractCompanyData(rawData, clientName) {
             if (!rawData) return {};
-            // Agar database mein direct agents hain ya client folder maujood hai
             if (rawData[clientName] && typeof rawData[clientName] === 'object') {
                 return rawData[clientName];
             }
-            return rawData; // Fallback agar data flat structure par save ho raha hai
+            return rawData;
         }
 
-        async function fetchAdminData() {
+        // REAL-TIME STREAMING CONNECTION (Baghair delay ke instant data update karega)
+        function startRealtimeStream() {
+            if (!currentClient) return;
+
+            // Sessions Stream
+            let sSource = new EventSource(`${FIREBASE_DB_URL}sessions.json`);
+            sSource.onmessage = function(event) {
+                try {
+                    let rawS = JSON.parse(event.data) || {};
+                    globalSessions = extractCompanyData(rawS, currentClient);
+                    renderContent();
+                } catch(err) {}
+            };
+
+            // Call Logs Stream (Instant calling update)
+            let cSource = new EventSource(`${FIREBASE_DB_URL}call_logs.json`);
+            cSource.onmessage = function(event) {
+                try {
+                    let rawC = JSON.parse(event.data) || {};
+                    globalCallLogs = extractCompanyData(rawC, currentClient);
+                    renderContent();
+                } catch(err) {}
+            };
+
+            // Shift Reports Stream
+            let rSource = new EventSource(`${FIREBASE_DB_URL}shift_reports.json`);
+            rSource.onmessage = function(event) {
+                try {
+                    let rawR = JSON.parse(event.data) || {};
+                    globalReports = extractCompanyData(rawR, currentClient);
+                    renderContent();
+                } catch(err) {}
+            };
+        }
+
+        async function fetchAdminDataOnce() {
             if (!currentClient) return;
             try {
                 let [sRes, rRes, cRes] = await Promise.all([
@@ -368,40 +282,26 @@
                     fetch(`${FIREBASE_DB_URL}shift_reports.json`),
                     fetch(`${FIREBASE_DB_URL}call_logs.json`)
                 ]);
-                let rawS = await sRes.json() || {};
-                let rawR = await rRes.json() || {};
-                let rawC = await cRes.json() || {};
-
-                globalSessions = extractCompanyData(rawS, currentClient);
-                globalReports = extractCompanyData(rawR, currentClient);
-                globalCallLogs = extractCompanyData(rawC, currentClient);
-
+                globalSessions = extractCompanyData(await sRes.json() || {}, currentClient);
+                globalReports = extractCompanyData(await rRes.json() || {}, currentClient);
+                globalCallLogs = extractCompanyData(await cRes.json() || {}, currentClient);
                 renderContent();
-            } catch (e) {
-                console.error("Fetch error:", e);
-                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase server.</p>`;
-            }
+            } catch (e) { console.error("Fetch error:", e); }
         }
 
         async function deleteUserRecord(userName) {
             if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
-
             try {
                 await Promise.all([
                     fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    // Direct root fallback deletion
                     fetch(`${FIREBASE_DB_URL}sessions/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL}call_logs/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL}shift_reports/${userName}.json`, { method: 'DELETE' })
                 ]);
                 alert(`User "${userName}" has been successfully deleted.`);
-                fetchAdminData();
-            } catch (err) {
-                console.error("Delete error:", err);
-                alert("Failed to delete user.");
-            }
+            } catch (err) { alert("Failed to delete user."); }
         }
 
         function switchTab(tab) {
@@ -409,7 +309,6 @@
             document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
             let activeBtnElem = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
             if (activeBtnElem) activeBtnElem.classList.add('active');
-            
             if(window.innerWidth <= 900) toggleSidebar();
 
             let filterBar = document.getElementById('filterBar');
@@ -419,28 +318,16 @@
 
             if (tab === 'online') {
                 pageTitle.innerText = "Live & Offline Users";
-                filterBar.style.display = 'none';
-                onlineFilterBar.style.display = 'flex';
-                exportBtn.style.display = 'none';
+                filterBar.style.display = 'none'; onlineFilterBar.style.display = 'flex'; exportBtn.style.display = 'none';
             } else if (tab === 'leaderboard') {
                 pageTitle.innerText = "Team Calling";
-                filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'block';
-                exportBtn.innerText = "📥 Export CSV";
-                exportBtn.onclick = exportCSV;
+                filterBar.style.display = 'flex'; onlineFilterBar.style.display = 'none'; exportBtn.style.display = 'block'; exportBtn.onclick = exportCSV;
             } else if (tab === 'reports') {
                 pageTitle.innerText = "Shift Reports & Ratios";
-                filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'block';
-                exportBtn.innerText = "📥 Export CSV";
-                exportBtn.onclick = exportCSV;
+                filterBar.style.display = 'flex'; onlineFilterBar.style.display = 'none'; exportBtn.style.display = 'block'; exportBtn.onclick = exportCSV;
             } else if (tab === 'audit') {
                 pageTitle.innerText = "Audit Trail & Logs";
-                filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'none';
+                filterBar.style.display = 'flex'; onlineFilterBar.style.display = 'none'; exportBtn.style.display = 'none';
             }
             renderContent();
         }
@@ -448,8 +335,7 @@
         function setOnlineFilter(mode) {
             onlineFilterMode = mode;
             ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => {
-                let b = document.getElementById(id);
-                if (b) b.classList.remove('active');
+                let b = document.getElementById(id); if (b) b.classList.remove('active');
             });
             let activeBtn = document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1));
             if (activeBtn) activeBtn.classList.add('active');
@@ -459,27 +345,16 @@
         function setDateFilterPreset(preset) {
             filterMode = preset;
             let currentShiftToday = getShiftDateStandardized();
-
             ['presetToday', 'presetWeek', 'presetMonth', 'presetAll'].forEach(id => {
-                let b = document.getElementById(id);
-                if (b) b.classList.remove('active');
+                let b = document.getElementById(id); if (b) b.classList.remove('active');
             });
-
             let activeBtn = document.getElementById('preset' + preset.charAt(0).toUpperCase() + preset.slice(1));
             if (activeBtn) activeBtn.classList.add('active');
 
-            if (preset === 'today') {
-                startDateStr = currentShiftToday; endDateStr = currentShiftToday;
-            } else if (preset === 'week') {
-                let past = new Date(currentShiftToday); past.setDate(past.getDate() - 6);
-                startDateStr = past.toISOString().split('T')[0]; endDateStr = currentShiftToday;
-            } else if (preset === 'month') {
-                let refDate = new Date(currentShiftToday);
-                let firstDay = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
-                startDateStr = firstDay.toISOString().split('T')[0]; endDateStr = currentShiftToday;
-            } else if (preset === 'all') {
-                startDateStr = "2020-01-01"; endDateStr = "2030-12-31";
-            }
+            if (preset === 'today') { startDateStr = currentShiftToday; endDateStr = currentShiftToday; }
+            else if (preset === 'week') { let past = new Date(currentShiftToday); past.setDate(past.getDate() - 6); startDateStr = past.toISOString().split('T')[0]; endDateStr = currentShiftToday; }
+            else if (preset === 'month') { let refDate = new Date(currentShiftToday); startDateStr = new Date(refDate.getFullYear(), refDate.getMonth(), 1).toISOString().split('T')[0]; endDateStr = currentShiftToday; }
+            else if (preset === 'all') { startDateStr = "2020-01-01"; endDateStr = "2030-12-31"; }
 
             document.getElementById('customStartDate').value = startDateStr;
             document.getElementById('customEndDate').value = endDateStr;
@@ -489,10 +364,7 @@
         function onCustomDateChanged() {
             let sInp = document.getElementById('customStartDate').value;
             let eInp = document.getElementById('customEndDate').value;
-            if (sInp && eInp) {
-                startDateStr = sInp; endDateStr = eInp;
-                renderContent();
-            }
+            if (sInp && eInp) { startDateStr = sInp; endDateStr = eInp; renderContent(); }
         }
 
         function isDateInRange(dateVal) {
@@ -502,19 +374,10 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        function isTimestampInRange(ts) {
-            if (!ts) return false;
-            let dStr = new Date(ts).toISOString().split('T')[0];
-            if (filterMode === 'all') return true;
-            return dStr >= startDateStr && dStr <= endDateStr;
-        }
-
         function openSummaryModal() {
             let modal = document.getElementById('summaryModal');
             let body = document.getElementById('modalSummaryBody');
-            
-            let totalCallsAll = 0, totalSalesAll = 0;
-            let agentSummary = {};
+            let totalCallsAll = 0, totalSalesAll = 0, agentSummary = {};
 
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
             allAgents.forEach(name => {
@@ -522,7 +385,6 @@
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let sales = filteredLogs.filter(l => l.status === 'Sale Closed').length;
-                
                 agentSummary[name] = { calls: filteredLogs.length, sales: sales };
                 totalCallsAll += filteredLogs.length;
                 totalSalesAll += sales;
