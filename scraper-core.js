@@ -11,20 +11,29 @@
     link.href = faviconUrl;
 })();
 
+// ====== MULTI-PROJECT FIREBASE URLS ======
+const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+const FIREBASE_DB_URL_2 = "https://data-scrapper-2-default-rtdb.firebaseio.com/"; // Yahan aapka dusra project link hai
+
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
-    "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
-    "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
-    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
-    "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },  
-    "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30" },  
-    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30" },  
+    "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28", dbUrl: FIREBASE_DB_URL_1 },    
+    "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30", dbUrl: FIREBASE_DB_URL_1 },  
+    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01", dbUrl: FIREBASE_DB_URL_1 }, 
+    "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 }, // Project 2
+    "testinguser": { pass: "testinguser123", maxLaptops: 5, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 },          // Project 2
+    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },  
 };
 
-const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/"; 
 const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
+
+// DYNAMIC FIREBASE URL SELECTOR (Har client ke mutabiq uska project URL set ho jayega)
+const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
+    ? allowedUsers[currentClient].dbUrl 
+    : FIREBASE_DB_URL_1;
+
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
@@ -167,7 +176,7 @@ window.processLogin = function() {
     let overlay = document.getElementById('dlLoginOverlay');
     if (overlay) overlay.remove();
 
-    initializeAccessControl();
+    window.location.reload(); // Reload taake naya database URL foran apply ho jaye
 };
 
 function setupDispatcherIdentity() {
@@ -2284,4 +2293,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
