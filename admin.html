@@ -284,10 +284,9 @@
 
     <script>
         const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
-        let currentClient = localStorage.getItem("dl_logged_client") || "Gslogisticsdispatch";
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
-        let cachedSessions = {}, cachedReports = {}, cachedCallLogs = {};
+        let globalSessions = {}, globalReports = {}, globalCallLogs = {};
 
         // Password Verification Logic
         function verifyAdminPassword() {
@@ -333,7 +332,27 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // Fetch Data with Multi-Client / Root Global Fallback Merge
+        // Flatten helper to automatically pull agents whether stored flat or inside sub-client nodes
+        function flattenDatabaseNode(data) {
+            let result = {};
+            if (!data || typeof data !== 'object') return result;
+
+            Object.keys(data).forEach(key => {
+                let val = data[key];
+                if (val && typeof val === 'object' && !val.timestamp && !val.lastActive && !val.loginTime && !Array.isArray(val)) {
+                    // This is a container node (like client name), unpack its children
+                    Object.keys(val).forEach(subKey => {
+                        result[subKey] = val[subKey];
+                    });
+                } else {
+                    // This is directly an agent record
+                    result[key] = val;
+                }
+            });
+            return result;
+        }
+
+        // Fetch Global Data across entire database structure
         async function fetchAdminData() {
             try {
                 let [sRes, rRes, cRes] = await Promise.all([
@@ -345,14 +364,9 @@
                 let rawR = await rRes.json() || {};
                 let rawC = await cRes.json() || {};
 
-                // Merge specific client node data and global root node data so no laptop is left out
-                let clientS = rawS[currentClient] || {};
-                let clientR = rawR[currentClient] || {};
-                let clientC = rawC[currentClient] || {};
-
-                cachedSessions = { ...rawS, ...clientS };
-                cachedReports = { ...rawR, ...clientR };
-                cachedCallLogs = { ...rawC, ...clientC };
+                globalSessions = flattenDatabaseNode(rawS);
+                globalReports = flattenDatabaseNode(rawR);
+                globalCallLogs = flattenDatabaseNode(rawC);
 
                 renderContent();
             } catch (e) {
@@ -480,10 +494,9 @@
             let totalSalesAll = 0;
             let agentSummary = {};
 
-            let allAgents = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+            let allAgents = new Set([...Object.keys(globalCallLogs || {}), ...Object.keys(globalReports || {})]);
             allAgents.forEach(name => {
-                if (name === currentClient) return;
-                let logs = cachedCallLogs[name] || [];
+                let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let sales = filteredLogs.filter(l => l.status === 'Sale Closed').length;
@@ -527,21 +540,9 @@
                 let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
                 let uniqueUsers = {};
 
-                if (cachedSessions) {
-                    Object.keys(cachedSessions).forEach(key => {
-                        if (key === currentClient && typeof cachedSessions[key] === 'object' && !cachedSessions[key].timestamp && !cachedSessions[key].lastActive) {
-                            // If this is a nested client container object, unpack its agents
-                            let subObj = cachedSessions[key];
-                            Object.keys(subObj).forEach(subKey => {
-                                let subUser = subObj[subKey];
-                                let subName = subUser?.nickname || subUser?.name || subKey;
-                                if (!uniqueUsers[subName] || (subUser?.timestamp > (uniqueUsers[subName].timestamp || 0))) {
-                                    uniqueUsers[subName] = { ...subUser, resolvedName: subName, lastActive: subUser?.timestamp || subUser?.lastActive || 0 };
-                                }
-                            });
-                            return;
-                        }
-                        let sObj = cachedSessions[key];
+                if (globalSessions) {
+                    Object.keys(globalSessions).forEach(key => {
+                        let sObj = globalSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
                         if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
                             uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
@@ -549,11 +550,11 @@
                     });
                 }
 
-                Object.keys(cachedReports || {}).forEach(n => {
-                    if (n !== currentClient && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                Object.keys(globalReports || {}).forEach(n => {
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
                 });
-                Object.keys(cachedCallLogs || {}).forEach(n => {
-                    if (n !== currentClient && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
+                Object.keys(globalCallLogs || {}).forEach(n => {
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' };
                 });
 
                 let userKeys = Object.keys(uniqueUsers);
@@ -603,18 +604,17 @@
 
             } else if (activeTab === 'leaderboard') {
                 let perfMap = {};
-                let allUsers = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+                let allUsers = new Set([...Object.keys(globalCallLogs || {}), ...Object.keys(globalReports || {})]);
 
                 allUsers.forEach(name => {
-                    if (name === currentClient) return;
-                    let logs = cachedCallLogs[name];
+                    let logs = globalCallLogs[name];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let count = 0;
                     if (Array.isArray(logs)) {
                         count = logs.filter(l => isDateInRange(l.shiftDate || l.date)).length;
                     }
-                    if (count === 0 && cachedReports[name]) {
-                        let filteredReps = cachedReports[name].filter(r => isDateInRange(r.date));
+                    if (count === 0 && globalReports[name]) {
+                        let filteredReps = globalReports[name].filter(r => isDateInRange(r.date));
                         count = filteredReps.reduce((sum, r) => sum + (r.totalCalls || (r.logs ? r.logs.length : 0)), 0);
                     }
                     if (count > 0) {
@@ -651,15 +651,14 @@
                 let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Shift Reports from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let hasReports = false;
 
-                let allAgents = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+                let allAgents = new Set([...Object.keys(globalCallLogs || {}), ...Object.keys(globalReports || {})]);
 
                 allAgents.forEach(name => {
-                    if (name === currentClient) return;
-                    let logs = cachedCallLogs[name] || [];
+                    let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                     
-                    let reps = cachedReports[name] || [];
+                    let reps = globalReports[name] || [];
                     let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
                     let datesMap = {};
@@ -721,34 +720,9 @@
                 let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail & Online Durations from <b style="color: #0f172a;">${startDateStr}</b> to <b style="color: #0f172a;">${endDateStr}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let agentAuditMap = {};
 
-                if (cachedSessions) {
-                    Object.keys(cachedSessions).forEach(key => {
-                        if (key === currentClient && typeof cachedSessions[key] === 'object' && !cachedSessions[key].timestamp && !cachedSessions[key].lastActive) {
-                            let subObj = cachedSessions[key];
-                            Object.keys(subObj).forEach(subKey => {
-                                let sObj = subObj[subKey];
-                                let name = sObj?.nickname || sObj?.name || subKey;
-                                let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
-                                let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
-
-                                if (isTimestampInRange(lastActiveTs) || isTimestampInRange(loginTs)) {
-                                    if (!agentAuditMap[name]) {
-                                        agentAuditMap[name] = { loginTimeStr: sObj?.loginTime || 'N/A', loginTs: loginTs, lastActiveTs: lastActiveTs };
-                                    } else {
-                                        if (loginTs && loginTs < agentAuditMap[name].loginTs) {
-                                            agentAuditMap[name].loginTs = loginTs;
-                                            if (sObj?.loginTime) agentAuditMap[name].loginTimeStr = sObj.loginTime;
-                                        }
-                                        if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
-                                            agentAuditMap[name].lastActiveTs = lastActiveTs;
-                                        }
-                                    }
-                                }
-                            });
-                            return;
-                        }
-
-                        let sObj = cachedSessions[key];
+                if (globalSessions) {
+                    Object.keys(globalSessions).forEach(key => {
+                        let sObj = globalSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
                         let loginTs = sObj?.loginTimestamp || sObj?.timestamp || 0;
                         let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
@@ -808,14 +782,13 @@
 
         function exportCSV() {
             let csv = "Agent Name,Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
-            let allAgents = new Set([...Object.keys(cachedCallLogs || {}), ...Object.keys(cachedReports || {})]);
+            let allAgents = new Set([...Object.keys(globalCallLogs || {}), ...Object.keys(globalReports || {})]);
 
             allAgents.forEach(name => {
-                if (name === currentClient) return;
-                let logs = cachedCallLogs[name] || [];
+                let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
-                let reps = cachedReports[name] || [];
+                let reps = globalReports[name] || [];
                 let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
                 let datesMap = {};
