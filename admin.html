@@ -132,14 +132,14 @@
         .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
         
         /* TOP BAR & FILTERS */
-        .top-header { height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; }
+        .top-header { height: auto; min-height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 12px 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; gap: 12px; flex-wrap: wrap; }
         .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
-        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; word-break: break-word; }
         
         /* HAMBURGER MENU BUTTON FOR MOBILE */
-        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; }
+        .menu-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: #0f172a; padding: 4px; flex-shrink: 0; }
 
-        .header-actions { display: flex; align-items: center; gap: 10px; }
+        .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
         .filter-bar { background: white; padding: 14px 32px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
         .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -187,8 +187,12 @@
             .sidebar.open { left: 0; }
             .sidebar-overlay.active { display: block; }
             .menu-toggle { display: block; }
-            .top-header { padding: 0 16px; }
-            .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 12px; }
+            .top-header { padding: 12px 16px; flex-direction: column; align-items: stretch; }
+            .header-title-wrapper { width: 100%; justify-content: flex-start; }
+            .header-actions { width: 100%; justify-content: space-between; }
+            .header-actions button { flex: 1; justify-content: center; font-size: 11.5px; padding: 8px 10px; }
+            .filter-bar { padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 10px; }
+            .filter-group { width: 100%; justify-content: flex-start; }
             .admin-body { padding: 16px; }
             .card { flex-direction: column; align-items: flex-start !important; gap: 10px; }
         }
@@ -604,7 +608,7 @@
             let now = Date.now();
 
             if (activeTab === 'online') {
-                let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
+                let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">`;
                 let uniqueUsers = {};
 
                 if (cachedSessions) {
@@ -648,15 +652,15 @@
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Online</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
                     
                     html += `
-                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'};">
-                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'}; width: 100%;">
+                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 8px;">
                                 <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
                             </div>
-                            <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%;">
+                            <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; gap: 8px; flex-wrap: wrap;">
                                 <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
-                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
                                 <span>Last Active: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
                                 <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger" title="Delete User">🗑️ Remove User</button>
                             </div>
@@ -702,7 +706,7 @@
                 sorted.forEach((name, idx) => {
                     let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx+1}`;
                     html += `
-                        <div class="card" style="border-left: 4px solid #0284c7;">
+                        <div class="card" style="border-left: 4px solid #0284c7; width: 100%;">
                             <div style="display: flex; align-items: center; gap: 16px;">
                                 <span style="font-size: 20px; font-weight: 800; width: 32px; text-align: center;">${medal}</span>
                                 <div>
@@ -759,8 +763,8 @@
                         let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
                         html += `
-                            <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a;">
-                                <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 8px;">
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
                                     <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Shift Date: ${dateStr}</span>
                                 </div>
@@ -837,7 +841,7 @@
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active Session</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
                     html += `
-                        <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px;">
+                        <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                                 <b style="font-size: 15px; color: #0f172a;">👤 ${name}</b> ${badge}
                             </div>
