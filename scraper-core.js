@@ -23,7 +23,7 @@ const allowedUsers = {
     "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 }, // Project 2
     "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 },          // Project 2
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },  
-    "Loadlink": { pass: "Loadlink#trial", maxLaptops: 1, expires: "2026-08-14", dbUrl: FIREBASE_DB_URL_2 },
+    "Loadlink": { pass: "Loadlink#trial", maxLaptops: 3, expires: "2026-08-14", dbUrl: FIREBASE_DB_URL_2 },
 };
 
 const MASTER_ADMIN_PASS = "admin890";
