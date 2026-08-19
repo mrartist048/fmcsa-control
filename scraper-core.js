@@ -13,15 +13,15 @@
 
 // ====== MULTI-PROJECT FIREBASE URLS ======
 const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
-const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/"; // Yahan aapka dusra project link hai
+const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28", dbUrl: FIREBASE_DB_URL_1 },    
     "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30", dbUrl: FIREBASE_DB_URL_1 },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01", dbUrl: FIREBASE_DB_URL_2 }, 
-    "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 }, // Project 2
-    "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 },          // Project 2
+    "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 }, 
+    "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 },         
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },  
     "Loadlink": { pass: "Loadlink#trial", maxLaptops: 3, expires: "2026-08-14", dbUrl: FIREBASE_DB_URL_2 },
 };
@@ -30,7 +30,7 @@ const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// DYNAMIC FIREBASE URL SELECTOR (Har client ke mutabiq uska project URL set ho jayega)
+// DYNAMIC FIREBASE URL SELECTOR
 const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
     ? allowedUsers[currentClient].dbUrl 
     : FIREBASE_DB_URL_1;
@@ -55,6 +55,48 @@ const usStatesMap = {
     "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
+
+// ====== AUTOMATIC 7-DAY DATA CLEANUP FUNCTION ======
+async function performAutomaticDataCleanup() {
+    if (!currentClient) return;
+    let now = Date.now();
+    let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000; // 7 Days
+
+    // 1. Clean LocalStorage Call Logs older than 7 days
+    let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
+    let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
+    let filteredLogs = callLogs.filter(log => {
+        let logTime = new Date(log.date).getTime();
+        return !isNaN(logTime) && (now - logTime) < sevenDaysInMillis;
+    });
+    if (filteredLogs.length !== callLogs.length) {
+        localStorage.setItem(storageKey, JSON.stringify(filteredLogs));
+    }
+
+    // 2. Clean Firebase Call Logs older than 7 days
+    try {
+        if (dispatcherNickname) {
+            let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+            let callLogUrl = `${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`;
+            let res = await fetch(callLogUrl);
+            let remoteLogs = await res.json();
+            if (Array.isArray(remoteLogs)) {
+                let freshRemoteLogs = remoteLogs.filter(log => {
+                    let logTime = new Date(log.date).getTime();
+                    return !isNaN(logTime) && (now - logTime) < sevenDaysInMillis;
+                });
+                if (freshRemoteLogs.length !== remoteLogs.length) {
+                    await fetch(callLogUrl, {
+                        method: 'PUT',
+                        body: JSON.stringify(freshRemoteLogs)
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Auto cleanup call logs failed:", e);
+    }
+}
 
 function showLimitExceededModal(message) {
     let existingModal = document.getElementById('dlLimitExceededModal');
@@ -177,7 +219,7 @@ window.processLogin = function() {
     let overlay = document.getElementById('dlLoginOverlay');
     if (overlay) overlay.remove();
 
-    window.location.reload(); // Reload taake naya database URL foran apply ho jaye
+    window.location.reload();
 };
 
 function setupDispatcherIdentity() {
@@ -274,8 +316,11 @@ function initializeAccessControl() {
     setupDispatcherIdentity();
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
+    // Run automatic cleanup on startup
+    performAutomaticDataCleanup();
+
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 1000);
+    setInterval(checkGlobalSessions, 30000);
 }
 
 if (document.readyState === 'loading') {
@@ -1478,7 +1523,7 @@ async function pollIncomingSharedLeads() {
     }
 }
 
-setInterval(pollIncomingSharedLeads, 10000);
+setInterval(pollIncomingSharedLeads, 60000);
 
 function renderFollowUpItems() {
     const listContainer = document.getElementById('drawerFollowUpList');
@@ -2278,7 +2323,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
         statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="font-size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
+        statusBox.innerHTML = `<strong style="size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
     }
 
     if(scrapedData.length > 0) {
