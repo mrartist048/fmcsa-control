@@ -7,6 +7,8 @@
     <!-- Favicon Integration -->
     <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Flatpickr CSS for Modern Single Calendar Range Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
@@ -58,11 +60,6 @@
             color: #64748b;
             line-height: 1.5;
         }
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-            margin-bottom: 12px;
-        }
         .auth-input {
             width: 100%;
             padding: 12px 16px;
@@ -79,6 +76,36 @@
             border-color: #0284c7;
             box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
         }
+        
+        /* PASSWORD FIELD WRAPPER WITH EYE ICON */
+        .password-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .password-container .auth-input {
+            margin-bottom: 0;
+            padding-right: 45px;
+        }
+        .eye-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #64748b;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .eye-btn:hover {
+            color: #0f172a;
+        }
+
         .auth-btn {
             width: 100%;
             background: #0f172a;
@@ -134,7 +161,9 @@
         .filter-btn:hover { background: #e2e8f0; }
         .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
 
-        .date-input { padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 500; color: #0f172a; }
+        /* SINGLE MODERN CALENDAR INPUT STYLING */
+        .single-range-input { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; width: 210px; text-align: center; }
+
         .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
         
         .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease; }
@@ -190,7 +219,13 @@
             <h2>Company Admin Portal</h2>
             <p>Enter your Company Name and Admin Password to view your designated agents.</p>
             <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchlodify, gslogistics)">
-            <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
+            
+            <!-- PASSWORD FIELD WITH SHOW/HIDE TOGGLE ICON -->
+            <div class="password-container">
+                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
+                <button type="button" class="eye-btn" id="togglePasswordBtn" onclick="togglePasswordVisibility()">👁️</button>
+            </div>
+
             <button onclick="verifyAdminPassword()" class="auth-btn">Access Dashboard</button>
             <div id="authErrorMsg" class="auth-error">Invalid Company Name or Password!</div>
         </div>
@@ -218,7 +253,7 @@
             <div class="sidebar-brand">
                 <div>
                     <h2 id="brandTitle">Dispatch Link</h2>
-                    <span id="brandSubtitle">Company Control Panel</span>
+                    <span id="brandSubtitle">USA Shift Control Panel</span>
                 </div>
             </div>
 
@@ -226,9 +261,6 @@
                 <div class="menu-label">Navigation Menu</div>
                 <button onclick="switchTab('online')" id="tabOnline" class="nav-btn active">
                     <span>👥</span> Live & Offline Users
-                </button>
-                <button onclick="switchTab('leaderboard')" id="tabLeaderboard" class="nav-btn">
-                    <span>🏆</span> Team Calling
                 </button>
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
                     <span>📋</span> Shift Reports & Ratios
@@ -259,19 +291,18 @@
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS, LEADERBOARD & AUDIT -->
+            <!-- FILTERS FOR REPORTS & AUDIT -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
-                    <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 Date Filter:</span>
-                    <button onclick="setDateFilterPreset('today')" id="presetToday" class="filter-btn active">Today</button>
+                    <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 USA Date Filter:</span>
+                    <button onclick="setDateFilterPreset('today')" id="presetToday" class="filter-btn active">Today (USA)</button>
                     <button onclick="setDateFilterPreset('week')" id="presetWeek" class="filter-btn">Last 7 Days</button>
-                    <button onclick="setDateFilterPreset('month')" id="presetMonth" class="filter-btn">This Month</button>
                     <button onclick="setDateFilterPreset('all')" id="presetAll" class="filter-btn">All Time</button>
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
-                    <span style="width:100%;">Custom Range:</span>
-                    <span>From:</span> <input type="date" id="customStartDate" class="date-input" onchange="onCustomDateChanged()">
-                    <span>To:</span> <input type="date" id="customEndDate" class="date-input" onchange="onCustomDateChanged()">
+                    <span>Custom Range / Single Date:</span>
+                    <!-- SINGLE MODERN CALENDAR INPUT -->
+                    <input type="text" id="unifiedDateRangePicker" class="single-range-input" placeholder="Select date or range...">
                 </div>
             </div>
 
@@ -291,20 +322,68 @@
         </div>
     </div>
 
+    <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        const FIREBASE_DB_URL = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+        const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+        const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
+
         let currentClient = "";
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
+        let calendarPicker = null;
 
         window.onload = function() {
-            // Popup hamesha visible rahega taake user password enter kare
             let authOverlay = document.getElementById('authOverlay');
             if (authOverlay) {
                 authOverlay.style.display = 'flex';
             }
+            
+            // Initialize Flatpickr Single Calendar with Range Mode Support
+            calendarPicker = flatpickr("#unifiedDateRangePicker", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                defaultDate: [getUSACurrentDate(), getUSACurrentDate()],
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        filterMode = 'custom';
+                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
+                        endDateStr = instance.formatDate(selectedDates[1], "Y-m-d");
+                        
+                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                            let b = document.getElementById(id);
+                            if (b) b.classList.remove('active');
+                        });
+                        
+                        renderContent();
+                    } else if (selectedDates.length === 1) {
+                        filterMode = 'custom';
+                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
+                        endDateStr = startDateStr;
+                        
+                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                            let b = document.getElementById(id);
+                            if (b) b.classList.remove('active');
+                        });
+                        
+                        renderContent();
+                    }
+                }
+            });
         };
+
+        function togglePasswordVisibility() {
+            let passInput = document.getElementById('adminPasswordInput');
+            let toggleBtn = document.getElementById('togglePasswordBtn');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                toggleBtn.innerText = '🙈';
+            } else {
+                passInput.type = 'password';
+                toggleBtn.innerText = '👁️';
+            }
+        }
 
         function verifyAdminPassword() {
             let companyInput = document.getElementById('adminCompanyInput').value.trim();
@@ -313,7 +392,6 @@
 
             if (companyInput && passInput === "admin890") {
                 currentClient = companyInput;
-                localStorage.setItem("dl_logged_client", currentClient);
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
                 setDateFilterPreset('today');
@@ -338,16 +416,18 @@
             overlay.classList.toggle('active');
         }
 
-        function getShiftDateStandardized() {
-            let now = new Date();
-            let hours = now.getHours();
-            if (hours < 6) {
-                now.setDate(now.getDate() - 1);
+        function getUSACurrentDate() {
+            try {
+                let options = { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' };
+                let formatter = new Intl.DateTimeFormat('en-CA', options);
+                return formatter.format(new Date());
+            } catch (e) {
+                let now = new Date();
+                return now.toISOString().split('T')[0];
             }
-            return now.toISOString().split('T')[0];
         }
 
-        let todayStr = getShiftDateStandardized();
+        let todayStr = getUSACurrentDate();
         let filterMode = 'today';
         let startDateStr = todayStr;
         let endDateStr = todayStr;
@@ -355,20 +435,31 @@
         async function fetchAdminData() {
             if (!currentClient) return;
             try {
-                let [sRes, rRes, cRes] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}.json`),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}.json`)
+                let [sRes1, sRes2, rRes1, rRes2, cRes1, cRes2] = await Promise.all([
+                    fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}.json`).catch(() => null)
                 ]);
-                
-                globalSessions = await sRes.json() || {};
-                globalReports = await rRes.json() || {};
-                globalCallLogs = await cRes.json() || {};
+
+                let s1 = sRes1 ? await sRes1.json() : {};
+                let s2 = sRes2 ? await sRes2.json() : {};
+                globalSessions = { ...(s1 || {}), ...(s2 || {}) };
+
+                let r1 = rRes1 ? await rRes1.json() : {};
+                let r2 = rRes2 ? await rRes2.json() : {};
+                globalReports = { ...(r1 || {}), ...(r2 || {}) };
+
+                let c1 = cRes1 ? await cRes1.json() : {};
+                let c2 = cRes2 ? await cRes2.json() : {};
+                globalCallLogs = { ...(c1 || {}), ...(c2 || {}) };
 
                 renderContent();
             } catch (e) {
                 console.error("Fetch error:", e);
-                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase server.</p>`;
+                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase servers.</p>`;
             }
         }
 
@@ -377,9 +468,12 @@
 
             try {
                 await Promise.all([
-                    fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
+                    fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
                 ]);
                 alert(`User "${userName}" has been successfully deleted.`);
                 fetchAdminData();
@@ -407,15 +501,8 @@
                 filterBar.style.display = 'none';
                 onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
-            } else if (tab === 'leaderboard') {
-                pageTitle.innerText = "Team Calling";
-                filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'block';
-                exportBtn.innerText = "📥 Export CSV";
-                exportBtn.onclick = exportCSV;
             } else if (tab === 'reports') {
-                pageTitle.innerText = "Shift Reports & Ratios";
+                pageTitle.innerText = "Shift Reports & Ratios (USA Time)";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
@@ -443,9 +530,9 @@
 
         function setDateFilterPreset(preset) {
             filterMode = preset;
-            let currentShiftToday = getShiftDateStandardized();
+            let currentUSAToday = getUSACurrentDate();
 
-            ['presetToday', 'presetWeek', 'presetMonth', 'presetAll'].forEach(id => {
+            ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
                 let b = document.getElementById(id);
                 if (b) b.classList.remove('active');
             });
@@ -454,42 +541,28 @@
             if (activeBtn) activeBtn.classList.add('active');
 
             if (preset === 'today') {
-                startDateStr = currentShiftToday; endDateStr = currentShiftToday;
+                startDateStr = currentUSAToday; endDateStr = currentUSAToday;
             } else if (preset === 'week') {
-                let past = new Date(currentShiftToday); past.setDate(past.getDate() - 6);
-                startDateStr = past.toISOString().split('T')[0]; endDateStr = currentShiftToday;
-            } else if (preset === 'month') {
-                let refDate = new Date(currentShiftToday);
-                let firstDay = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
-                startDateStr = firstDay.toISOString().split('T')[0]; endDateStr = currentShiftToday;
+                let past = new Date(currentUSAToday); past.setDate(past.getDate() - 6);
+                startDateStr = past.toISOString().split('T')[0]; endDateStr = currentUSAToday;
             } else if (preset === 'all') {
                 startDateStr = "2020-01-01"; endDateStr = "2030-12-31";
             }
 
-            document.getElementById('customStartDate').value = startDateStr;
-            document.getElementById('customEndDate').value = endDateStr;
-            renderContent();
-        }
-
-        function onCustomDateChanged() {
-            let sInp = document.getElementById('customStartDate').value;
-            let eInp = document.getElementById('customEndDate').value;
-            if (sInp && eInp) {
-                startDateStr = sInp; endDateStr = eInp;
-                renderContent();
+            if (calendarPicker) {
+                if (preset === 'all') {
+                    calendarPicker.clear();
+                } else {
+                    calendarPicker.setDate([startDateStr, endDateStr], true);
+                }
             }
+
+            renderContent();
         }
 
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
             let dStr = dateVal.substring(0, 10);
-            if (filterMode === 'all') return true;
-            return dStr >= startDateStr && dStr <= endDateStr;
-        }
-
-        function isTimestampInRange(ts) {
-            if (!ts) return false;
-            let dStr = new Date(ts).toISOString().split('T')[0];
             if (filterMode === 'all') return true;
             return dStr >= startDateStr && dStr <= endDateStr;
         }
@@ -518,7 +591,7 @@
 
             body.innerHTML = `
                 <b>🏢 Company:</b> ${currentClient.toUpperCase()}<br>
-                <b>📅 Shift Range:</b> ${startDateStr} to ${endDateStr}<br>
+                <b>📅 USA Shift Range:</b> ${startDateStr} to ${endDateStr}<br>
                 <b>📞 Total Calls:</b> ${totalCallsAll}<br>
                 <b>💰 Total Sales:</b> ${totalSalesAll}<br>
                 <b>🏆 Top Performer:</b> ${topAgent} (${agentSummary[topAgent]?.calls || 0} calls)<br>
@@ -598,44 +671,8 @@
                 }
                 container.innerHTML = html + `</div>`;
 
-            } else if (activeTab === 'leaderboard') {
-                let perfMap = {};
-                let allUsers = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
-
-                allUsers.forEach(name => {
-                    let logs = globalCallLogs[name];
-                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                    let count = 0;
-                    if (Array.isArray(logs)) count = logs.filter(l => isDateInRange(l.shiftDate || l.date)).length;
-                    if (count === 0 && globalReports[name]) {
-                        let filteredReps = globalReports[name].filter(r => isDateInRange(r.date));
-                        count = filteredReps.reduce((sum, r) => sum + (r.totalCalls || (r.logs ? r.logs.length : 0)), 0);
-                    }
-                    if (count > 0) perfMap[name] = count;
-                });
-
-                let sorted = Object.keys(perfMap).sort((a, b) => perfMap[b] - perfMap[a]);
-                if (sorted.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling activity found.</p>`;
-                    return;
-                }
-
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Leaderboard for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
-                sorted.forEach((name, idx) => {
-                    let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx+1}`;
-                    html += `
-                        <div class="card" style="border-left: 4px solid #0284c7; width: 100%;">
-                            <div style="display: flex; align-items: center; gap: 16px;">
-                                <span style="font-size: 20px; font-weight: 800; width: 32px; text-align: center;">${medal}</span>
-                                <div><b style="font-size: 15px; color: #0f172a;">${name}</b></div>
-                            </div>
-                            <div style="background: #0f172a; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;">Total Calls: ${perfMap[name]}</div>
-                        </div>`;
-                });
-                container.innerHTML = html + `</div>`;
-
             } else if (activeTab === 'reports') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Shift Reports for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Shift Reports (USA Time Zone) for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 let hasReports = false;
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
@@ -675,7 +712,7 @@
                             <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap;">
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
-                                    <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">Date: ${dateStr}</span>
+                                    <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">USA Date: ${dateStr}</span>
                                 </div>
                                 <div style="font-size: 13px; color: #334155;"><b>Total Calls:</b> ${totalC}</div>
                                 <div style="display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap; width: 100%;">
@@ -692,7 +729,7 @@
                 });
 
                 if (!hasReports) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports found.</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports found for USA timezone.</p>`;
                     return;
                 }
                 container.innerHTML = html + `</div>`;
@@ -744,7 +781,7 @@
         }
 
         function exportCSV() {
-            let csv = "Agent Name,Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
+            let csv = "Agent Name,USA Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
             allAgents.forEach(name => {
@@ -785,7 +822,7 @@
             let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             let link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `${currentClient}_Reports_${startDateStr}_to_${endDateStr}.csv`;
+            link.download = `${currentClient}_USA_Reports_${startDateStr}_to_${endDateStr}.csv`;
             link.click();
         }
     </script>
