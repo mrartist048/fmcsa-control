@@ -436,26 +436,32 @@
         async function fetchAdminData() {
             if (!currentClient) return;
             try {
-                let [sRes1, sRes2, rRes1, rRes2, cRes1, cRes2] = await Promise.all([
+                let [sRes1, sRes2, sRes3, rRes1, rRes2, rRes3, cRes1, cRes2, cRes3] = await Promise.all([
                     fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}.json`).catch(() => null),
                     fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_3}sessions/${currentClient}.json`).catch(() => null),
                     fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}.json`).catch(() => null),
                     fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}.json`).catch(() => null),
                     fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}.json`).catch(() => null)
+                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}.json`).catch(() => null)
                 ]);
 
                 let s1 = sRes1 ? await sRes1.json() : {};
                 let s2 = sRes2 ? await sRes2.json() : {};
-                globalSessions = { ...(s1 || {}), ...(s2 || {}) };
+                let s3 = sRes3 ? await sRes3.json() : {};
+                globalSessions = { ...(s1 || {}), ...(s2 || {}), ...(s3 || {}) };
 
                 let r1 = rRes1 ? await rRes1.json() : {};
                 let r2 = rRes2 ? await rRes2.json() : {};
-                globalReports = { ...(r1 || {}), ...(r2 || {}) };
+                let r3 = rRes3 ? await rRes3.json() : {};
+                globalReports = { ...(r1 || {}), ...(r2 || {}), ...(r3 || {}) };
 
                 let c1 = cRes1 ? await cRes1.json() : {};
                 let c2 = cRes2 ? await cRes2.json() : {};
-                globalCallLogs = { ...(c1 || {}), ...(c2 || {}) };
+                let c3 = cRes3 ? await cRes3.json() : {};
+                globalCallLogs = { ...(c1 || {}), ...(c2 || {}), ...(c3 || {}) };
 
                 renderContent();
             } catch (e) {
@@ -474,7 +480,10 @@
                     fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
                     fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
+                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_3}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
                 ]);
                 alert(`User "${userName}" has been successfully deleted.`);
                 fetchAdminData();
