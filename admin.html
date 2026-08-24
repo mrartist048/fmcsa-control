@@ -218,7 +218,7 @@
             <div class="auth-icon">🏢</div>
             <h2>Company Admin Portal</h2>
             <p>Enter your Company Name and Admin Password to view your designated agents.</p>
-            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchlodify, Gslogisticsdispatch)">
+            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchloadify, Gslogisticsdispatch)">
             
             <!-- PASSWORD FIELD WITH SHOW/HIDE TOGGLE ICON -->
             <div class="password-container">
@@ -322,6 +322,9 @@
         </div>
     </div>
 
+    <!-- Firebase SDKs for Realtime Event Listeners -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
@@ -405,7 +408,6 @@
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
-            // Check if company exists in allowedUsers and password matches either their specific pass or master admin pass
             let userConfig = allowedUsers[companyInput];
             let isValid = userConfig && (passInput === userConfig.pass || passInput === MASTER_ADMIN_PASS);
 
@@ -414,8 +416,7 @@
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
                 setDateFilterPreset('today');
-                fetchAdminData();
-                setInterval(fetchAdminData, 30000);
+                fetchAdminData(); // Real-time listeners setup
             } else {
                 errorMsg.style.display = 'block';
                 document.getElementById('adminPasswordInput').style.borderColor = '#dc2626';
@@ -451,8 +452,65 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        async function fetchAdminData() {
+        // INSTANT REAL-TIME DATA LISTENER SETUP VIA FIREBASE SDK COMPAT
+        let dbRefsInitialized = false;
+
+        function fetchAdminData() {
             if (!currentClient) return;
+
+            // Agar pehle se listeners attached hain toh dobara attach karne ki zaroorat nahi
+            if (dbRefsInitialized) {
+                renderContent();
+                return;
+            }
+
+            try {
+                const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+
+                urls.forEach((url, index) => {
+                    // Unique app instance for each firebase URL to prevent conflicts
+                    let appName = `adminApp_${index}`;
+                    let secondaryApp;
+                    try {
+                        secondaryApp = firebase.initializeApp({ databaseURL: url }, appName);
+                    } catch (err) {
+                        secondaryApp = firebase.app(appName);
+                    }
+                    let db = secondaryApp.database();
+
+                    // Sessions Listener (Instant Online / Offline check)
+                    db.ref(`sessions/${currentClient}`).on('value', (snapshot) => {
+                        let val = snapshot.val() || {};
+                        if (index === 0) globalSessions = {};
+                        globalSessions = { ...globalSessions, ...val };
+                        renderContent();
+                    });
+
+                    // Shift Reports Listener
+                    db.ref(`shift_reports/${currentClient}`).on('value', (snapshot) => {
+                        let val = snapshot.val() || {};
+                        if (index === 0) globalReports = {};
+                        globalReports = { ...globalReports, ...val };
+                        renderContent();
+                    });
+
+                    // Call Logs Listener (Foran update hoga jab agent call karega)
+                    db.ref(`call_logs/${currentClient}`).on('value', (snapshot) => {
+                        let val = snapshot.val() || {};
+                        if (index === 0) globalCallLogs = {};
+                        globalCallLogs = { ...globalCallLogs, ...val };
+                        renderContent();
+                    });
+                });
+
+                dbRefsInitialized = true;
+            } catch (e) {
+                console.error("Real-time listener error, falling back to REST fetch:", e);
+                fallbackFetchRest();
+            }
+        }
+
+        async function fallbackFetchRest() {
             try {
                 let [sRes1, sRes2, sRes3, rRes1, rRes2, rRes3, cRes1, cRes2, cRes3] = await Promise.all([
                     fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}.json`).catch(() => null),
@@ -466,25 +524,13 @@
                     fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}.json`).catch(() => null)
                 ]);
 
-                let s1 = sRes1 ? await sRes1.json() : {};
-                let s2 = sRes2 ? await sRes2.json() : {};
-                let s3 = sRes3 ? await sRes3.json() : {};
-                globalSessions = { ...(s1 || {}), ...(s2 || {}), ...(s3 || {}) };
-
-                let r1 = rRes1 ? await rRes1.json() : {};
-                let r2 = rRes2 ? await rRes2.json() : {};
-                let r3 = rRes3 ? await rRes3.json() : {};
-                globalReports = { ...(r1 || {}), ...(r2 || {}), ...(r3 || {}) };
-
-                let c1 = cRes1 ? await cRes1.json() : {};
-                let c2 = cRes2 ? await cRes2.json() : {};
-                let c3 = cRes3 ? await cRes3.json() : {};
-                globalCallLogs = { ...(c1 || {}), ...(c2 || {}), ...(c3 || {}) };
+                globalSessions = { ...(sRes1 ? await sRes1.json() || {} : {}), ...(sRes2 ? await sRes2.json() || {} : {}), ...(sRes3 ? await sRes3.json() || {} : {}) };
+                globalReports = { ...(rRes1 ? await rRes1.json() || {} : {}), ...(rRes2 ? await rRes2.json() || {} : {}), ...(rRes3 ? await rRes3.json() || {} : {}) };
+                globalCallLogs = { ...(cRes1 ? await cRes1.json() || {} : {}), ...(cRes2 ? await cRes2.json() || {} : {}), ...(cRes3 ? await cRes3.json() || {} : {}) };
 
                 renderContent();
-            } catch (e) {
-                console.error("Fetch error:", e);
-                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #ef4444; text-align: center; padding: 40px; font-weight:600;">Failed to load data from Firebase servers.</p>`;
+            } catch (err) {
+                console.error("REST fallback error:", err);
             }
         }
 
@@ -504,7 +550,6 @@
                     fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
                 ]);
                 alert(`User "${userName}" has been successfully deleted.`);
-                fetchAdminData();
             } catch (err) {
                 console.error("Delete error:", err);
                 alert("Failed to delete user.");
@@ -635,6 +680,7 @@
 
         function renderContent() {
             let container = document.getElementById('adminBodyContent');
+            if(!container) return;
             let now = Date.now();
 
             if (activeTab === 'online') {
