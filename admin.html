@@ -218,7 +218,7 @@
             <div class="auth-icon">🏢</div>
             <h2>Company Admin Portal</h2>
             <p>Enter your Company Name and Admin Password to view your designated agents.</p>
-            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchlodify, gslogistics)">
+            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchlodify, Gslogisticsdispatch)">
             
             <!-- PASSWORD FIELD WITH SHOW/HIDE TOGGLE ICON -->
             <div class="password-container">
@@ -329,6 +329,20 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
+        // Allowed Users List Verification
+        const allowedUsers = {
+            "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
+            "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
+            "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
+            "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },         
+            "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30" },  
+            "Loadlink": { pass: "Loadlink#trial", maxLaptops: 3, expires: "2026-08-14" },
+            "Nexteklogistics": { pass: "Nexteklogistics#123", maxLaptops: 1, expires: "2026-09-22" },
+            "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30" }, 
+        };
+
+        const MASTER_ADMIN_PASS = "admin890";
+
         let currentClient = "";
         let activeTab = 'online';
         let onlineFilterMode = 'all'; 
@@ -391,7 +405,11 @@
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
-            if (companyInput && passInput === "admin890") {
+            // Check if company exists in allowedUsers and password matches either their specific pass or master admin pass
+            let userConfig = allowedUsers[companyInput];
+            let isValid = userConfig && (passInput === userConfig.pass || passInput === MASTER_ADMIN_PASS);
+
+            if (isValid) {
                 currentClient = companyInput;
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
