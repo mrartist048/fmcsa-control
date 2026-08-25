@@ -1078,7 +1078,6 @@ let activeCallPhone = null;
 let pendingReviewPhone = null;
 let activeCallCellElement = null;
 
-// Helper to look up the lead row data by phone number
 function findLeadDataByPhone(phoneNum) {
     if (typeof scrapedData === 'undefined') return {};
     return scrapedData.find(r => r.phone === phoneNum) || {};
@@ -1108,7 +1107,6 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Save to Firebase call logs
     try {
         let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
         await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
@@ -1119,7 +1117,6 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
         console.error("Failed to sync call log to DB:", e);
     }
 
-    // Send complete row package directly to Google Sheet
     syncDataToGoogleSheets('logCall', logEntry);
 
     showPremiumNotification(`✅ Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
@@ -1191,7 +1188,6 @@ window.openAdminPanelPrompt = function() {
     window.open('admin.html', '_blank');
 };
 
-// ====== INSTANT COLOR CHANGE & CALL/COPY HANDLERS ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1307,7 +1303,40 @@ window.confirmFollowUpSchedule = function() {
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
+    // ====== LOG FOLLOW-UP TO GOOGLE SHEETS & FIREBASE CALL LOGS ======
+    let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
+    let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
+    
+    let logEntry = {
+        timestamp: new Date().toLocaleString(),
+        company: currentClient,
+        agent: dispatcherNickname,
+        mc: record.mc || 'N/A',
+        companyName: record.name || 'N/A',
+        phone: record.phone || 'N/A',
+        email: record.email || 'N/A',
+        status: "Follow up",
+        remarks: record.remarks || '',
+        shiftDate: getCurrentShiftDateKey()
+    };
+    
+    callLogs.push(logEntry);
+    localStorage.setItem(storageKey, JSON.stringify(callLogs));
+
+    // Save to Firebase call logs & Google Sheets
+    try {
+        let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+        fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
+            method: 'PUT',
+            body: JSON.stringify(callLogs)
+        });
+    } catch (e) {
+        console.error("Failed to sync follow-up call log to DB:", e);
+    }
+    syncDataToGoogleSheets('logCall', logEntry);
+    // ===============================================================
+
+    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up & Logged to Sheet!`, 3500);
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
@@ -2256,13 +2285,17 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         };
     }
 
+    // ====== FIXED RESUME LOGIC (Ensures starting from correct next MC) ======
     let effectiveStart = start;
-    if (scrapedData.length > 0) {
+    if (scrapedData.length > 0 && overrideStart === null) {
         let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
         if (!isNaN(maxScannedMc) && maxScannedMc >= start && maxScannedMc < end) {
             effectiveStart = maxScannedMc + 1;
         }
+    } else if (overrideStart !== null) {
+        effectiveStart = overrideStart;
     }
+    // =======================================================================
 
     for (let mc = effectiveStart; mc <= end; mc++) {
         if (!scraping) break;
