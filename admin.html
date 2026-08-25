@@ -218,7 +218,7 @@
             <div class="auth-icon">🏢</div>
             <h2>Company Admin Portal</h2>
             <p>Enter your Company Name and Admin Password to view your designated agents.</p>
-            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. testinguser)">
+            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchloadify, Gslogisticsdispatch)">
             
             <!-- PASSWORD FIELD WITH SHOW/HIDE TOGGLE ICON -->
             <div class="password-container">
@@ -301,6 +301,7 @@
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
                     <span>Custom Range / Single Date:</span>
+                    <!-- SINGLE MODERN CALENDAR INPUT -->
                     <input type="text" id="unifiedDateRangePicker" class="single-range-input" placeholder="Select date or range...">
                 </div>
             </div>
@@ -321,12 +322,17 @@
         </div>
     </div>
 
-    <!-- Flatpickr JS -->
+    <!-- Firebase SDKs for Realtime Event Listeners -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // GOOGLE SHEETS WEB APP API URL UPDATED
-        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxQWGQ1UXjypGoHmmB93n41KyCMMaP2MzbvZaaU9c-CdTHOWkP0LOb_hHXbpy3amEBUPg/exec";
+        const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
+        const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
+        const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
+        // Allowed Users List Verification
         const allowedUsers = {
             "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
             "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
@@ -348,18 +354,37 @@
 
         window.onload = function() {
             let authOverlay = document.getElementById('authOverlay');
-            if (authOverlay) authOverlay.style.display = 'flex';
+            if (authOverlay) {
+                authOverlay.style.display = 'flex';
+            }
             
+            // Initialize Flatpickr Single Calendar with Range Mode Support
             calendarPicker = flatpickr("#unifiedDateRangePicker", {
                 mode: "range",
                 dateFormat: "Y-m-d",
                 defaultDate: [getUSACurrentDate(), getUSACurrentDate()],
                 onChange: function(selectedDates, dateStr, instance) {
-                    if (selectedDates.length >= 1) {
+                    if (selectedDates.length === 2) {
                         filterMode = 'custom';
                         startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                        endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
-                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+                        endDateStr = instance.formatDate(selectedDates[1], "Y-m-d");
+                        
+                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                            let b = document.getElementById(id);
+                            if (b) b.classList.remove('active');
+                        });
+                        
+                        renderContent();
+                    } else if (selectedDates.length === 1) {
+                        filterMode = 'custom';
+                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
+                        endDateStr = startDateStr;
+                        
+                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                            let b = document.getElementById(id);
+                            if (b) b.classList.remove('active');
+                        });
+                        
                         renderContent();
                     }
                 }
@@ -369,13 +394,17 @@
         function togglePasswordVisibility() {
             let passInput = document.getElementById('adminPasswordInput');
             let toggleBtn = document.getElementById('togglePasswordBtn');
-            passInput.type = passInput.type === 'password' ? 'text' : 'password';
-            toggleBtn.innerText = passInput.type === 'password' ? '👁️' : '🙈';
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                toggleBtn.innerText = '🙈';
+            } else {
+                passInput.type = 'password';
+                toggleBtn.innerText = '👁️';
+            }
         }
 
         function verifyAdminPassword() {
-            let rawCompanyInput = document.getElementById('adminCompanyInput').value.trim();
-            let companyInput = rawCompanyInput.toLowerCase();
+            let companyInput = document.getElementById('adminCompanyInput').value.trim();
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
@@ -385,23 +414,36 @@
             if (isValid) {
                 currentClient = companyInput;
                 document.getElementById('authOverlay').style.display = 'none';
-                document.getElementById('brandTitle').innerText = rawCompanyInput.toUpperCase();
+                document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
                 setDateFilterPreset('today');
-                fetchAdminData();
+                fetchAdminData(); // Real-time listeners setup
             } else {
                 errorMsg.style.display = 'block';
                 document.getElementById('adminPasswordInput').style.borderColor = '#dc2626';
             }
         }
 
-        function handlePasswordKeypress(e) { if (e.key === 'Enter') verifyAdminPassword(); }
-        function toggleSidebar() { document.getElementById('appSidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
+        function handlePasswordKeypress(e) {
+            if (e.key === 'Enter') {
+                verifyAdminPassword();
+            }
+        }
+
+        function toggleSidebar() {
+            let sidebar = document.getElementById('appSidebar');
+            let overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
 
         function getUSACurrentDate() {
             try {
-                return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+                let options = { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' };
+                let formatter = new Intl.DateTimeFormat('en-CA', options);
+                return formatter.format(new Date());
             } catch (e) {
-                return new Date().toISOString().split('T')[0];
+                let now = new Date();
+                return now.toISOString().split('T')[0];
             }
         }
 
@@ -410,40 +452,116 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        async function fetchAdminData() {
+        // INSTANT REAL-TIME DATA LISTENER SETUP VIA FIREBASE SDK COMPAT
+        let dbRefsInitialized = false;
+
+        function fetchAdminData() {
             if (!currentClient) return;
-            document.getElementById('adminBodyContent').innerHTML = `<p style="text-align: center; color: #64748b; padding: 40px;">Fetching records from Google Sheets...</p>`;
+
+            // Agar pehle se listeners attached hain toh dobara attach karne ki zaroorat nahi
+            if (dbRefsInitialized) {
+                renderContent();
+                return;
+            }
 
             try {
-                let response = await fetch(GOOGLE_SHEET_API_URL, {
-                    method: "GET",
-                    redirect: "follow"
+                const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+
+                urls.forEach((url, index) => {
+                    // Unique app instance for each firebase URL to prevent conflicts
+                    let appName = `adminApp_${index}`;
+                    let secondaryApp;
+                    try {
+                        secondaryApp = firebase.initializeApp({ databaseURL: url }, appName);
+                    } catch (err) {
+                        secondaryApp = firebase.app(appName);
+                    }
+                    let db = secondaryApp.database();
+
+                    // Sessions Listener (Instant Online / Offline check)
+                    db.ref(`sessions/${currentClient}`).on('value', (snapshot) => {
+                        let val = snapshot.val() || {};
+                        if (index === 0) globalSessions = {};
+                        globalSessions = { ...globalSessions, ...val };
+                        renderContent();
+                    });
+
+                    // Shift Reports Listener
+                    db.ref(`shift_reports/${currentClient}`).on('value', (snapshot) => {
+                        let val = snapshot.val() || {};
+                        if (index === 0) globalReports = {};
+                        globalReports = { ...globalReports, ...val };
+                        renderContent();
+                    });
+
+                    // Call Logs Listener (Foran update hoga jab agent call karega)
+                    db.ref(`call_logs/${currentClient}`).on('value', (snapshot) => {
+                        let val = snapshot.val() || {};
+                        if (index === 0) globalCallLogs = {};
+                        globalCallLogs = { ...globalCallLogs, ...val };
+                        renderContent();
+                    });
                 });
-                
-                let textData = await response.text();
-                let data = JSON.parse(textData);
 
-                let targetClient = currentClient.toLowerCase().trim();
+                dbRefsInitialized = true;
+            } catch (e) {
+                console.error("Real-time listener error, falling back to REST fetch:", e);
+                fallbackFetchRest();
+            }
+        }
 
-                globalSessions = data.sessions?.[targetClient] || {};
-                globalReports = data.shift_reports?.[targetClient] || {};
-                globalCallLogs = data.call_logs?.[targetClient] || {};
+        async function fallbackFetchRest() {
+            try {
+                let [sRes1, sRes2, sRes3, rRes1, rRes2, rRes3, cRes1, cRes2, cRes3] = await Promise.all([
+                    fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_3}sessions/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}.json`).catch(() => null),
+                    fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}.json`).catch(() => null)
+                ]);
+
+                globalSessions = { ...(sRes1 ? await sRes1.json() || {} : {}), ...(sRes2 ? await sRes2.json() || {} : {}), ...(sRes3 ? await sRes3.json() || {} : {}) };
+                globalReports = { ...(rRes1 ? await rRes1.json() || {} : {}), ...(rRes2 ? await rRes2.json() || {} : {}), ...(rRes3 ? await rRes3.json() || {} : {}) };
+                globalCallLogs = { ...(cRes1 ? await cRes1.json() || {} : {}), ...(cRes2 ? await cRes2.json() || {} : {}), ...(cRes3 ? await cRes3.json() || {} : {}) };
 
                 renderContent();
             } catch (err) {
-                console.error("Error fetching data from Google Sheets:", err);
-                document.getElementById('adminBodyContent').innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #dc2626;">
-                        <p><b>Failed to load data from Google Sheets.</b></p>
-                        <p style="font-size: 12px; color: #64748b;">Reason: Make sure your Google Apps Script is deployed with Access set to <b>"Anyone"</b>.</p>
-                    </div>`;
+                console.error("REST fallback error:", err);
+            }
+        }
+
+        async function deleteUserRecord(userName) {
+            if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
+
+            try {
+                await Promise.all([
+                    fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_3}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
+                    fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
+                ]);
+                alert(`User "${userName}" has been successfully deleted.`);
+            } catch (err) {
+                console.error("Delete error:", err);
+                alert("Failed to delete user.");
             }
         }
 
         function switchTab(tab) {
             activeTab = tab;
             document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1))?.classList.add('active');
+            let activeBtnElem = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (activeBtnElem) activeBtnElem.classList.add('active');
+            
             if(window.innerWidth <= 900) toggleSidebar();
 
             let filterBar = document.getElementById('filterBar');
@@ -461,6 +579,8 @@
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
+                exportBtn.innerText = "📥 Export CSV";
+                exportBtn.onclick = exportCSV;
             } else if (tab === 'audit') {
                 pageTitle.innerText = "Audit Trail & Logs";
                 filterBar.style.display = 'flex';
@@ -472,30 +592,50 @@
 
         function setOnlineFilter(mode) {
             onlineFilterMode = mode;
-            ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => document.getElementById(id)?.classList.remove('active'));
-            document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1))?.classList.add('active');
+            ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => {
+                let b = document.getElementById(id);
+                if (b) b.classList.remove('active');
+            });
+            let activeBtn = document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1));
+            if (activeBtn) activeBtn.classList.add('active');
             renderContent();
         }
 
         function setDateFilterPreset(preset) {
             filterMode = preset;
             let currentUSAToday = getUSACurrentDate();
-            ['presetToday', 'presetWeek', 'presetAll'].forEach(id => document.getElementById(id)?.classList.remove('active'));
-            document.getElementById('preset' + preset.charAt(0).toUpperCase() + preset.slice(1))?.classList.add('active');
 
-            if (preset === 'today') { startDateStr = currentUSAToday; endDateStr = currentUSAToday; }
-            else if (preset === 'week') {
+            ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                let b = document.getElementById(id);
+                if (b) b.classList.remove('active');
+            });
+
+            let activeBtn = document.getElementById('preset' + preset.charAt(0).toUpperCase() + preset.slice(1));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            if (preset === 'today') {
+                startDateStr = currentUSAToday; endDateStr = currentUSAToday;
+            } else if (preset === 'week') {
                 let past = new Date(currentUSAToday); past.setDate(past.getDate() - 6);
                 startDateStr = past.toISOString().split('T')[0]; endDateStr = currentUSAToday;
-            } else if (preset === 'all') { startDateStr = "2020-01-01"; endDateStr = "2030-12-31"; }
+            } else if (preset === 'all') {
+                startDateStr = "2020-01-01"; endDateStr = "2030-12-31";
+            }
 
-            if (calendarPicker && preset !== 'all') calendarPicker.setDate([startDateStr, endDateStr], true);
+            if (calendarPicker) {
+                if (preset === 'all') {
+                    calendarPicker.clear();
+                } else {
+                    calendarPicker.setDate([startDateStr, endDateStr], true);
+                }
+            }
+
             renderContent();
         }
 
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
-            let dStr = String(dateVal).substring(0, 10);
+            let dStr = dateVal.substring(0, 10);
             if (filterMode === 'all') return true;
             return dStr >= startDateStr && dStr <= endDateStr;
         }
@@ -503,15 +643,17 @@
         function openSummaryModal() {
             let modal = document.getElementById('summaryModal');
             let body = document.getElementById('modalSummaryBody');
+            
             let totalCallsAll = 0, totalSalesAll = 0;
             let agentSummary = {};
 
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
-                if (!Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = logs.filter(l => isDateInRange(l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date));
-                let sales = filteredLogs.filter(l => String(l.Status || l.status) === 'Sale Closed').length;
+                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
+                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                let sales = filteredLogs.filter(l => l.status === 'Sale Closed').length;
+                
                 agentSummary[name] = { calls: filteredLogs.length, sales: sales };
                 totalCallsAll += filteredLogs.length;
                 totalSalesAll += sales;
@@ -531,7 +673,10 @@
         }
 
         function closeSummaryModal() { document.getElementById('summaryModal').style.display = 'none'; }
-        function copySummaryText() { navigator.clipboard.writeText(document.getElementById('modalSummaryBody').innerText); alert("Summary copied!"); }
+        function copySummaryText() {
+            navigator.clipboard.writeText(document.getElementById('modalSummaryBody').innerText);
+            alert("Summary copied to clipboard!");
+        }
 
         function renderContent() {
             let container = document.getElementById('adminBodyContent');
@@ -544,17 +689,16 @@
 
                 if (globalSessions) {
                     Object.keys(globalSessions).forEach(key => {
-                        let records = globalSessions[key];
-                        if (Array.isArray(records) && records.length > 0) {
-                            let latest = records[records.length - 1];
-                            let name = latest.Agent || latest.agent || key;
-                            uniqueUsers[name] = { ...latest, resolvedName: name, lastActive: new Date(latest.Timestamp || latest.timestamp || 0).getTime() || Number(latest.Timestamp || 0) };
+                        let sObj = globalSessions[key];
+                        let name = sObj?.nickname || sObj?.name || key;
+                        if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
+                            uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
                         }
                     });
                 }
 
-                Object.keys(globalReports).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0 }; });
-                Object.keys(globalCallLogs).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0 }; });
+                Object.keys(globalReports).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; });
+                Object.keys(globalCallLogs).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; });
 
                 let userKeys = Object.keys(uniqueUsers);
                 if (userKeys.length === 0) {
@@ -567,7 +711,7 @@
                     let uData = uniqueUsers[nameKey];
                     let displayName = uData.resolvedName || nameKey;
                     let lastActiveTime = uData.lastActive || 0;
-                    let isOnline = lastActiveTime && (now - lastActiveTime < 300000); // 5 mins threshold
+                    let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
                     let inactiveMs = now - lastActiveTime;
                     let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Never Active';
@@ -585,8 +729,12 @@
                                 <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; gap: 8px; flex-wrap: wrap;">
-                                <span>Login Time: <b>${uData.Shift_Date || uData.Timestamp || 'N/A'}</b></span>
+                                <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span>Last Active: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
+                                <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger">🗑️ Remove</button>
                             </div>
                         </div>`;
                 });
@@ -604,24 +752,28 @@
 
                 allAgents.forEach(name => {
                     let logs = globalCallLogs[name] || [];
-                    if (!Array.isArray(logs)) logs = Object.values(logs);
-                    let filteredLogs = logs.filter(l => isDateInRange(l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date));
+                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
+                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                    let reps = globalReports[name] || [];
+                    let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
                     let datesMap = {};
                     filteredLogs.forEach(l => {
-                        let rawDate = l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date || startDateStr;
-                        let d = String(rawDate).substring(0, 10);
+                        let d = (l.shiftDate || l.date || startDateStr).substring(0, 10);
                         if (!datesMap[d]) datesMap[d] = [];
                         datesMap[d].push(l);
+                    });
+                    filteredReps.forEach(r => {
+                        let d = (r.date || startDateStr).substring(0, 10);
+                        if (!datesMap[d]) datesMap[d] = r.logs || [];
                     });
 
                     Object.keys(datesMap).forEach(dateStr => {
                         hasReports = true;
                         let finalLogs = datesMap[dateStr];
                         let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
-                        
                         finalLogs.forEach(l => {
-                            let st = l.Status || l.status || "Hung up";
+                            let st = l.status || "Hung up";
                             if (counts[st] !== undefined) counts[st]++;
                             else counts["Hung up"]++;
                         });
@@ -662,20 +814,15 @@
 
                 if (globalSessions) {
                     Object.keys(globalSessions).forEach(key => {
-                        let records = globalSessions[key];
-                        if (Array.isArray(records)) {
-                            records.forEach(r => {
-                                let name = r.Agent || r.agent || key;
-                                let loginTimeStr = r.Shift_Date || r.Timestamp || 'N/A';
-                                let lastActiveTs = new Date(r.Timestamp || 0).getTime() || 0;
+                        let sObj = globalSessions[key];
+                        let name = sObj?.nickname || sObj?.name || key;
+                        let loginTimeStr = sObj?.loginTime || 'N/A';
+                        let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
 
-                                if (!agentAuditMap[name]) {
-                                    agentAuditMap[name] = { loginTimeStr: loginTimeStr, lastActiveTs: lastActiveTs };
-                                } else if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
-                                    agentAuditMap[name].lastActiveTs = lastActiveTs;
-                                    agentAuditMap[name].loginTimeStr = loginTimeStr;
-                                }
-                            });
+                        if (!agentAuditMap[name]) {
+                            agentAuditMap[name] = { loginTimeStr: loginTimeStr, lastActiveTs: lastActiveTs };
+                        } else if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
+                            agentAuditMap[name].lastActiveTs = lastActiveTs;
                         }
                     });
                 }
@@ -689,7 +836,7 @@
                 auditKeys.forEach(name => {
                     let data = agentAuditMap[name];
                     let lastActiveTime = data.lastActiveTs ? new Date(data.lastActiveTs).toLocaleTimeString() : 'N/A';
-                    let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 300000);
+                    let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
                     html += `
@@ -698,7 +845,7 @@
                                 <b style="font-size: 15px; color: #0f172a;">👤 ${name}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
-                                <span>⏰ Login Record: <b>${data.loginTimeStr}</b></span>
+                                <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
                             </div>
                         </div>`;
@@ -713,22 +860,27 @@
 
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
-                if (!Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = logs.filter(l => isDateInRange(l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date));
+                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
+                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                let reps = globalReports[name] || [];
+                let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
                 let datesMap = {};
                 filteredLogs.forEach(l => {
-                    let rawDate = l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date || startDateStr;
-                    let d = String(rawDate).substring(0, 10);
+                    let d = (l.shiftDate || l.date || startDateStr).substring(0, 10);
                     if (!datesMap[d]) datesMap[d] = [];
                     datesMap[d].push(l);
+                });
+                filteredReps.forEach(r => {
+                    let d = (r.date || startDateStr).substring(0, 10);
+                    if (!datesMap[d]) datesMap[d] = r.logs || [];
                 });
 
                 Object.keys(datesMap).forEach(dateStr => {
                     let finalLogs = datesMap[dateStr];
                     let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                     finalLogs.forEach(l => {
-                        let st = l.Status || l.status || "Hung up";
+                        let st = l.status || "Hung up";
                         if (counts[st] !== undefined) counts[st]++;
                         else counts["Hung up"]++;
                     });
