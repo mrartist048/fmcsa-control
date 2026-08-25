@@ -62,21 +62,28 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== GOOGLE SHEETS SYNC INTEGRATION (UPDATED) ======
+// ====== GOOGLE SHEETS SYNC INTEGRATION (FIXED & MAPPED) ======
 async function syncLeadToGoogleSheet(record, callStatus = "Scraped", remarksText = "") {
     if (!GOOGLE_SHEET_API_URL) return;
     try {
+        let payload = {
+            timestamp: new Date().toLocaleString(),
+            company: currentClient || "N/A",              // Column B: Company Name (Username)
+            agent: dispatcherNickname || "N/A",          // Column C: Agent Name
+            mc: record.mc || "N/A",                      // Column D: MC Number
+            companyName: record.name || "N/A",           // Column E: Carrier Company Name
+            phone: record.phone || "N/A",                // Column F: Phone Number
+            email: record.email || "N/A",                // Column G: Email
+            status: callStatus || record.status || "N/A", // Column H: Status
+            remarks: remarksText || record.remarks || "", // Column I: Remarks
+            shiftDate: getCurrentShiftDateKey()          // Column J: Shift Date
+        };
+
         await fetch(GOOGLE_SHEET_API_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ...record,
-                client: currentClient,
-                dispatcher: dispatcherNickname,
-                status: callStatus || record.status,
-                remarks: remarksText || record.remarks || ""
-            })
+            body: JSON.stringify(payload)
         });
     } catch (e) {
         console.error("Google Sheet Sync Error:", e);
@@ -1087,7 +1094,6 @@ let activeCallPhone = null;
 let pendingReviewPhone = null;
 let activeCallCellElement = null;
 
-// ====== CALL LOG & DISPOSITION SYNC (UPDATED) ======
 window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispositionStatus) {
     if (!phoneNum || phoneNum === 'N/A') return;
     
@@ -1105,7 +1111,6 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Find corresponding scraped lead and sync updated status to Google Sheet
     let matchedRecord = scrapedData.find(r => r.phone === phoneNum);
     if (matchedRecord) {
         syncLeadToGoogleSheet(matchedRecord, dispositionStatus, matchedRecord.remarks);
@@ -1190,7 +1195,6 @@ window.openAdminPanelPrompt = function() {
     window.open('admin.html', '_blank');
 };
 
-// ====== INSTANT COLOR CHANGE & CALL/COPY HANDLERS ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1306,6 +1310,9 @@ window.confirmFollowUpSchedule = function() {
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
+    // Sync to Google Sheet on Follow Up
+    syncLeadToGoogleSheet(record, "Follow up", record.remarks);
+
     showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
     if (pendingFollowUpRowBtn) {
@@ -1705,6 +1712,8 @@ window.syncRemarksData = function(index, textarea) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = textarea.value;
         updateRealTimeHistory(scrapedData, false);
+        // Sync remarks update to Google Sheet instantly
+        syncLeadToGoogleSheet(scrapedData[index], scrapedData[index].status, textarea.value);
     }
 };
 
@@ -2284,7 +2293,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                 let record = result.data;
                 scrapedData.push(record);
                 
-                // Sync lead to Google Sheet instantly with Client & Dispatcher info
+                // Sync lead to Google Sheet instantly
                 syncLeadToGoogleSheet(record, "AUTHORIZED", record.remarks);
 
                 let recordIndex = scrapedData.length - 1;
