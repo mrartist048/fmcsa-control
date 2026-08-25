@@ -252,8 +252,12 @@
             try {
                 let response = await fetch(GOOGLE_SHEET_API_URL, { method: "GET", redirect: "follow" });
                 let textData = await response.text();
-                let data = JSON.parse(textData);
+                
+                if (textData.trim().startsWith("<!DOCTYPE") || textData.trim().startsWith("<html")) {
+                    throw new Error("Google Script returned HTML. Please check Web App deployment permissions.");
+                }
 
+                let data = JSON.parse(textData);
                 let targetClient = currentClient.toLowerCase().trim();
                 let clientLogs = data.call_logs?.[targetClient] || {};
 
@@ -283,7 +287,11 @@
                 renderContent();
             } catch (err) {
                 console.error("Error fetching data:", err);
-                document.getElementById('adminBodyContent').innerHTML = `<p style="text-align: center; color: #dc2626; padding: 40px;">Error loading data from Google Sheet. Make sure Web App is deployed as 'Anyone'.</p>`;
+                document.getElementById('adminBodyContent').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #dc2626;">
+                        <p><b>Error loading data from Google Sheet.</b></p>
+                        <p style="font-size: 12px; color: #64748b; margin-top: 5px;">${err.message}</p>
+                    </div>`;
             }
         }
 
