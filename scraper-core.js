@@ -5,7 +5,7 @@
     if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
-        document.head.appendChild(link);
+        document.head.appendChild(link); 
     }
     link.type = 'image/png';
     link.href = faviconUrl;
@@ -17,7 +17,7 @@ const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
 // ====== GOOGLE SHEETS WEB APP ENDPOINT (DATA STORAGE) ======
-const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxTonLY1awIdvB3cBwbGVAlL14Z_zwe0eMYib942GfA3rCQ_Dl-_4Ip0kPNA7bst6b1pg/exec";
+const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx9W21nM4q5q-bzgzL59qRRtHIOBGCySPTZ1xOJdIWySOkmXcr_wxvvJbL6hBalUcKuVw/exec";
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
