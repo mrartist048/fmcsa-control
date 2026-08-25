@@ -19,7 +19,6 @@ const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.c
 const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28", dbUrl: FIREBASE_DB_URL_1 },    
@@ -36,7 +35,6 @@ const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// DYNAMIC FIREBASE URL SELECTOR
 const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
     ? allowedUsers[currentClient].dbUrl 
     : FIREBASE_DB_URL_1;
@@ -62,7 +60,7 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== GOOGLE SHEETS SYNC INTEGRATION (MAPPED) ======
+// ====== GOOGLE SHEETS SYNC INTEGRATION ======
 async function syncLeadToGoogleSheet(record, callStatus = "Scraped", remarksText = "") {
     if (!GOOGLE_SHEET_API_URL) return;
     try {
@@ -527,8 +525,8 @@ function injectHistoryUIFramework() {
                     <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
+                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
                 </div>
             </div>
         `;
@@ -940,7 +938,7 @@ window.remarksBlur = function(index, textarea) {
     }
 };
 
-// FIXED: Using onchange instead of oninput to prevent duplicate row entries while typing!
+// FIXED: Using onchange instead of oninput to prevent duplicate row creation while typing!
 window.syncRemarksData = function(index, textarea) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = textarea.value;
@@ -983,6 +981,7 @@ window.stopScraping = function() {
     if (currentHistoryId) updateRealTimeHistory(scrapedData, false);
 }
 
+// FULL ADVANCED FETCHING LOGIC (Safer, BrokerSnapshot, SMS Portal Email Extraction)
 async function processSingleMCWithDetailedError(mc) {
     try {
         const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
@@ -1013,6 +1012,52 @@ async function processSingleMCWithDetailedError(mc) {
         }
 
         if (record.status !== "AUTHORIZED") return { status: "filtered_out" };
+
+        // Fetch BrokerSnapshot for Vehicles
+        if (record.usdot !== 'N/A') {
+            try {
+                const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
+                const brokerRes = await fetch(brokerSnapshotUrl);
+                if (brokerRes.ok) {
+                    const brokerHtml = await brokerRes.text();
+                    let brokerEl = document.createElement('html');
+                    brokerEl.innerHTML = brokerHtml;
+                    let vehicleList = [];
+                    brokerEl.querySelectorAll('div, span, a, td, th, p').forEach(node => {
+                        let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
+                        if (/^Tractors\s+\d+$/i.test(cleanText)) {
+                            let num = cleanText.match(/\d+/)[0];
+                            let formatted = `Power Only ${num}`;
+                            if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                        } else if (/^Trucks\s+\d+$/i.test(cleanText)) {
+                            let num = cleanText.match(/\d+/)[0];
+                            let formatted = `Box Truck ${num}`;
+                            if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                        } else if (/^Trailers\s+\d+$/i.test(cleanText)) {
+                            let num = cleanText.match(/\d+/)[0];
+                            let formatted = `Trailers ${num}`;
+                            if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
+                        }
+                    });
+                    if (vehicleList.length > 0) record.vehicleType = vehicleList.join(" | ");
+                }
+            } catch (bErr) { console.warn("BrokerSnapshot error:", bErr); }
+
+            // Fetch SMS Portal for Emails
+            try {
+                const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
+                const smsResponse = await fetch(smsUrl);
+                if (smsResponse.ok) {
+                    const smsHtml = await smsResponse.text();
+                    let fullPageEmailMatch = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+                    if (fullPageEmailMatch) {
+                        let validEmail = fullPageEmailMatch.find(e => !e.toLowerCase().includes("fmcsa") && !e.toLowerCase().includes("dot.gov"));
+                        if (validEmail) record.email = validEmail;
+                    }
+                }
+            } catch (smsErr) { console.warn("SMS Portal error:", smsErr); }
+        }
+
         return { status: "success", data: record };
     } catch (err) {
         return { status: "error", message: err.message };
