@@ -325,8 +325,10 @@
     <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbx9W21nM4q5q-bzgzL59qRRtHIOBGCySPTZ1xOJdIWySOkmXcr_wxvvJbL6hBalUcKuVw/exec";
+        // UPDATED GOOGLE SHEETS WEB APP API URL INTEGRATED
+        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbz_mBxdF6a7smKg9M7c3-jPkg0ywUTjt-QWN5jzvnpp1kmrnzFdhqwH8YRLVpBM7UzxyQ/exec";
 
+        // Allowed Users List Verification
         const allowedUsers = {
             "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
             "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
@@ -375,7 +377,7 @@
 
         function verifyAdminPassword() {
             let rawCompanyInput = document.getElementById('adminCompanyInput').value.trim();
-            let companyInput = rawCompanyInput.toLowerCase(); // Case-insensitive mapping
+            let companyInput = rawCompanyInput.toLowerCase();
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
@@ -418,10 +420,11 @@
                 let response = await fetch(GOOGLE_SHEET_API_URL);
                 let data = await response.json();
 
-                // Case-insensitive lookup support for keys returned from Google Sheets
+                let targetClient = currentClient.toLowerCase().trim();
+
                 let findDataKey = (obj) => {
                     if (!obj) return {};
-                    let foundKey = Object.keys(obj).find(k => k.toLowerCase() === currentClient);
+                    let foundKey = Object.keys(obj).find(k => k.toLowerCase().trim() === targetClient);
                     return foundKey ? obj[foundKey] : {};
                 };
 
