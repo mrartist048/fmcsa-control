@@ -325,10 +325,8 @@
     <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // GOOGLE SHEETS WEB APP API URL INTEGRATED
         const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbx9W21nM4q5q-bzgzL59qRRtHIOBGCySPTZ1xOJdIWySOkmXcr_wxvvJbL6hBalUcKuVw/exec";
 
-        // Allowed Users List Verification
         const allowedUsers = {
             "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
             "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
@@ -350,37 +348,18 @@
 
         window.onload = function() {
             let authOverlay = document.getElementById('authOverlay');
-            if (authOverlay) {
-                authOverlay.style.display = 'flex';
-            }
+            if (authOverlay) authOverlay.style.display = 'flex';
             
-            // Initialize Flatpickr Single Calendar with Range Mode Support
             calendarPicker = flatpickr("#unifiedDateRangePicker", {
                 mode: "range",
                 dateFormat: "Y-m-d",
                 defaultDate: [getUSACurrentDate(), getUSACurrentDate()],
                 onChange: function(selectedDates, dateStr, instance) {
-                    if (selectedDates.length === 2) {
+                    if (selectedDates.length >= 1) {
                         filterMode = 'custom';
                         startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                        endDateStr = instance.formatDate(selectedDates[1], "Y-m-d");
-                        
-                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
-                            let b = document.getElementById(id);
-                            if (b) b.classList.remove('active');
-                        });
-                        
-                        renderContent();
-                    } else if (selectedDates.length === 1) {
-                        filterMode = 'custom';
-                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                        endDateStr = startDateStr;
-                        
-                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
-                            let b = document.getElementById(id);
-                            if (b) b.classList.remove('active');
-                        });
-                        
+                        endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
+                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => document.getElementById(id)?.classList.remove('active'));
                         renderContent();
                     }
                 }
@@ -390,17 +369,13 @@
         function togglePasswordVisibility() {
             let passInput = document.getElementById('adminPasswordInput');
             let toggleBtn = document.getElementById('togglePasswordBtn');
-            if (passInput.type === 'password') {
-                passInput.type = 'text';
-                toggleBtn.innerText = '🙈';
-            } else {
-                passInput.type = 'password';
-                toggleBtn.innerText = '👁️';
-            }
+            passInput.type = passInput.type === 'password' ? 'text' : 'password';
+            toggleBtn.innerText = passInput.type === 'password' ? '👁️' : '🙈';
         }
 
         function verifyAdminPassword() {
-            let companyInput = document.getElementById('adminCompanyInput').value.trim();
+            let rawCompanyInput = document.getElementById('adminCompanyInput').value.trim();
+            let companyInput = rawCompanyInput.toLowerCase(); // Case-insensitive mapping
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
@@ -410,36 +385,23 @@
             if (isValid) {
                 currentClient = companyInput;
                 document.getElementById('authOverlay').style.display = 'none';
-                document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
+                document.getElementById('brandTitle').innerText = rawCompanyInput.toUpperCase();
                 setDateFilterPreset('today');
-                fetchAdminData(); // Fetch from Google Sheets
+                fetchAdminData();
             } else {
                 errorMsg.style.display = 'block';
                 document.getElementById('adminPasswordInput').style.borderColor = '#dc2626';
             }
         }
 
-        function handlePasswordKeypress(e) {
-            if (e.key === 'Enter') {
-                verifyAdminPassword();
-            }
-        }
-
-        function toggleSidebar() {
-            let sidebar = document.getElementById('appSidebar');
-            let overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        }
+        function handlePasswordKeypress(e) { if (e.key === 'Enter') verifyAdminPassword(); }
+        function toggleSidebar() { document.getElementById('appSidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
 
         function getUSACurrentDate() {
             try {
-                let options = { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' };
-                let formatter = new Intl.DateTimeFormat('en-CA', options);
-                return formatter.format(new Date());
+                return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             } catch (e) {
-                let now = new Date();
-                return now.toISOString().split('T')[0];
+                return new Date().toISOString().split('T')[0];
             }
         }
 
@@ -448,7 +410,6 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // FETCH DATA FROM GOOGLE SHEETS WEB APP API
         async function fetchAdminData() {
             if (!currentClient) return;
             document.getElementById('adminBodyContent').innerHTML = `<p style="text-align: center; color: #64748b; padding: 40px;">Fetching records from Google Sheets...</p>`;
@@ -457,23 +418,28 @@
                 let response = await fetch(GOOGLE_SHEET_API_URL);
                 let data = await response.json();
 
-                globalSessions = data.sessions?.[currentClient] || {};
-                globalReports = data.shift_reports?.[currentClient] || {};
-                globalCallLogs = data.call_logs?.[currentClient] || {};
+                // Case-insensitive lookup support for keys returned from Google Sheets
+                let findDataKey = (obj) => {
+                    if (!obj) return {};
+                    let foundKey = Object.keys(obj).find(k => k.toLowerCase() === currentClient);
+                    return foundKey ? obj[foundKey] : {};
+                };
+
+                globalSessions = findDataKey(data.sessions);
+                globalReports = findDataKey(data.shift_reports);
+                globalCallLogs = findDataKey(data.call_logs);
 
                 renderContent();
             } catch (err) {
                 console.error("Error fetching data from Google Sheets:", err);
-                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #dc2626; text-align: center; padding: 40px;">Failed to load data from Google Sheets. Please check your Web App deployment.</p>`;
+                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #dc2626; text-align: center; padding: 40px;">Failed to load data from Google Sheets.</p>`;
             }
         }
 
         function switchTab(tab) {
             activeTab = tab;
             document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
-            let activeBtnElem = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
-            if (activeBtnElem) activeBtnElem.classList.add('active');
-            
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1))?.classList.add('active');
             if(window.innerWidth <= 900) toggleSidebar();
 
             let filterBar = document.getElementById('filterBar');
@@ -491,8 +457,6 @@
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
-                exportBtn.innerText = "📥 Export CSV";
-                exportBtn.onclick = exportCSV;
             } else if (tab === 'audit') {
                 pageTitle.innerText = "Audit Trail & Logs";
                 filterBar.style.display = 'flex';
@@ -504,44 +468,24 @@
 
         function setOnlineFilter(mode) {
             onlineFilterMode = mode;
-            ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => {
-                let b = document.getElementById(id);
-                if (b) b.classList.remove('active');
-            });
-            let activeBtn = document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1));
-            if (activeBtn) activeBtn.classList.add('active');
+            ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+            document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1))?.classList.add('active');
             renderContent();
         }
 
         function setDateFilterPreset(preset) {
             filterMode = preset;
             let currentUSAToday = getUSACurrentDate();
+            ['presetToday', 'presetWeek', 'presetAll'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+            document.getElementById('preset' + preset.charAt(0).toUpperCase() + preset.slice(1))?.classList.add('active');
 
-            ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
-                let b = document.getElementById(id);
-                if (b) b.classList.remove('active');
-            });
-
-            let activeBtn = document.getElementById('preset' + preset.charAt(0).toUpperCase() + preset.slice(1));
-            if (activeBtn) activeBtn.classList.add('active');
-
-            if (preset === 'today') {
-                startDateStr = currentUSAToday; endDateStr = currentUSAToday;
-            } else if (preset === 'week') {
+            if (preset === 'today') { startDateStr = currentUSAToday; endDateStr = currentUSAToday; }
+            else if (preset === 'week') {
                 let past = new Date(currentUSAToday); past.setDate(past.getDate() - 6);
                 startDateStr = past.toISOString().split('T')[0]; endDateStr = currentUSAToday;
-            } else if (preset === 'all') {
-                startDateStr = "2020-01-01"; endDateStr = "2030-12-31";
-            }
+            } else if (preset === 'all') { startDateStr = "2020-01-01"; endDateStr = "2030-12-31"; }
 
-            if (calendarPicker) {
-                if (preset === 'all') {
-                    calendarPicker.clear();
-                } else {
-                    calendarPicker.setDate([startDateStr, endDateStr], true);
-                }
-            }
-
+            if (calendarPicker && preset !== 'all') calendarPicker.setDate([startDateStr, endDateStr], true);
             renderContent();
         }
 
@@ -555,17 +499,15 @@
         function openSummaryModal() {
             let modal = document.getElementById('summaryModal');
             let body = document.getElementById('modalSummaryBody');
-            
             let totalCallsAll = 0, totalSalesAll = 0;
             let agentSummary = {};
 
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
-                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date)) : [];
+                if (!Array.isArray(logs)) logs = Object.values(logs);
+                let filteredLogs = logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date));
                 let sales = filteredLogs.filter(l => String(l.Status || l.status) === 'Sale Closed').length;
-                
                 agentSummary[name] = { calls: filteredLogs.length, sales: sales };
                 totalCallsAll += filteredLogs.length;
                 totalSalesAll += sales;
@@ -585,10 +527,7 @@
         }
 
         function closeSummaryModal() { document.getElementById('summaryModal').style.display = 'none'; }
-        function copySummaryText() {
-            navigator.clipboard.writeText(document.getElementById('modalSummaryBody').innerText);
-            alert("Summary copied to clipboard!");
-        }
+        function copySummaryText() { navigator.clipboard.writeText(document.getElementById('modalSummaryBody').innerText); alert("Summary copied!"); }
 
         function renderContent() {
             let container = document.getElementById('adminBodyContent');
@@ -645,9 +584,6 @@
                                 <span>Login Time: <b>${uData.LoginTime || uData.loginTime || 'N/A'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
-                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                                <span>Last Sync: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
-                            </div>
                         </div>`;
                 });
 
@@ -664,8 +600,8 @@
 
                 allAgents.forEach(name => {
                     let logs = globalCallLogs[name] || [];
-                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date)) : [];
+                    if (!Array.isArray(logs)) logs = Object.values(logs);
+                    let filteredLogs = logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date));
 
                     let datesMap = {};
                     filteredLogs.forEach(l => {
@@ -773,8 +709,8 @@
 
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
-                if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date)) : [];
+                if (!Array.isArray(logs)) logs = Object.values(logs);
+                let filteredLogs = logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date));
 
                 let datesMap = {};
                 filteredLogs.forEach(l => {
