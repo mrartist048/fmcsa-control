@@ -218,7 +218,7 @@
             <div class="auth-icon">🏢</div>
             <h2>Company Admin Portal</h2>
             <p>Enter your Company Name and Admin Password to view your designated agents.</p>
-            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchloadify, Gslogisticsdispatch)">
+            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. testinguser)">
             
             <!-- PASSWORD FIELD WITH SHOW/HIDE TOGGLE ICON -->
             <div class="password-container">
@@ -301,7 +301,6 @@
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
                     <span>Custom Range / Single Date:</span>
-                    <!-- SINGLE MODERN CALENDAR INPUT -->
                     <input type="text" id="unifiedDateRangePicker" class="single-range-input" placeholder="Select date or range...">
                 </div>
             </div>
@@ -322,13 +321,12 @@
         </div>
     </div>
 
-    <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
+    <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // UPDATED GOOGLE SHEETS WEB APP API URL INTEGRATED
-        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxIAmBESr-S2XH-Ck8d30_HQfMdxwFhPI2KW9XhrPyXAdlO-lnek6BBzXT6FKsE3RjBMg/exec";
+        // GOOGLE SHEETS WEB APP API URL UPDATED
+        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbz_mBxdF6a7smKg9M7c3-jPkg0ywUTjt-QWN5jzvnpp1kmrnzFdhqwH8YRLVpBM7UzxyQ/exec";
 
-        // Allowed Users List Verification
         const allowedUsers = {
             "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
             "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
@@ -422,15 +420,10 @@
 
                 let targetClient = currentClient.toLowerCase().trim();
 
-                let findDataKey = (obj) => {
-                    if (!obj) return {};
-                    let foundKey = Object.keys(obj).find(k => k.toLowerCase().trim() === targetClient);
-                    return foundKey ? obj[foundKey] : {};
-                };
-
-                globalSessions = findDataKey(data.sessions);
-                globalReports = findDataKey(data.shift_reports);
-                globalCallLogs = findDataKey(data.call_logs);
+                // Safe extraction matching Google Sheets doGet output structure
+                globalSessions = data.sessions?.[targetClient] || {};
+                globalReports = data.shift_reports?.[targetClient] || {};
+                globalCallLogs = data.call_logs?.[targetClient] || {};
 
                 renderContent();
             } catch (err) {
@@ -509,7 +502,7 @@
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
                 if (!Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date));
+                let filteredLogs = logs.filter(l => isDateInRange(l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date));
                 let sales = filteredLogs.filter(l => String(l.Status || l.status) === 'Sale Closed').length;
                 agentSummary[name] = { calls: filteredLogs.length, sales: sales };
                 totalCallsAll += filteredLogs.length;
@@ -547,7 +540,7 @@
                         if (Array.isArray(records) && records.length > 0) {
                             let latest = records[records.length - 1];
                             let name = latest.Agent || latest.agent || key;
-                            uniqueUsers[name] = { ...latest, resolvedName: name, lastActive: Number(latest.Timestamp || latest.timestamp || 0) };
+                            uniqueUsers[name] = { ...latest, resolvedName: name, lastActive: new Date(latest.Timestamp || latest.timestamp || 0).getTime() || Number(latest.Timestamp || 0) };
                         }
                     });
                 }
@@ -566,7 +559,7 @@
                     let uData = uniqueUsers[nameKey];
                     let displayName = uData.resolvedName || nameKey;
                     let lastActiveTime = uData.lastActive || 0;
-                    let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
+                    let isOnline = lastActiveTime && (now - lastActiveTime < 300000); // 5 mins threshold
 
                     let inactiveMs = now - lastActiveTime;
                     let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Never Active';
@@ -584,7 +577,7 @@
                                 <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; gap: 8px; flex-wrap: wrap;">
-                                <span>Login Time: <b>${uData.LoginTime || uData.loginTime || 'N/A'}</b></span>
+                                <span>Login Time: <b>${uData.Shift_Date || uData.Timestamp || 'N/A'}</b></span>
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
                         </div>`;
@@ -604,11 +597,11 @@
                 allAgents.forEach(name => {
                     let logs = globalCallLogs[name] || [];
                     if (!Array.isArray(logs)) logs = Object.values(logs);
-                    let filteredLogs = logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date));
+                    let filteredLogs = logs.filter(l => isDateInRange(l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date));
 
                     let datesMap = {};
                     filteredLogs.forEach(l => {
-                        let rawDate = l.ShiftDate || l.shiftDate || l.Date || l.date || startDateStr;
+                        let rawDate = l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date || startDateStr;
                         let d = String(rawDate).substring(0, 10);
                         if (!datesMap[d]) datesMap[d] = [];
                         datesMap[d].push(l);
@@ -665,8 +658,8 @@
                         if (Array.isArray(records)) {
                             records.forEach(r => {
                                 let name = r.Agent || r.agent || key;
-                                let loginTimeStr = r.LoginTime || r.loginTime || 'N/A';
-                                let lastActiveTs = Number(r.Timestamp || r.timestamp || 0);
+                                let loginTimeStr = r.Shift_Date || r.Timestamp || 'N/A';
+                                let lastActiveTs = new Date(r.Timestamp || 0).getTime() || 0;
 
                                 if (!agentAuditMap[name]) {
                                     agentAuditMap[name] = { loginTimeStr: loginTimeStr, lastActiveTs: lastActiveTs };
@@ -688,7 +681,7 @@
                 auditKeys.forEach(name => {
                     let data = agentAuditMap[name];
                     let lastActiveTime = data.lastActiveTs ? new Date(data.lastActiveTs).toLocaleTimeString() : 'N/A';
-                    let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
+                    let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 300000);
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Active</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
 
                     html += `
@@ -697,7 +690,7 @@
                                 <b style="font-size: 15px; color: #0f172a;">👤 ${name}</b> ${badge}
                             </div>
                             <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
-                                <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
+                                <span>⏰ Login Record: <b>${data.loginTimeStr}</b></span>
                                 <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
                             </div>
                         </div>`;
@@ -713,11 +706,11 @@
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
                 if (!Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = logs.filter(l => isDateInRange(l.ShiftDate || l.shiftDate || l.Date || l.date));
+                let filteredLogs = logs.filter(l => isDateInRange(l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date));
 
                 let datesMap = {};
                 filteredLogs.forEach(l => {
-                    let rawDate = l.ShiftDate || l.shiftDate || l.Date || l.date || startDateStr;
+                    let rawDate = l.Shift_Date || l.ShiftDate || l.shiftDate || l.Date || l.date || startDateStr;
                     let d = String(rawDate).substring(0, 10);
                     if (!datesMap[d]) datesMap[d] = [];
                     datesMap[d].push(l);
