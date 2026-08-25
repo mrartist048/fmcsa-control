@@ -62,15 +62,21 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== GOOGLE SHEETS SYNC INTEGRATION ======
-async function syncLeadToGoogleSheet(record) {
+// ====== GOOGLE SHEETS SYNC INTEGRATION (UPDATED) ======
+async function syncLeadToGoogleSheet(record, callStatus = "Scraped", remarksText = "") {
     if (!GOOGLE_SHEET_API_URL) return;
     try {
         await fetch(GOOGLE_SHEET_API_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...record, client: currentClient, dispatcher: dispatcherNickname })
+            body: JSON.stringify({
+                ...record,
+                client: currentClient,
+                dispatcher: dispatcherNickname,
+                status: callStatus || record.status,
+                remarks: remarksText || record.remarks || ""
+            })
         });
     } catch (e) {
         console.error("Google Sheet Sync Error:", e);
@@ -1081,6 +1087,7 @@ let activeCallPhone = null;
 let pendingReviewPhone = null;
 let activeCallCellElement = null;
 
+// ====== CALL LOG & DISPOSITION SYNC (UPDATED) ======
 window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispositionStatus) {
     if (!phoneNum || phoneNum === 'N/A') return;
     
@@ -1097,6 +1104,12 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
+
+    // Find corresponding scraped lead and sync updated status to Google Sheet
+    let matchedRecord = scrapedData.find(r => r.phone === phoneNum);
+    if (matchedRecord) {
+        syncLeadToGoogleSheet(matchedRecord, dispositionStatus, matchedRecord.remarks);
+    }
 
     try {
         let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
@@ -2271,8 +2284,8 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                 let record = result.data;
                 scrapedData.push(record);
                 
-                // Sync lead to Google Sheet instantly
-                syncLeadToGoogleSheet(record);
+                // Sync lead to Google Sheet instantly with Client & Dispatcher info
+                syncLeadToGoogleSheet(record, "AUTHORIZED", record.remarks);
 
                 let recordIndex = scrapedData.length - 1;
                 updateRealTimeHistory(scrapedData, false);
