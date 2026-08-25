@@ -12,8 +12,7 @@
 })();
 
 // ====== GOOGLE SHEETS API CONFIGURATION ======
-// Apna Google Apps Script Web App URL yahan paste karein:
-const GOOGLE_SHEET_API_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbx18Pg5Uxn7grnQElHJ6dErltf6CKT1oJvj4C0ISXFI8X7OqsnE8jUOL5fqM1_2TRnWaA/exec";
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
@@ -49,9 +48,9 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// Sync data to Google Sheets
+// Sync data directly to Google Sheets
 async function syncLeadToGoogleSheet(record) {
-    if (!GOOGLE_SHEET_API_URL || GOOGLE_SHEET_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) return;
+    if (!GOOGLE_SHEET_API_URL) return;
     try {
         await fetch(GOOGLE_SHEET_API_URL, {
             method: 'POST',
@@ -281,7 +280,7 @@ window.startScraping = async function() {
             let record = result.data;
             scrapedData.push(record);
             
-            // Sync with Google Sheet instantly
+            // Sync lead directly to Google Sheet
             syncLeadToGoogleSheet(record);
 
             let tableBody = document.getElementById('resultsTable');
