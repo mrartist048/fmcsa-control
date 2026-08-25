@@ -19,6 +19,7 @@ const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.c
 const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
+
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28", dbUrl: FIREBASE_DB_URL_1 },    
@@ -32,8 +33,10 @@ const allowedUsers = {
 };
 
 const MASTER_ADMIN_PASS = "admin890";
+
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
+// DYNAMIC FIREBASE URL SELECTOR
 const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
     ? allowedUsers[currentClient].dbUrl 
     : FIREBASE_DB_URL_1;
@@ -59,7 +62,7 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== GOOGLE SHEETS SYNC INTEGRATION ======
+// ====== GOOGLE SHEETS SYNC INTEGRATION (MAPPED) ======
 async function syncLeadToGoogleSheet(record, callStatus = "Scraped", remarksText = "") {
     if (!GOOGLE_SHEET_API_URL) return;
     try {
@@ -87,6 +90,7 @@ async function syncLeadToGoogleSheet(record, callStatus = "Scraped", remarksText
     }
 }
 
+// ====== AUTOMATIC 7-DAY DATA CLEANUP FUNCTION ======
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
     let now = Date.now();
@@ -219,10 +223,8 @@ window.processLogin = function() {
 
     localStorage.setItem("dl_logged_client", uInput);
     currentClient = uInput;
-    
     let overlay = document.getElementById('dlLoginOverlay');
     if (overlay) overlay.remove();
-
     window.location.reload();
 };
 
@@ -525,8 +527,8 @@ function injectHistoryUIFramework() {
                     <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
+                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
                 </div>
             </div>
         `;
@@ -554,6 +556,8 @@ function injectHistoryUIFramework() {
         document.body.appendChild(dModal);
     }
 
+    injectAdvancedFilterBar();
+
     let tableHeader = document.querySelector('table tr');
     if (tableHeader && !document.getElementById('remarksHeaderCol')) {
         let vehTh = document.createElement('th');
@@ -572,6 +576,182 @@ function injectHistoryUIFramework() {
         tableHeader.appendChild(remTh);
         tableHeader.appendChild(followTh);
     }
+
+    injectEmailProposalPanel();
+}
+
+function injectAdvancedFilterBar() {
+    let table = document.querySelector('table');
+    if (!table || document.getElementById('advancedFilterWrapper')) return;
+
+    let filterDiv = document.createElement('div');
+    filterDiv.id = 'advancedFilterWrapper';
+    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
+    filterDiv.innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
+                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold;" onchange="applyAdvancedFilters()">
+                    <option value="">All States</option>
+                </select>
+            </div>
+            <div style="position: relative; display: inline-block;">
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px;">
+                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
+                    <div id="vehicleCheckboxList"></div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
+                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
+            </div>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
+        </div>
+        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
+            📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
+        </div>
+    `;
+    table.parentNode.insertBefore(filterDiv, table);
+    populateStateDropdown();
+    populateVehicleTypeCheckboxes();
+}
+
+window.toggleVehicleDropdown = function(e) {
+    e.stopPropagation();
+    let dropdown = document.getElementById('vehicleTypeDropdownContent');
+    if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+};
+
+function populateStateDropdown() {
+    let select = document.getElementById('stateDropdownSelect');
+    if (!select) return;
+    let stateCounts = {};
+    if (typeof scrapedData !== 'undefined' && scrapedData.length > 0) {
+        scrapedData.forEach(r => {
+            let addr = (r.address || "").toUpperCase();
+            for (let code in usStatesMap) {
+                let stateRegex = new RegExp(`\\b${code}\\b(?=\\s+\\d{5}(-\\d{4})?)`);
+                if (stateRegex.test(addr)) {
+                    stateCounts[code] = (stateCounts[code] || 0) + 1;
+                    break;
+                }
+            }
+        });
+    }
+    let currentVal = select.value;
+    select.innerHTML = '<option value="">All States</option>';
+    Object.keys(usStatesMap).forEach(code => {
+        if (stateCounts[code]) {
+            let opt = document.createElement('option');
+            opt.value = code;
+            opt.textContent = `${usStatesMap[code]} (${code}) - ${stateCounts[code]}`;
+            select.appendChild(opt);
+        }
+    });
+    select.value = currentVal;
+}
+
+function populateVehicleTypeCheckboxes() {
+    let container = document.getElementById('vehicleCheckboxList');
+    if (!container) return;
+    let fixedTypes = ["Box Truck", "Power Only", "Trailers"];
+    let html = "";
+    fixedTypes.forEach(vType => {
+        html += `<label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:6px; cursor:pointer;"><input type="checkbox" value="${vType}" onchange="applyAdvancedFilters()"> ${vType}</label>`;
+    });
+    container.innerHTML = html;
+}
+
+window.applyAdvancedFilters = function() {
+    let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
+    let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
+    let selectedVehicles = [];
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
+        selectedVehicles.push(cb.value.toLowerCase());
+    });
+
+    let rows = document.querySelectorAll('#resultsTable tr');
+    let visibleCount = 0;
+    rows.forEach(row => {
+        let mcText = (row.cells[0]?.textContent || "").toLowerCase();
+        let nameText = (row.cells[2]?.textContent || "").toLowerCase();
+        let phoneText = (row.cells[5]?.textContent || "").toLowerCase();
+        let addressText = (row.cells[6]?.textContent || "").toUpperCase();
+        let vehicleText = (row.cells[9]?.textContent || "").toLowerCase();
+
+        let matchesState = selectedState === "" || new RegExp(`\\b${selectedState}\\b`).test(addressText);
+        let matchesSearch = searchQuery === "" || mcText.includes(searchQuery) || nameText.includes(searchQuery) || phoneText.includes(searchQuery);
+        let matchesVehicle = selectedVehicles.length === 0 || selectedVehicles.some(sel => vehicleText.includes(sel));
+
+        if (matchesState && matchesSearch && matchesVehicle) {
+            row.style.display = "";
+            visibleCount++;
+        } else {
+            row.style.display = "none";
+        }
+    });
+    let badge = document.getElementById('visibleRecordCountBadge');
+    if (badge) badge.innerText = visibleCount;
+};
+
+window.resetAdvancedFilters = function() {
+    document.getElementById('stateDropdownSelect').value = "";
+    document.getElementById('universalSearchInput').value = "";
+    document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    applyAdvancedFilters();
+};
+
+function injectEmailProposalPanel() {
+    let table = document.querySelector('table');
+    if (!table || document.getElementById('premiumProposalWrapper')) return;
+
+    let savedSubject = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Service Proposal";
+    let savedBody = localStorage.getItem(`dl_body_${currentClient}`) || "Hello,\n\nWe found your profile via FMCSA. We offer dispatching services at 5% rate.\n\nBest Regards.";
+
+    let proposalPanel = document.createElement('div');
+    proposalPanel.id = 'premiumProposalWrapper';
+    proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif;";
+    proposalPanel.innerHTML = `
+        <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
+            <span style="font-size: 12px; font-weight: bold;">⚙️ Click to Edit</span>
+        </div>
+        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
+            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px;"></div>
+            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px;">${savedBody}</textarea></div>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
+        </div>
+    `;
+    table.parentNode.insertBefore(proposalPanel, table);
+}
+
+window.saveProposalTemplateSettings = function() {
+    localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
+    localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('propBodyInput').value);
+    alert("Template saved successfully.");
+    document.getElementById('proposalInputsBlock').style.display = 'none';
+};
+
+window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
+    if (!emailAddress || emailAddress === 'N/A') return;
+    let subj = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Proposal";
+    let body = localStorage.getItem(`dl_body_${currentClient}`) || "Hello";
+    let customizedBody = body.replace(/{company}/gi, companyName);
+    window.open(`mailto:${emailAddress}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(customizedBody)}`, '_blank');
+};
+
+function buildEmailCellMarkup(emailAddress, companyName) {
+    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
+    let escapedName = companyName.replace(/'/g, "\\'");
+    return `
+        <td style="position: relative; vertical-align: middle;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span style="color: #002d62; font-weight: bold;">${emailAddress}</span>
+                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📤 Send</a>
+            </div>
+        </td>
+    `;
 }
 
 let activeCallPhone = null;
@@ -725,7 +905,6 @@ window.confirmFollowUpSchedule = function() {
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    // Sync to Google Sheet on Follow Up
     syncLeadToGoogleSheet(record, "Follow up", record.remarks);
     showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up`, 3500);
 
@@ -761,12 +940,11 @@ window.remarksBlur = function(index, textarea) {
     }
 };
 
-// FIXED: Using onchange/blur instead of oninput to prevent duplicate row creation while typing!
+// FIXED: Using onchange instead of oninput to prevent duplicate row entries while typing!
 window.syncRemarksData = function(index, textarea) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = textarea.value;
         updateRealTimeHistory(scrapedData, false);
-        // Sync to Google Sheet only when typing finishes (onchange)
         syncLeadToGoogleSheet(scrapedData[index], scrapedData[index].status, textarea.value);
     }
 };
@@ -805,7 +983,7 @@ window.stopScraping = function() {
     if (currentHistoryId) updateRealTimeHistory(scrapedData, false);
 }
 
-async function processSingleMCWithDetailedError(mc, statusBox) {
+async function processSingleMCWithDetailedError(mc) {
     try {
         const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
         const response = await fetch(snapshotUrl);
@@ -861,11 +1039,10 @@ window.startScraping = async function() {
             let record = result.data;
             scrapedData.push(record);
             
-            // Sync lead to Google Sheet instantly once per lead
             syncLeadToGoogleSheet(record, "AUTHORIZED", record.remarks);
 
             let recordIndex = scrapedData.length - 1;
-            let emailCellMarkup = `<td style="color:#002d62; font-weight:bold;">${record.email}</td>`;
+            let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
             let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
 
             let newRow = document.createElement('tr');
@@ -887,6 +1064,9 @@ window.startScraping = async function() {
             `;
             tableBody.appendChild(newRow);
         }
+        populateStateDropdown();
+        populateVehicleTypeCheckboxes();
+        applyAdvancedFilters();
         await new Promise(r => setTimeout(r, 200));
     }
     scraping = false;
