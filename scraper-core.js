@@ -18,7 +18,7 @@ const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
 // ====== GOOGLE SHEETS WEB APP ENDPOINT (DATA STORAGE) ======
 // Replace this URL with your deployed Google Apps Script Web App URL
-const GOOGLE_SHEETS_WEB_APP_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx18Pg5Uxn7grnQElHJ6dErltf6CKT1oJvj4C0ISXFI8X7OqsnE8jUOL5fqM1_2TRnWaA/exec";
 
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
