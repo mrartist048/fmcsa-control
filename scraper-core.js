@@ -5,7 +5,7 @@
     if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
-        document.head.appendChild(link); 
+        document.head.appendChild(link);
     }
     link.type = 'image/png';
     link.href = faviconUrl;
@@ -16,8 +16,6 @@ const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.c
 const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-// ====== GOOGLE SHEETS WEB APP ENDPOINT (DATA STORAGE) ======
-const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxQWGQ1UXjypGoHmmB93n41KyCMMaP2MzbvZaaU9c-CdTHOWkP0LOb_hHXbpy3amEBUPg/exec";
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
@@ -61,28 +59,13 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== GOOGLE SHEETS SYNC FUNCTION ======
-async function syncDataToGoogleSheets(actionType, payload) {
-    if (!GOOGLE_SHEETS_WEB_APP_URL || GOOGLE_SHEETS_WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return null;
-    try {
-        let response = await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
-            method: 'POST',
-            mode: 'cors',
-            body: JSON.stringify({ client: currentClient, action: actionType, data: payload })
-        });
-        return await response.json();
-    } catch (e) {
-        console.error("Google Sheets Sync Failed:", e);
-        return null;
-    }
-}
-
 // ====== AUTOMATIC 7-DAY DATA CLEANUP FUNCTION ======
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
     let now = Date.now();
-    let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000; 
+    let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000; // 7 Days
 
+    // 1. Clean LocalStorage Call Logs older than 7 days
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     let filteredLogs = callLogs.filter(log => {
@@ -91,6 +74,30 @@ async function performAutomaticDataCleanup() {
     });
     if (filteredLogs.length !== callLogs.length) {
         localStorage.setItem(storageKey, JSON.stringify(filteredLogs));
+    }
+
+    // 2. Clean Firebase Call Logs older than 7 days
+    try {
+        if (dispatcherNickname) {
+            let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+            let callLogUrl = `${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`;
+            let res = await fetch(callLogUrl);
+            let remoteLogs = await res.json();
+            if (Array.isArray(remoteLogs)) {
+                let freshRemoteLogs = remoteLogs.filter(log => {
+                    let logTime = new Date(log.date).getTime();
+                    return !isNaN(logTime) && (now - logTime) < sevenDaysInMillis;
+                });
+                if (freshRemoteLogs.length !== remoteLogs.length) {
+                    await fetch(callLogUrl, {
+                        method: 'PUT',
+                        body: JSON.stringify(freshRemoteLogs)
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Auto cleanup call logs failed:", e);
     }
 }
 
@@ -312,6 +319,7 @@ function initializeAccessControl() {
     setupDispatcherIdentity();
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
+    // Run automatic cleanup on startup
     performAutomaticDataCleanup();
 
     checkGlobalSessions();
@@ -1055,37 +1063,32 @@ let activeCallPhone = null;
 let pendingReviewPhone = null;
 let activeCallCellElement = null;
 
-function findLeadDataByPhone(phoneNum) {
-    if (typeof scrapedData === 'undefined') return {};
-    return scrapedData.find(r => r.phone === phoneNum) || {};
-}
-
-// ====== GOOGLE SHEETS ONLY CALL LOGGING FUNCTION (FIREBASE PUT REMOVED) ======
 window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispositionStatus) {
     if (!phoneNum || phoneNum === 'N/A') return;
     
-    let lead = findLeadDataByPhone(phoneNum);
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
     let logEntry = {
-        timestamp: new Date().toLocaleString(),
-        company: currentClient,
-        agent: dispatcherNickname,
-        mc: lead.mc || 'N/A',
-        companyName: lead.name || 'N/A',
         phone: phoneNum,
-        email: lead.email || 'N/A',
-        status: dispositionStatus,
-        remarks: lead.remarks || '',
-        shiftDate: getCurrentShiftDateKey()
+        dispatcher: dispatcherNickname,
+        shiftDate: getCurrentShiftDateKey(),
+        date: new Date().toLocaleString(),
+        status: dispositionStatus 
     };
     
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Firebase Call Log PUT removed completely to save bandwidth. Data goes directly to Google Sheets.
-    syncDataToGoogleSheets('logCall', logEntry);
+    try {
+        let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+        await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
+            method: 'PUT',
+            body: JSON.stringify(callLogs)
+        });
+    } catch (e) {
+        console.error("Failed to sync call log to DB:", e);
+    }
 
     showPremiumNotification(`✅ Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
 
@@ -1156,6 +1159,7 @@ window.openAdminPanelPrompt = function() {
     window.open('admin.html', '_blank');
 };
 
+// ====== INSTANT COLOR CHANGE & CALL/COPY HANDLERS ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1271,31 +1275,7 @@ window.confirmFollowUpSchedule = function() {
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    // ====== LOG FOLLOW-UP TO GOOGLE SHEETS ONLY (FIREBASE PUT REMOVED) ======
-    let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
-    let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    let logEntry = {
-        timestamp: new Date().toLocaleString(),
-        company: currentClient,
-        agent: dispatcherNickname,
-        mc: record.mc || 'N/A',
-        companyName: record.name || 'N/A',
-        phone: record.phone || 'N/A',
-        email: record.email || 'N/A',
-        status: "Follow up",
-        remarks: record.remarks || '',
-        shiftDate: getCurrentShiftDateKey()
-    };
-    
-    callLogs.push(logEntry);
-    localStorage.setItem(storageKey, JSON.stringify(callLogs));
-
-    // Save only to Google Sheets, skipping Firebase call log bandwidth
-    syncDataToGoogleSheets('logCall', logEntry);
-    // ===============================================================
-
-    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up & Logged to Sheet!`, 3500);
+    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
@@ -2245,13 +2225,11 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     }
 
     let effectiveStart = start;
-    if (scrapedData.length > 0 && overrideStart === null) {
+    if (scrapedData.length > 0) {
         let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
         if (!isNaN(maxScannedMc) && maxScannedMc >= start && maxScannedMc < end) {
             effectiveStart = maxScannedMc + 1;
         }
-    } else if (overrideStart !== null) {
-        effectiveStart = overrideStart;
     }
 
     for (let mc = effectiveStart; mc <= end; mc++) {
