@@ -17,7 +17,7 @@ const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
 // ====== GOOGLE SHEETS WEB APP ENDPOINT (DATA STORAGE) ======
-const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx18Pg5Uxn7grnQElHJ6dErltf6CKT1oJvj4C0ISXFI8X7OqsnE8jUOL5fqM1_2TRnWaA/exec";
+const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx3E6dn5r9AdB8dg7-Q-DDG99Vf5WIHvekTGpxYIVsOp3EwxN3t6J2UgJeB6gn13uj51Q/exec";
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
 const allowedUsers = {
