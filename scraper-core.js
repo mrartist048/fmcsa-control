@@ -32,7 +32,6 @@ const allowedUsers = {
 };
 
 const MASTER_ADMIN_PASS = "admin890";
-
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
 const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
@@ -438,21 +437,29 @@ function injectHistoryUIFramework() {
         styleTag.innerHTML = `
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
-            table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
-            table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
-            .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
-            .remarks-input-field { width: 100% !important; height: 38px !important; border: 1px solid #b6ccfe !important; border-radius: 6px !important; padding: 6px 10px !important; font-size: 12px !important; box-sizing: border-box !important; color: #222 !important; background: #fafafa !important; resize: none !important; font-family: monospace !important; overflow: hidden !important; transition: height 0.25s ease-in-out; }
-            .remarks-input-field:focus { height: 120px !important; border-color: #002d62 !important; background: #ffffff !important; outline: none !important; overflow-y: auto !important; box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; }
-            .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; margin-left: 5px; }
-            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; cursor: pointer; }
-            .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
-            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; display: block; border-radius: 6px !important; }
+            table.table { width: 100% !important; min-width: 1300px !important; border-collapse: collapse !important; }
+            table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; }
+            
+            /* Clean 1-line phone number layout styling */
+            .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; white-space: nowrap !important; }
+            .phone-clickable-cell { padding: 6px 10px !important; text-align: center !important; cursor: pointer !important; display: inline-block !important; border-radius: 6px !important; white-space: nowrap !important; text-decoration: none !important; }
             .phone-clickable-cell:hover { background-color: #001a3a !important; color: #ffffff !important; }
             .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
-            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; }
+            .phone-cell-content { display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; white-space: nowrap !important; pointer-events: none; }
+            .phone-icon-span { font-size: 13px !important; line-height: 1 !important; }
+            .clickable-phone-text { color: #002d62 !important; font-weight: bold !important; font-size: 12px !important; white-space: nowrap !important; }
+            .phone-hover-copy-icon { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 11px; opacity: 0; cursor: pointer; background: #e2eafc; padding: 2px 4px; border-radius: 3px; }
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
+
+            /* Proper Remarks & Action Column layout to prevent overflow */
+            .remarks-cell-container { min-width: 240px !important; width: 240px !important; position: relative; white-space: normal !important; }
+            .remarks-input-field { width: 100% !important; height: 38px !important; border: 1px solid #b6ccfe !important; border-radius: 6px !important; padding: 6px 10px !important; font-size: 12px !important; box-sizing: border-box !important; color: #222 !important; background: #fafafa !important; resize: none !important; font-family: monospace !important; overflow: hidden !important; transition: height 0.25s ease-in-out; }
+            .remarks-input-field:focus { height: 120px !important; border-color: #002d62 !important; background: #ffffff !important; outline: none !important; overflow-y: auto !important; box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; }
+            
+            .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
+            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; margin-left: 5px; }
+            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 10px; border-radius: 3px; cursor: pointer; white-space: nowrap !important; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -653,7 +660,7 @@ function populateStateDropdown() {
 function populateVehicleTypeCheckboxes() {
     let container = document.getElementById('vehicleCheckboxList');
     if (!container) return;
-    let fixedTypes = ["Box Truck", "Power Only", "Trailers"];
+    let fixedTypes = ["Straight Trucks", "Truck Tractors", "Trailers"];
     let html = "";
     fixedTypes.forEach(vType => {
         html += `<label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:6px; cursor:pointer;"><input type="checkbox" value="${vType}" onchange="applyAdvancedFilters()"> ${vType}</label>`;
@@ -938,7 +945,7 @@ window.remarksBlur = function(index, textarea) {
     }
 };
 
-// FIXED: Using onchange instead of oninput to prevent duplicate row creation while typing!
+// FIXED: Using onchange instead of oninput to prevent duplicate row entries while typing!
 window.syncRemarksData = function(index, textarea) {
     if (scrapedData[index]) {
         scrapedData[index].remarks = textarea.value;
@@ -981,7 +988,7 @@ window.stopScraping = function() {
     if (currentHistoryId) updateRealTimeHistory(scrapedData, false);
 }
 
-// FULL ADVANCED FETCHING LOGIC (Safer, BrokerSnapshot, SMS Portal Email Extraction)
+// FETCHING LOGIC WITH SMS PORTAL VEHICLE & EMAIL EXTRACTION
 async function processSingleMCWithDetailedError(mc) {
     try {
         const snapshotUrl = `https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=${mc}`;
@@ -1013,42 +1020,34 @@ async function processSingleMCWithDetailedError(mc) {
 
         if (record.status !== "AUTHORIZED") return { status: "filtered_out" };
 
-        // Fetch BrokerSnapshot for Vehicles
+        // Fetch SMS Portal (CarrierRegistration.aspx) for Vehicles Breakdown Table & Email
         if (record.usdot !== 'N/A') {
-            try {
-                const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
-                const brokerRes = await fetch(brokerSnapshotUrl);
-                if (brokerRes.ok) {
-                    const brokerHtml = await brokerRes.text();
-                    let brokerEl = document.createElement('html');
-                    brokerEl.innerHTML = brokerHtml;
-                    let vehicleList = [];
-                    brokerEl.querySelectorAll('div, span, a, td, th, p').forEach(node => {
-                        let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
-                        if (/^Tractors\s+\d+$/i.test(cleanText)) {
-                            let num = cleanText.match(/\d+/)[0];
-                            let formatted = `Power Only ${num}`;
-                            if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                        } else if (/^Trucks\s+\d+$/i.test(cleanText)) {
-                            let num = cleanText.match(/\d+/)[0];
-                            let formatted = `Box Truck ${num}`;
-                            if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                        } else if (/^Trailers\s+\d+$/i.test(cleanText)) {
-                            let num = cleanText.match(/\d+/)[0];
-                            let formatted = `Trailers ${num}`;
-                            if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                        }
-                    });
-                    if (vehicleList.length > 0) record.vehicleType = vehicleList.join(" | ");
-                }
-            } catch (bErr) { console.warn("BrokerSnapshot error:", bErr); }
-
-            // Fetch SMS Portal for Emails
             try {
                 const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                 const smsResponse = await fetch(smsUrl);
                 if (smsResponse.ok) {
                     const smsHtml = await smsResponse.text();
+                    let smsEl = document.createElement('html');
+                    smsEl.innerHTML = smsHtml;
+                    
+                    let vehicleList = [];
+                    // Parse Vehicle Breakdown table matching screenshot structure
+                    let rows = smsEl.querySelectorAll('tr');
+                    rows.forEach(tr => {
+                        let cols = tr.querySelectorAll('td');
+                        if (cols.length >= 2) {
+                            let vName = cols[0].textContent.replace(/\s+/g, ' ').trim();
+                            let ownedCount = parseInt(cols[1].textContent.trim()) || 0;
+                            if (ownedCount > 0 && (vName.includes("Truck") || vName.includes("Tractor") || vName.includes("Trailer"))) {
+                                vehicleList.push(`${vName} ${ownedCount}`);
+                            }
+                        }
+                    });
+                    if (vehicleList.length > 0) {
+                        record.vehicleType = vehicleList.join(" | ");
+                    }
+
+                    // Extract Email from SMS Portal
                     let fullPageEmailMatch = smsHtml.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
                     if (fullPageEmailMatch) {
                         let validEmail = fullPageEmailMatch.find(e => !e.toLowerCase().includes("fmcsa") && !e.toLowerCase().includes("dot.gov"));
