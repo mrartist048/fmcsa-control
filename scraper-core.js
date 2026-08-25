@@ -92,29 +92,6 @@ async function performAutomaticDataCleanup() {
     if (filteredLogs.length !== callLogs.length) {
         localStorage.setItem(storageKey, JSON.stringify(filteredLogs));
     }
-
-    try {
-        if (dispatcherNickname) {
-            let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
-            let callLogUrl = `${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`;
-            let res = await fetch(callLogUrl);
-            let remoteLogs = await res.json();
-            if (Array.isArray(remoteLogs)) {
-                let freshRemoteLogs = remoteLogs.filter(log => {
-                    let logTime = new Date(log.date).getTime();
-                    return !isNaN(logTime) && (now - logTime) < sevenDaysInMillis;
-                });
-                if (freshRemoteLogs.length !== remoteLogs.length) {
-                    await fetch(callLogUrl, {
-                        method: 'PUT',
-                        body: JSON.stringify(freshRemoteLogs)
-                    });
-                }
-            }
-        }
-    } catch (e) {
-        console.error("Auto cleanup call logs failed:", e);
-    }
 }
 
 function showLimitExceededModal(message) {
@@ -1083,7 +1060,7 @@ function findLeadDataByPhone(phoneNum) {
     return scrapedData.find(r => r.phone === phoneNum) || {};
 }
 
-// ====== FIXED GOOGLE SHEETS & FIREBASE CALL LOGGING FUNCTION ======
+// ====== GOOGLE SHEETS ONLY CALL LOGGING FUNCTION (FIREBASE PUT REMOVED) ======
 window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispositionStatus) {
     if (!phoneNum || phoneNum === 'N/A') return;
     
@@ -1107,16 +1084,7 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    try {
-        let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
-        await fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
-            method: 'PUT',
-            body: JSON.stringify(callLogs)
-        });
-    } catch (e) {
-        console.error("Failed to sync call log to DB:", e);
-    }
-
+    // Firebase Call Log PUT removed completely to save bandwidth. Data goes directly to Google Sheets.
     syncDataToGoogleSheets('logCall', logEntry);
 
     showPremiumNotification(`✅ Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
@@ -1303,7 +1271,7 @@ window.confirmFollowUpSchedule = function() {
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    // ====== LOG FOLLOW-UP TO GOOGLE SHEETS & FIREBASE CALL LOGS ======
+    // ====== LOG FOLLOW-UP TO GOOGLE SHEETS ONLY (FIREBASE PUT REMOVED) ======
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
@@ -1323,16 +1291,7 @@ window.confirmFollowUpSchedule = function() {
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
-    // Save to Firebase call logs & Google Sheets
-    try {
-        let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
-        fetch(`${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`, {
-            method: 'PUT',
-            body: JSON.stringify(callLogs)
-        });
-    } catch (e) {
-        console.error("Failed to sync follow-up call log to DB:", e);
-    }
+    // Save only to Google Sheets, skipping Firebase call log bandwidth
     syncDataToGoogleSheets('logCall', logEntry);
     // ===============================================================
 
@@ -2285,7 +2244,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         };
     }
 
-    // ====== FIXED RESUME LOGIC (Ensures starting from correct next MC) ======
     let effectiveStart = start;
     if (scrapedData.length > 0 && overrideStart === null) {
         let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
@@ -2295,7 +2253,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     } else if (overrideStart !== null) {
         effectiveStart = overrideStart;
     }
-    // =======================================================================
 
     for (let mc = effectiveStart; mc <= end; mc++) {
         if (!scraping) break;
