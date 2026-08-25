@@ -270,9 +270,6 @@
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
                     <span>📋</span> Shift Reports & Ratios
                 </button>
-                <button onclick="switchTab('audit')" id="tabAudit" class="nav-btn">
-                    <span>📊</span> Audit Trail & Logs
-                </button>
             </div>
         </div>
 
@@ -296,7 +293,7 @@
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS & AUDIT & LEADERBOARD (Only Today & Last 7 Days) -->
+            <!-- FILTERS FOR REPORTS & LEADERBOARD (Only Today & Last 7 Days) -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 USA Date Filter:</span>
@@ -564,11 +561,6 @@
                 exportBtn.style.display = 'block';
                 exportBtn.innerText = "📥 Export CSV";
                 exportBtn.onclick = exportCSV;
-            } else if (tab === 'audit') {
-                pageTitle.innerText = "Audit Trail & Logs";
-                filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'none';
             }
             renderContent();
         }
@@ -837,50 +829,6 @@
                     container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No shift reports found for USA timezone.</p>`;
                     return;
                 }
-                container.innerHTML = html + `</div>`;
-
-            } else if (activeTab === 'audit') {
-                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Audit Trail for <b>${currentClient.toUpperCase()}</b></div><div style="display: flex; flex-direction: column; gap: 12px;">`;
-                let agentAuditMap = {};
-
-                if (globalSessions) {
-                    Object.keys(globalSessions).forEach(key => {
-                        let sObj = globalSessions[key];
-                        let name = sObj?.nickname || sObj?.name || key;
-                        let loginTimeStr = sObj?.loginTime || 'N/A';
-                        let lastActiveTs = sObj?.timestamp || sObj?.lastActive || 0;
-
-                        if (!agentAuditMap[name]) {
-                            agentAuditMap[name] = { loginTimeStr: loginTimeStr, lastActiveTs: lastActiveTs };
-                        } else if (lastActiveTs > agentAuditMap[name].lastActiveTs) {
-                            agentAuditMap[name].lastActiveTs = lastActiveTs;
-                        }
-                    });
-                }
-
-                let auditKeys = Object.keys(agentAuditMap);
-                if (auditKeys.length === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No audit logs found.</p>`;
-                    return;
-                }
-
-                auditKeys.forEach(name => {
-                    let data = agentAuditMap[name];
-                    let lastActiveTime = data.lastActiveTs ? new Date(data.lastActiveTs).toLocaleTimeString() : 'N/A';
-                    let isOnline = data.lastActiveTs && (now - data.lastActiveTs < 120000);
-                    let badge = isOnline ? `<span class="badge badge-online">🟢 Active</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
-
-                    html += `
-                        <div class="card" style="border-left: 4px solid ${isOnline ? '#16a34a' : '#64748b'}; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
-                            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                                <b style="font-size: 15px; color: #0f172a;">👤 ${name}</b> ${badge}
-                            </div>
-                            <div style="font-size: 12px; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
-                                <span>⏰ Login Time: <b>${data.loginTimeStr}</b></span>
-                                <span>⏱️ Last Activity: <b>${lastActiveTime}</b></span>
-                            </div>
-                        </div>`;
-                });
                 container.innerHTML = html + `</div>`;
             }
         }
