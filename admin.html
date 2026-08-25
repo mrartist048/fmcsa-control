@@ -415,12 +415,16 @@
             document.getElementById('adminBodyContent').innerHTML = `<p style="text-align: center; color: #64748b; padding: 40px;">Fetching records from Google Sheets...</p>`;
 
             try {
-                let response = await fetch(GOOGLE_SHEET_API_URL);
-                let data = await response.json();
+                let response = await fetch(GOOGLE_SHEET_API_URL, {
+                    method: "GET",
+                    redirect: "follow"
+                });
+                
+                let textData = await response.text();
+                let data = JSON.parse(textData);
 
                 let targetClient = currentClient.toLowerCase().trim();
 
-                // Safe extraction matching Google Sheets doGet output structure
                 globalSessions = data.sessions?.[targetClient] || {};
                 globalReports = data.shift_reports?.[targetClient] || {};
                 globalCallLogs = data.call_logs?.[targetClient] || {};
@@ -428,7 +432,11 @@
                 renderContent();
             } catch (err) {
                 console.error("Error fetching data from Google Sheets:", err);
-                document.getElementById('adminBodyContent').innerHTML = `<p style="color: #dc2626; text-align: center; padding: 40px;">Failed to load data from Google Sheets.</p>`;
+                document.getElementById('adminBodyContent').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #dc2626;">
+                        <p><b>Failed to load data from Google Sheets.</b></p>
+                        <p style="font-size: 12px; color: #64748b;">Reason: Make sure your Google Apps Script is deployed with Access set to <b>"Anyone"</b>.</p>
+                    </div>`;
             }
         }
 
