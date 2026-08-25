@@ -157,9 +157,11 @@
 
         .filter-bar { background: white; padding: 14px 24px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
         .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
-        .filter-btn:hover { background: #e2e8f0; }
-        .filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
+        
+        /* Filter Button Styling with Active Color Transition */
+        .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
+        .filter-btn:hover { background: #e2e8f0; color: #0f172a; }
+        .filter-btn.active { background: #0284c7 !important; color: white !important; border-color: #0284c7 !important; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 
         /* SINGLE MODERN CALENDAR INPUT STYLING */
         .single-range-input { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; width: 210px; text-align: center; }
@@ -262,6 +264,9 @@
                 <button onclick="switchTab('online')" id="tabOnline" class="nav-btn active">
                     <span>👥</span> Live & Offline Users
                 </button>
+                <button onclick="switchTab('leaderboard')" id="tabLeaderboard" class="nav-btn">
+                    <span>🏆</span> Top Calling Leaderboard
+                </button>
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
                     <span>📋</span> Shift Reports & Ratios
                 </button>
@@ -291,13 +296,12 @@
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS & AUDIT -->
+            <!-- FILTERS FOR REPORTS & AUDIT & LEADERBOARD (Only Today & Last 7 Days) -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 USA Date Filter:</span>
                     <button onclick="setDateFilterPreset('today')" id="presetToday" class="filter-btn active">Today (USA)</button>
                     <button onclick="setDateFilterPreset('week')" id="presetWeek" class="filter-btn">Last 7 Days</button>
-                    <button onclick="setDateFilterPreset('all')" id="presetAll" class="filter-btn">All Time</button>
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
                     <span>Custom Range / Single Date:</span>
@@ -369,7 +373,7 @@
                         startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
                         endDateStr = instance.formatDate(selectedDates[1], "Y-m-d");
                         
-                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                        ['presetToday', 'presetWeek'].forEach(id => {
                             let b = document.getElementById(id);
                             if (b) b.classList.remove('active');
                         });
@@ -380,7 +384,7 @@
                         startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
                         endDateStr = startDateStr;
                         
-                        ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+                        ['presetToday', 'presetWeek'].forEach(id => {
                             let b = document.getElementById(id);
                             if (b) b.classList.remove('active');
                         });
@@ -458,7 +462,6 @@
         function fetchAdminData() {
             if (!currentClient) return;
 
-            // Agar pehle se listeners attached hain toh dobara attach karne ki zaroorat nahi
             if (dbRefsInitialized) {
                 renderContent();
                 return;
@@ -468,7 +471,6 @@
                 const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
 
                 urls.forEach((url, index) => {
-                    // Unique app instance for each firebase URL to prevent conflicts
                     let appName = `adminApp_${index}`;
                     let secondaryApp;
                     try {
@@ -478,7 +480,7 @@
                     }
                     let db = secondaryApp.database();
 
-                    // Sessions Listener (Instant Online / Offline check)
+                    // Sessions Listener
                     db.ref(`sessions/${currentClient}`).on('value', (snapshot) => {
                         let val = snapshot.val() || {};
                         if (index === 0) globalSessions = {};
@@ -494,7 +496,7 @@
                         renderContent();
                     });
 
-                    // Call Logs Listener (Foran update hoga jab agent call karega)
+                    // Call Logs Listener
                     db.ref(`call_logs/${currentClient}`).on('value', (snapshot) => {
                         let val = snapshot.val() || {};
                         if (index === 0) globalCallLogs = {};
@@ -505,32 +507,8 @@
 
                 dbRefsInitialized = true;
             } catch (e) {
-                console.error("Real-time listener error, falling back to REST fetch:", e);
+                console.error("Real-time listener error:", e);
                 fallbackFetchRest();
-            }
-        }
-
-        async function fallbackFetchRest() {
-            try {
-                let [sRes1, sRes2, sRes3, rRes1, rRes2, rRes3, cRes1, cRes2, cRes3] = await Promise.all([
-                    fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_3}sessions/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}.json`).catch(() => null),
-                    fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}.json`).catch(() => null)
-                ]);
-
-                globalSessions = { ...(sRes1 ? await sRes1.json() || {} : {}), ...(sRes2 ? await sRes2.json() || {} : {}), ...(sRes3 ? await sRes3.json() || {} : {}) };
-                globalReports = { ...(rRes1 ? await rRes1.json() || {} : {}), ...(rRes2 ? await rRes2.json() || {} : {}), ...(rRes3 ? await rRes3.json() || {} : {}) };
-                globalCallLogs = { ...(cRes1 ? await cRes1.json() || {} : {}), ...(cRes2 ? await cRes2.json() || {} : {}), ...(cRes3 ? await cRes3.json() || {} : {}) };
-
-                renderContent();
-            } catch (err) {
-                console.error("REST fallback error:", err);
             }
         }
 
@@ -574,6 +552,11 @@
                 filterBar.style.display = 'none';
                 onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
+            } else if (tab === 'leaderboard') {
+                pageTitle.innerText = "Top Calling Leaderboard";
+                filterBar.style.display = 'flex';
+                onlineFilterBar.style.display = 'none';
+                exportBtn.style.display = 'none';
             } else if (tab === 'reports') {
                 pageTitle.innerText = "Shift Reports & Ratios (USA Time)";
                 filterBar.style.display = 'flex';
@@ -605,7 +588,7 @@
             filterMode = preset;
             let currentUSAToday = getUSACurrentDate();
 
-            ['presetToday', 'presetWeek', 'presetAll'].forEach(id => {
+            ['presetToday', 'presetWeek'].forEach(id => {
                 let b = document.getElementById(id);
                 if (b) b.classList.remove('active');
             });
@@ -618,16 +601,10 @@
             } else if (preset === 'week') {
                 let past = new Date(currentUSAToday); past.setDate(past.getDate() - 6);
                 startDateStr = past.toISOString().split('T')[0]; endDateStr = currentUSAToday;
-            } else if (preset === 'all') {
-                startDateStr = "2020-01-01"; endDateStr = "2030-12-31";
             }
 
             if (calendarPicker) {
-                if (preset === 'all') {
-                    calendarPicker.clear();
-                } else {
-                    calendarPicker.setDate([startDateStr, endDateStr], true);
-                }
+                calendarPicker.setDate([startDateStr, endDateStr], true);
             }
 
             renderContent();
@@ -636,7 +613,6 @@
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
             let dStr = dateVal.substring(0, 10);
-            if (filterMode === 'all') return true;
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
@@ -743,6 +719,61 @@
                     container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match filter (${onlineFilterMode}).</p>`;
                     return;
                 }
+                container.innerHTML = html + `</div>`;
+
+            } else if (activeTab === 'leaderboard') {
+                let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Top Calling Leaderboard (USA Time Range: <b>${startDateStr}</b> to <b>${endDateStr}</b>)</div><div style="display: flex; flex-direction: column; gap: 12px;">`;
+                
+                let agentCallingStats = {};
+                let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
+
+                allAgents.forEach(name => {
+                    let logs = globalCallLogs[name] || [];
+                    if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
+                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                    
+                    let reps = globalReports[name] || [];
+                    let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
+
+                    let totalCalls = filteredLogs.length;
+                    filteredReps.forEach(r => {
+                        if (r.logs && Array.isArray(r.logs)) {
+                            totalCalls += r.logs.length;
+                        }
+                    });
+
+                    agentCallingStats[name] = totalCalls;
+                });
+
+                let sortedLeaderboard = Object.keys(agentCallingStats).sort((a, b) => agentCallingStats[b] - agentCallingStats[a]);
+
+                if (sortedLeaderboard.length === 0 || sortedLeaderboard.every(n => agentCallingStats[n] === 0)) {
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling data found for the selected date range.</p>`;
+                    return;
+                }
+
+                let rank = 1;
+                sortedLeaderboard.forEach(name => {
+                    let calls = agentCallingStats[name];
+                    let rankBadgeBg = rank === 1 ? '#f59e0b' : (rank === 2 ? '#94a3b8' : (rank === 3 ? '#b45309' : '#e2e8f0'));
+                    let rankIcon = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
+
+                    html += `
+                        <div class="card" style="border-left: 6px solid ${rank === 1 ? '#f59e0b' : '#0284c7'}; align-items: center; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <div style="font-size: 20px; font-weight: 800; background: ${rankBadgeBg}; color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">${rankIcon}</div>
+                                <div>
+                                    <b style="font-size: 16px; color: #0f172a;">👤 ${name}</b>
+                                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Company Agent</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 20px; font-weight: 800; color: #0284c7;">${calls} <span style="font-size: 12px; color: #64748b; font-weight: 600;">Calls</span></div>
+                            </div>
+                        </div>`;
+                    rank++;
+                });
+
                 container.innerHTML = html + `</div>`;
 
             } else if (activeTab === 'reports') {
