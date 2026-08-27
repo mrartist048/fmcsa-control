@@ -580,15 +580,15 @@ function injectHistoryUIFramework() {
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             
-            /* Professional Dropdown Checkbox Styling for Select Categories */
+            /* ====== PERFECTED SELECT CATEGORIES DROPDOWN STYLING MATCHING VEHICLE TYPES ====== */
             .dropdown-check-list { display: inline-block; position: relative; }
             .dropdown-check-list .anchor { position: relative; cursor: pointer; display: inline-block; padding: 6px 12px; background: white; border: 1px solid #b6ccfe; border-radius: 4px; font-size: 12px; user-select: none; color: #002d62; font-weight: bold; }
             .dropdown-check-list .anchor:active { background-color: #f1f1f1; }
-            .dropdown-check-list ul.items { position: absolute; background: white; border: 1px solid #b6ccfe; border-top: none; border-radius: 0 0 6px 6px; display: none; margin: 0; padding: 8px; list-style: none; max-height: 220px; overflow-y: auto; z-index: 1000; width: 240px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); text-align: left; box-sizing: border-box; }
+            .dropdown-check-list ul.items { display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 220px; top: 100%; left: 0; margin-top: 4px; text-align: left; list-style: none; max-height: 220px; overflow-y: auto; box-sizing: border-box; }
             .dropdown-check-list.visible ul.items { display: block; }
-            .dropdown-check-list ul.items li { margin-bottom: 6px; font-size: 12px; white-space: normal !important; }
-            .dropdown-check-list ul.items li label { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 8px !important; cursor: pointer !important; color: #333 !important; line-height: 1.3 !important; }
-            .dropdown-check-list ul.items li input[type="checkbox"] { margin-top: 1px !important; cursor: pointer !important; flex-shrink: 0 !important; }
+            .dropdown-check-list ul.items li { margin-bottom: 8px !important; font-size: 12px !important; white-space: nowrap !important; }
+            .dropdown-check-list ul.items li label { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; cursor: pointer !important; color: #333 !important; line-height: 1.3 !important; width: 100% !important; }
+            .dropdown-check-list ul.items li input[type="checkbox"] { margin: 0 !important; cursor: pointer !important; flex-shrink: 0 !important; width: 14px !important; height: 14px !important; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -865,7 +865,14 @@ function updateCategoryCheckboxes() {
     let html = "";
     Array.from(availableCategories).sort().forEach(cat => {
         let isChecked = currentChecked.includes(cat) ? "checked" : "";
-        html += `<li><label><input type="checkbox" class="cat-checkbox" value="${cat}" ${isChecked} onchange="applyAdvancedFilters()"> <span>${cat}</span></label></li>`;
+        html += `
+            <li>
+                <label>
+                    <input type="checkbox" class="cat-checkbox" value="${cat}" ${isChecked} onchange="applyAdvancedFilters()"> 
+                    <span>${cat}</span>
+                </label>
+            </li>
+        `;
     });
     container.innerHTML = html;
 }
@@ -886,7 +893,7 @@ function injectAdvancedFilterBar() {
                 </select>
             </div>
             
-            <!-- ====== SELECT CATEGORIES DROPDOWN FEATURE STYLING FIXED ====== -->
+            <!-- ====== SELECT CATEGORIES DROPDOWN FIXED STYLING MATCHING VEHICLE TYPES ====== -->
             <div id="categoryDropdownCheckList" class="dropdown-check-list" tabindex="100">
                 <span class="anchor" onclick="toggleCategoryDropdown(event)">Select Categories ▼</span>
                 <ul id="checkboxListContainer" class="items">
