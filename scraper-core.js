@@ -284,7 +284,7 @@ function injectNicknameProfileUI() {
                 ${dispatcherNickname.charAt(0).toUpperCase()}
             </div>
             <div>
-                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Dispatcher</div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Agent</div>
                 <div style="font-size: 14px; color: #0f172a; font-weight: bold;">
                     <span id="dlDispCurrentName">${dispatcherNickname}</span>
                 </div>
