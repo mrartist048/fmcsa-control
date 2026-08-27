@@ -63,9 +63,8 @@ const usStatesMap = {
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
     let now = Date.now();
-    let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000; // 7 Days
+    let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
 
-    // 1. Clean LocalStorage Call Logs older than 7 days
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     let filteredLogs = callLogs.filter(log => {
@@ -76,7 +75,6 @@ async function performAutomaticDataCleanup() {
         localStorage.setItem(storageKey, JSON.stringify(filteredLogs));
     }
 
-    // 2. Clean Firebase Call Logs older than 7 days
     try {
         if (dispatcherNickname) {
             let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
@@ -164,6 +162,7 @@ function showPremiumNotification(message, duration = 4500) {
     }, duration);
 }
 
+// ====== PROFESSIONAL LOGIN SCREEN WITH SHOW/HIDE PASSWORD ======
 function renderLoginScreen() {
     if (document.getElementById('dlLoginOverlay')) return;
 
@@ -171,21 +170,24 @@ function renderLoginScreen() {
     overlay.id = 'dlLoginOverlay';
     overlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #001a3a; z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     overlay.innerHTML = `
-        <div style="background: #ffffff; padding: 35px 30px; border-radius: 8px; width: 360px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+        <div style="background: #ffffff; padding: 35px 30px; border-radius: 10px; width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); text-align: center;">
             <h2 style="color: #002d62; margin-bottom: 5px; font-size: 24px;">Dispatch Link</h2>
             <p style="color: #6c757d; font-size: 12px; margin-bottom: 25px;">Secure Dispatcher CRM Portal</p>
             
             <div style="margin-bottom: 15px; text-align: left;">
                 <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Username</label>
-                <input type="text" id="dlLoginUser" placeholder="Enter your username" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+                <input type="text" id="dlLoginUser" placeholder="Enter your username" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 6px; box-sizing: border-box;">
             </div>
 
-            <div style="margin-bottom: 20px; text-align: left;">
+            <div style="margin-bottom: 20px; text-align: left; position: relative;">
                 <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Password</label>
-                <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
+                <div style="position: relative; display: flex; align-items: center;">
+                    <input type="password" id="dlLoginPass" placeholder="Enter your password" style="width: 100%; padding: 10px 40px 10px 10px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 6px; box-sizing: border-box;">
+                    <span onclick="togglePasswordVisibility()" id="dlEyeIcon" style="position: absolute; right: 12px; cursor: pointer; font-size: 16px; user-select: none;" title="Show/Hide Password">👁️‍🗨️</span>
+                </div>
             </div>
 
-            <button onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
+            <button onclick="processLogin()" style="width: 100%; background: #002d62; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s;">Login to Portal</button>
             <div id="dlLoginError" style="color: #dc3545; font-size: 12px; font-weight: bold; margin-top: 12px; display: none;"></div>
             
             <div style="margin-top: 25px; font-size: 11px; color: #6c757d;">
@@ -196,6 +198,20 @@ function renderLoginScreen() {
     `;
     document.body.appendChild(overlay);
 }
+
+window.togglePasswordVisibility = function() {
+    let passInput = document.getElementById('dlLoginPass');
+    let eyeIcon = document.getElementById('dlEyeIcon');
+    if (!passInput) return;
+
+    if (passInput.type === 'password') {
+        passInput.type = 'text';
+        eyeIcon.innerText = '👁️';
+    } else {
+        passInput.type = 'password';
+        eyeIcon.innerText = '👁️‍🗨️';
+    }
+};
 
 window.processLogin = function() {
     let uInput = document.getElementById('dlLoginUser').value.trim();
@@ -254,25 +270,37 @@ function getCurrentShiftDateKey() {
     return `${year}-${month}-${day}`;
 }
 
+// ====== PROFESSIONAL MODERN TOP BAR UI ======
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
     let panel = document.createElement('div');
     panel.id = 'dlNickProfilePanel';
-    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 12px; font-family: sans-serif;";
+    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 15px 0; padding: 12px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); font-family: sans-serif; box-sizing: border-box;";
     
     panel.innerHTML = `
-        <div style="font-size: 12px; color: #002d62; font-weight: bold; background: #e2eafc; padding: 6px 12px; border-radius: 4px; display: inline-block;">
-            👤 User: <span style="color:#28a745;" id="dlDispCurrentName">${dispatcherNickname}</span> 
-            <a href="#" onclick="changeDispatcherName(); return false;" style="margin-left:8px; color:#17a2b8; text-decoration:none;">[✏️ Change]</a> 
-            <a href="#" onclick="logoutUser(); return false;" style="margin-left:12px; color:#dc3545; text-decoration:none;">[🚪 Logout]</a>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px;">
+                ${dispatcherNickname.charAt(0).toUpperCase()}
+            </div>
+            <div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Dispatcher</div>
+                <div style="font-size: 14px; color: #0f172a; font-weight: bold;">
+                    <span id="dlDispCurrentName">${dispatcherNickname}</span>
+                </div>
+            </div>
+            <button onclick="changeDispatcherName()" title="Edit Name" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 6px; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✏️ Edit Name</button>
         </div>
-        <div style="display: flex; gap: 8px;">
-            <button onclick="openCallingDetailModal()" style="background: #ff9800; color: white; border: 1px solid #e68a00; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
-                📊 Calling Detail
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245,158,11,0.2); display: flex; align-items: center; gap: 6px;">
+                <span>📊</span> Calling Detail
             </button>
-            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: 0.2s;">
-                👑 Admin Panel
+            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,45,98,0.2); display: flex; align-items: center; gap: 6px;">
+                <span>👑</span> Admin Panel
+            </button>
+            <div style="height: 24px; width: 1px; background: #cbd5f1; margin: 0 4px;"></div>
+            <button onclick="logoutUser()" title="Logout Portal" style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+                <span>🚪</span> Logout
             </button>
         </div>
     `;
@@ -288,6 +316,7 @@ window.changeDispatcherName = function() {
         let label = document.getElementById('dlDispCurrentName');
         if (label) label.innerText = dispatcherNickname;
         updateActiveSessionData();
+        window.location.reload();
     }
 };
 
@@ -319,7 +348,6 @@ function initializeAccessControl() {
     setupDispatcherIdentity();
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
-    // Run automatic cleanup on startup
     performAutomaticDataCleanup();
 
     checkGlobalSessions();
@@ -2251,33 +2279,39 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
             errorDetailsList = []; 
             if (result.status === "success" && result.data) {
                 let record = result.data;
-                scrapedData.push(record);
-                let recordIndex = scrapedData.length - 1;
-                updateRealTimeHistory(scrapedData, false);
+                
+                // --- DUPLICATE CHECK ADDED HERE ---
+                let isAlreadyExists = scrapedData.some(existing => String(existing.mc) === String(record.mc));
+                
+                if (!isAlreadyExists) {
+                    scrapedData.push(record);
+                    let recordIndex = scrapedData.length - 1;
+                    updateRealTimeHistory(scrapedData, false);
 
-                let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
-                let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
-                let activeRemarksValue = record.remarks || "";
+                    let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
+                    let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
+                    let activeRemarksValue = record.remarks || "";
 
-                const tableBody = document.getElementById('resultsTable');
-                let newRow = document.createElement('tr');
-                newRow.innerHTML = `
-                    <td><b>${record.mc}</b></td>
-                    <td>${record.usdot}</td>
-                    <td>${record.name}</td>
-                    <td>${record.entityType}</td>
-                    <td><span class="badge badge-active">${record.status}</span></td>
-                    ${phoneCellMarkup}
-                    <td>${record.address}</td>
-                    ${emailCellMarkup}
-                    <td>${record.powerUnits}</td>
-                    <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
-                    <td class="remarks-cell-container">
-                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
-                    </td>
-                    <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
-                `;
-                tableBody.appendChild(newRow);
+                    const tableBody = document.getElementById('resultsTable');
+                    let newRow = document.createElement('tr');
+                    newRow.innerHTML = `
+                        <td><b>${record.mc}</b></td>
+                        <td>${record.usdot}</td>
+                        <td>${record.name}</td>
+                        <td>${record.entityType}</td>
+                        <td><span class="badge badge-active">${record.status}</span></td>
+                        ${phoneCellMarkup}
+                        <td>${record.address}</td>
+                        ${emailCellMarkup}
+                        <td>${record.powerUnits}</td>
+                        <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
+                        <td class="remarks-cell-container">
+                            <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
+                        </td>
+                        <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
+                    `;
+                    tableBody.appendChild(newRow);
+                }
             }
         }
 
