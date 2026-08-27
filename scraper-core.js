@@ -580,13 +580,15 @@ function injectHistoryUIFramework() {
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             
-            /* Dropdown Checkbox Styling for Select Categories */
+            /* Professional Dropdown Checkbox Styling for Select Categories */
             .dropdown-check-list { display: inline-block; position: relative; }
             .dropdown-check-list .anchor { position: relative; cursor: pointer; display: inline-block; padding: 6px 12px; background: white; border: 1px solid #b6ccfe; border-radius: 4px; font-size: 12px; user-select: none; color: #002d62; font-weight: bold; }
             .dropdown-check-list .anchor:active { background-color: #f1f1f1; }
-            .dropdown-check-list ul.items { position: absolute; background: white; border: 1px solid #b6ccfe; border-top: none; border-radius: 0 0 4px 4px; display: none; margin: 0; padding: 10px; list-style: none; max-height: 200px; overflow-y: auto; z-index: 1000; width: 220px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: left; }
+            .dropdown-check-list ul.items { position: absolute; background: white; border: 1px solid #b6ccfe; border-top: none; border-radius: 0 0 6px 6px; display: none; margin: 0; padding: 8px; list-style: none; max-height: 220px; overflow-y: auto; z-index: 1000; width: 240px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); text-align: left; box-sizing: border-box; }
             .dropdown-check-list.visible ul.items { display: block; }
-            .dropdown-check-list ul.items li { margin-bottom: 5px; font-size: 12px; }
+            .dropdown-check-list ul.items li { margin-bottom: 6px; font-size: 12px; white-space: normal !important; }
+            .dropdown-check-list ul.items li label { display: flex !important; flex-direction: row !important; align-items: flex-start !important; gap: 8px !important; cursor: pointer !important; color: #333 !important; line-height: 1.3 !important; }
+            .dropdown-check-list ul.items li input[type="checkbox"] { margin-top: 1px !important; cursor: pointer !important; flex-shrink: 0 !important; }
         `;
         document.head.appendChild(styleTag);
     }
@@ -863,7 +865,7 @@ function updateCategoryCheckboxes() {
     let html = "";
     Array.from(availableCategories).sort().forEach(cat => {
         let isChecked = currentChecked.includes(cat) ? "checked" : "";
-        html += `<li><label style="cursor: pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="cat-checkbox" value="${cat}" ${isChecked} onchange="applyAdvancedFilters()"> ${cat}</label></li>`;
+        html += `<li><label><input type="checkbox" class="cat-checkbox" value="${cat}" ${isChecked} onchange="applyAdvancedFilters()"> <span>${cat}</span></label></li>`;
     });
     container.innerHTML = html;
 }
@@ -884,7 +886,7 @@ function injectAdvancedFilterBar() {
                 </select>
             </div>
             
-            <!-- ====== SELECT CATEGORIES DROPDOWN FEATURE ADDED HERE ====== -->
+            <!-- ====== SELECT CATEGORIES DROPDOWN FEATURE STYLING FIXED ====== -->
             <div id="categoryDropdownCheckList" class="dropdown-check-list" tabindex="100">
                 <span class="anchor" onclick="toggleCategoryDropdown(event)">Select Categories ▼</span>
                 <ul id="checkboxListContainer" class="items">
@@ -1865,7 +1867,6 @@ window.loadHistorySheetToTable = async function(id) {
         scrapedData = item.records; 
         currentHistoryId = item.id;
 
-        // Rebuild availableCategories from loaded history data
         availableCategories.clear();
         scrapedData.forEach(r => {
             if (r.carrierDetails) {
@@ -2177,7 +2178,6 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 return { status: "filtered_out" }; 
             }
 
-            // --- EXTRACT CARRIER DETAILS & CATEGORIES FROM TABLES (X marks) ---
             let tables = el.querySelectorAll('table');
             let allDetails = [];
             tables.forEach(table => {
@@ -2379,7 +2379,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                     scrapedData.push(record);
                     let recordIndex = scrapedData.length - 1;
                     updateRealTimeHistory(scrapedData, false);
-                    updateCategoryCheckboxes(); // Update Category checkboxes dynamically during scraping
+                    updateCategoryCheckboxes();
 
                     let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
                     let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
