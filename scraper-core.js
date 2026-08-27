@@ -284,7 +284,7 @@ function injectNicknameProfileUI() {
                 ${dispatcherNickname.charAt(0).toUpperCase()}
             </div>
             <div>
-                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Agent</div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Dispatcher</div>
                 <div style="font-size: 14px; color: #0f172a; font-weight: bold;">
                     <span id="dlDispCurrentName">${dispatcherNickname}</span>
                 </div>
@@ -931,7 +931,7 @@ function populateVehicleTypeCheckboxes() {
     let container = document.getElementById('vehicleCheckboxList');
     if (!container) return;
 
-    let fixedTypes = ["Box Truck", "Power Only", "Trailers"];
+    let fixedTypes = ["Straight Trucks", "Truck Tractors", "Trailers"];
     let checkedSet = new Set();
     container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedSet.add(cb.value));
 
@@ -979,12 +979,7 @@ window.applyAdvancedFilters = function() {
 
         let matchesVehicle = true;
         if (selectedVehicles.length > 0) {
-            matchesVehicle = selectedVehicles.some(sel => {
-                if (sel === "box truck") return vehicleText.includes("box truck");
-                if (sel === "power only") return vehicleText.includes("power only");
-                if (sel === "trailers") return vehicleText.includes("trailers");
-                return vehicleText.includes(sel);
-            });
+            matchesVehicle = selectedVehicles.some(sel => vehicleText.includes(sel));
         }
 
         row.style.display = (matchesState && matchesSearch && matchesVehicle) ? "" : "none";
@@ -2098,50 +2093,39 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
             if (record.usdot !== 'N/A') {
                 try {
-                    const brokerSnapshotUrl = `https://brokersnapshot.com/Company?dot=${record.usdot}&prefix=MC&docket=${record.mc}`;
-                    const brokerRes = await fetch(brokerSnapshotUrl);
-                    
-                    if (brokerRes.ok) {
-                        const brokerHtml = await brokerRes.text();
-                        let brokerEl = document.createElement('html');
-                        brokerEl.innerHTML = brokerHtml;
-                        
-                        let vehicleList = [];
-                        let textNodes = brokerEl.querySelectorAll('div, span, a, td, th, p');
-                        
-                        textNodes.forEach(node => {
-                            let cleanText = node.textContent.replace(/\s+/g, ' ').trim();
-                            
-                            if (/^Tractors\s+\d+$/i.test(cleanText)) {
-                                let num = cleanText.match(/\d+/)[0];
-                                let formatted = `Power Only ${num}`;
-                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                            } else if (/^Trucks\s+\d+$/i.test(cleanText)) {
-                                let num = cleanText.match(/\d+/)[0];
-                                let formatted = `Box Truck ${num}`;
-                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                            } else if (/^Trailers\s+\d+$/i.test(cleanText)) {
-                                let num = cleanText.match(/\d+/)[0];
-                                let formatted = `Trailers ${num}`;
-                                if (!vehicleList.includes(formatted)) vehicleList.push(formatted);
-                            }
-                        });
-
-                        if (vehicleList.length > 0) {
-                            record.vehicleType = vehicleList.join(" | ");
-                        }
-                    }
-                } catch (bErr) {
-                    console.warn(`BrokerSnapshot warning for MC ${mc}:`, bErr.message);
-                }
-
-                try {
                     const smsUrl = `https://ai.fmcsa.dot.gov/SMS/Carrier/${record.usdot}/CarrierRegistration.aspx`;
                     const smsResponse = await fetch(smsUrl);
                     if (smsResponse.ok) {
                         const smsHtml = await smsResponse.text();
                         let smsEl = document.createElement('html');
                         smsEl.innerHTML = smsHtml;
+
+                        // --- FETCH VEHICLE TYPE BREAKDOWN FROM SMS PORTAL TABLE ---
+                        let vehicleMapList = [];
+                        let tables = smsEl.querySelectorAll('table');
+                        tables.forEach(tbl => {
+                            let rows = tbl.querySelectorAll('tr');
+                            rows.forEach(row => {
+                                let cols = row.querySelectorAll('td, th');
+                                if (cols.length >= 4) {
+                                    let vType = cols[0].textContent.trim().replace(/\*$/, "").trim(); // Removes trailing asterisk like Trailers*
+                                    let owned = parseInt(cols[1].textContent.trim()) || 0;
+                                    let termLeased = parseInt(cols[2].textContent.trim()) || 0;
+                                    let tripLeased = parseInt(cols[3].textContent.trim()) || 0;
+                                    let totalCount = owned + termLeased + tripLeased;
+
+                                    if (totalCount > 0 && ["Straight Trucks", "Truck Tractors", "Trailers"].includes(vType)) {
+                                        vehicleMapList.push(`${vType} ${totalCount}`);
+                                    }
+                                }
+                            });
+                        });
+
+                        if (vehicleMapList.length > 0) {
+                            record.vehicleType = vehicleMapList.join(" | ");
+                        }
+
+                        // --- EXTRACT EMAIL ---
                         let smsCells = smsEl.querySelectorAll('td, th, span, label, a');
                         for (let j = 0; j < smsCells.length; j++) {
                             let smsText = smsCells[j].textContent.trim();
@@ -2280,7 +2264,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
             if (result.status === "success" && result.data) {
                 let record = result.data;
                 
-                // --- DUPLICATE CHECK ADDED HERE ---
                 let isAlreadyExists = scrapedData.some(existing => String(existing.mc) === String(record.mc));
                 
                 if (!isAlreadyExists) {
