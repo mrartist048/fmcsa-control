@@ -65,24 +65,6 @@
     </table>
 </div>
 
-<script>
-    // Cache buster lagane ke liye timestamp generate kiya
-    const cacheBuster = new Date().getTime();
-
-    // GitHub se core logic dynamically load karne ke liye
-    fetch("https://raw.githubusercontent.com/mrartist048/fmcsa-control/main/scraper-core.js?t=" + cacheBuster)
-    .then(response => response.text())
-    .then(code => {
-        let script = document.createElement('script');
-        script.text = code;
-        document.body.appendChild(script);
-        console.log("Control script loaded live from GitHub!");
-    })
-    .catch(err => {
-        document.getElementById('status').innerText = "Network Error: Unable to load control configuration.";
-        console.error("Error loading remote script:", err);
-    });
-</script>
-
+<script src="scraper-core.js"></script>
 </body>
 </html>
