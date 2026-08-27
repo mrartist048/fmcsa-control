@@ -608,6 +608,46 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
+        // HELPER FUNCTION TO CALCULATE AVERAGE CALL DELAY (IN MINUTES)
+        function calculateAverageCallDelay(logs) {
+            if (!logs || logs.length < 2) return 'N/A';
+            
+            // Sabhi valid dates ko timestamp mein convert karke ascending order (oldest to newest) sort karein
+            let validTimestamps = logs
+                .map(l => l.date ? new Date(l.date).getTime() : 0)
+                .filter(t => !isNaN(t) && t > 0)
+                .sort((a, b) => a - b);
+
+            if (validTimestamps.length < 2) return 'N/A';
+
+            let totalDiffMs = 0;
+            let gapsCount = validTimestamps.length - 1;
+
+            for (let i = 0; i < validTimestamps.length - 1; i++) {
+                let diff = validTimestamps[i + 1] - validTimestamps[i];
+                // Agar gap 6 ghante se kam ho tabhi count karein (taake shift breaks ya overnight gaps average kharab na karein)
+                if (diff > 0 && diff < 6 * 3600 * 1000) {
+                    totalDiffMs += diff;
+                } else {
+                    gapsCount--; // Invalid/long break gap ko exclude karein
+                }
+            }
+
+            if (gapsCount <= 0) return 'N/A';
+
+            let avgMs = totalDiffMs / gapsCount;
+            let avgMins = Math.round(avgMs / 60000);
+            
+            if (avgMins < 1) {
+                let avgSecs = Math.round(avgMs / 1000);
+                return `${avgSecs} Secs`;
+            } else if (avgMins > 60) {
+                let hrs = (avgMins / 60).toFixed(1);
+                return `${hrs} Hours`;
+            }
+            return `${avgMins} Mins`;
+        }
+
         function openSummaryModal() {
             let modal = document.getElementById('summaryModal');
             let body = document.getElementById('modalSummaryBody');
@@ -690,6 +730,7 @@
 
                     renderedCount++;
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Online</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
+                    let formattedLastActive = lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
                     
                     html += `
                         <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'}; width: 100%;">
@@ -701,7 +742,7 @@
                                 <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
                             </div>
                             <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span>Last Active: ${lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString() : 'N/A'}</span>
+                                <span>Last Active: ${formattedLastActive}</span>
                                 <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger">🗑️ Remove</button>
                             </div>
                         </div>`;
@@ -717,6 +758,8 @@
                 let html = `<div style="font-size: 12px; color: #64748b; margin-bottom: 16px; font-weight: 600;">Top Calling Leaderboard (USA Time Range: <b>${startDateStr}</b> to <b>${endDateStr}</b>)</div><div style="display: flex; flex-direction: column; gap: 12px;">`;
                 
                 let agentCallingStats = {};
+                let agentLastCallTime = {};
+                let agentAvgDelay = {};
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allAgents.forEach(name => {
@@ -731,10 +774,26 @@
                     filteredReps.forEach(r => {
                         if (r.logs && Array.isArray(r.logs)) {
                             totalCalls += r.logs.length;
+                            filteredLogs = filteredLogs.concat(r.logs);
                         }
                     });
 
                     agentCallingStats[name] = totalCalls;
+
+                    // Calculate Average Call Delay for Leaderboard
+                    agentAvgDelay[name] = calculateAverageCallDelay(filteredLogs);
+
+                    // Find Last Call Time in 12-hour AM/PM format
+                    let latestTime = 'N/A';
+                    if (filteredLogs.length > 0) {
+                        filteredLogs.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                        let rawDate = filteredLogs[0].date;
+                        if (rawDate) {
+                            let dObj = new Date(rawDate);
+                            if (!isNaN(dObj)) latestTime = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                        }
+                    }
+                    agentLastCallTime[name] = latestTime;
                 });
 
                 let sortedLeaderboard = Object.keys(agentCallingStats).sort((a, b) => agentCallingStats[b] - agentCallingStats[a]);
@@ -747,6 +806,8 @@
                 let rank = 1;
                 sortedLeaderboard.forEach(name => {
                     let calls = agentCallingStats[name];
+                    let lastCall = agentLastCallTime[name];
+                    let avgDelay = agentAvgDelay[name];
                     let rankBadgeBg = rank === 1 ? '#f59e0b' : (rank === 2 ? '#94a3b8' : (rank === 3 ? '#b45309' : '#e2e8f0'));
                     let rankIcon = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
 
@@ -757,6 +818,10 @@
                                 <div>
                                     <b style="font-size: 16px; color: #0f172a;">👤 ${name}</b>
                                     <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Company Agent</div>
+                                    <div style="display: flex; gap: 12px; margin-top: 3px; flex-wrap: wrap;">
+                                        <span style="font-size: 11px; color: #0284c7; font-weight: 600;">🕒 Last Call: ${lastCall}</span>
+                                        <span style="font-size: 11px; color: #7c3aed; font-weight: 600;">⏱️ Avg Call Delay: ${avgDelay}</span>
+                                    </div>
                                 </div>
                             </div>
                             <div style="text-align: right;">
@@ -795,6 +860,18 @@
                         hasReports = true;
                         let finalLogs = datesMap[dateStr];
                         let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+                        
+                        // Calculate Average Call Delay for this specific date report
+                        let avgDelay = calculateAverageCallDelay(finalLogs);
+
+                        // Find last call time in 12-hour AM/PM format for this specific date report
+                        let sortedDateLogs = [...finalLogs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                        let lastCallTime = 'N/A';
+                        if (sortedDateLogs.length > 0 && sortedDateLogs[0].date) {
+                            let dObj = new Date(sortedDateLogs[0].date);
+                            if (!isNaN(dObj)) lastCallTime = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                        }
+
                         finalLogs.forEach(l => {
                             let st = l.status || "Hung up";
                             if (counts[st] !== undefined) counts[st]++;
@@ -807,9 +884,13 @@
 
                         html += `
                             <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a; width: 100%;">
-                                <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap;">
+                                <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap; align-items: center; gap: 8px;">
                                     <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
-                                    <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">USA Date: ${dateStr}</span>
+                                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                        <span style="font-size: 11px; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 4px 8px; border-radius: 6px;">🕒 Last Call: ${lastCallTime}</span>
+                                        <span style="font-size: 11px; color: #7c3aed; font-weight: 700; background: #f3e8ff; padding: 4px 8px; border-radius: 6px;">⏱️ Avg Delay: ${avgDelay}</span>
+                                        <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">USA Date: ${dateStr}</span>
+                                    </div>
                                 </div>
                                 <div style="font-size: 13px; color: #334155;"><b>Total Calls:</b> ${totalC}</div>
                                 <div style="display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap; width: 100%;">
@@ -834,7 +915,7 @@
         }
 
         function exportCSV() {
-            let csv = "Agent Name,USA Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio\n";
+            let csv = "Agent Name,USA Shift Date,Total Calls,Hung up,Voicemail,Not interested,Do not Call,Follow up,Sale Closed,Pickup Ratio,Avg Call Delay\n";
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
             allAgents.forEach(name => {
@@ -857,8 +938,9 @@
 
                 Object.keys(datesMap).forEach(dateStr => {
                     let finalLogs = datesMap[dateStr];
+                    let avgDelay = calculateAverageCallDelay(finalLogs);
                     let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
-                    finalLogs.forEach(l => {
+                    finalLogs.endswith = finalLogs.forEach(l => {
                         let st = l.status || "Hung up";
                         if (counts[st] !== undefined) counts[st]++;
                         else counts["Hung up"]++;
@@ -868,7 +950,7 @@
                     let connected = totalC - counts["Voicemail"];
                     let ratio = totalC > 0 ? Math.round((connected / totalC) * 100) : 0;
 
-                    csv += `"${name}","${dateStr}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${ratio}%"\n`;
+                    csv += `"${name}","${dateStr}",${totalC},${counts["Hung up"]},${counts["Voicemail"]},${counts["Not interested"]},${counts["Do not Call"]},${counts["Follow up"]},${counts["Sale Closed"]},"${ratio}%","${avgDelay}"\n`;
                 });
             });
 
