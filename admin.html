@@ -352,6 +352,31 @@
         let onlineFilterMode = 'all'; 
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
         let calendarPicker = null;
+        
+        // PERSISTENT BLACKLIST STORAGE (Page refresh hone par bhi yaad rahega)
+        let deletedUsersBlacklist = new Set();
+
+        function loadBlacklist() {
+            if (!currentClient) return;
+            try {
+                let saved = localStorage.getItem(`dl_blacklist_${currentClient}`);
+                if (saved) {
+                    let arr = JSON.parse(saved);
+                    deletedUsersBlacklist = new Set(arr);
+                } else {
+                    deletedUsersBlacklist = new Set();
+                }
+            } catch(e) {
+                deletedUsersBlacklist = new Set();
+            }
+        }
+
+        function saveBlacklist() {
+            if (!currentClient) return;
+            try {
+                localStorage.setItem(`dl_blacklist_${currentClient}`, JSON.stringify(Array.from(deletedUsersBlacklist)));
+            } catch(e) {}
+        }
 
         window.onload = function() {
             let authOverlay = document.getElementById('authOverlay');
@@ -416,6 +441,7 @@
                 currentClient = companyInput;
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
+                loadBlacklist(); // Load deleted users memory for this company
                 setDateFilterPreset('today');
                 fetchAdminData(); // Real-time listeners setup
             } else {
@@ -455,6 +481,7 @@
 
         // INSTANT REAL-TIME DATA LISTENER SETUP VIA FIREBASE SDK COMPAT
         let dbRefsInitialized = false;
+        let activeDatabases = [];
 
         function fetchAdminData() {
             if (!currentClient) return;
@@ -476,6 +503,7 @@
                         secondaryApp = firebase.app(appName);
                     }
                     let db = secondaryApp.database();
+                    activeDatabases.push(db);
 
                     // Sessions Listener
                     db.ref(`sessions/${currentClient}`).on('value', (snapshot) => {
@@ -505,29 +533,51 @@
                 dbRefsInitialized = true;
             } catch (e) {
                 console.error("Real-time listener error:", e);
-                fallbackFetchRest();
             }
         }
 
         async function deleteUserRecord(userName) {
             if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
 
+            // Blacklist mein add karke localStorage mein save kar lein
+            deletedUsersBlacklist.add(userName);
+            saveBlacklist();
+
             try {
-                await Promise.all([
-                    fetch(`${FIREBASE_DB_URL_1}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_1}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_1}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_2}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_2}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_2}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_3}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_3}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }),
-                    fetch(`${FIREBASE_DB_URL_3}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' })
-                ]);
+                let promises = [];
+                
+                activeDatabases.forEach(db => {
+                    promises.push(db.ref(`sessions/${currentClient}/${userName}`).remove());
+                    promises.push(db.ref(`call_logs/${currentClient}/${userName}`).remove());
+                    promises.push(db.ref(`shift_reports/${currentClient}/${userName}`).remove());
+                });
+
+                const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+                urls.forEach(url => {
+                    promises.push(fetch(`${url}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }));
+                    promises.push(fetch(`${url}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }));
+                    promises.push(fetch(`${url}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }));
+                });
+
+                await Promise.allSettled(promises);
+
+                // Local objects se saaf karein
+                if (globalSessions) {
+                    Object.keys(globalSessions).forEach(k => {
+                        let s = globalSessions[k];
+                        if (k === userName || s?.nickname === userName || s?.name === userName) {
+                            delete globalSessions[k];
+                        }
+                    });
+                }
+                delete globalCallLogs[userName];
+                delete globalReports[userName];
+                
+                renderContent();
                 alert(`User "${userName}" has been successfully deleted.`);
             } catch (err) {
                 console.error("Delete error:", err);
-                alert("Failed to delete user.");
+                alert("Failed to delete user completely.");
             }
         }
 
@@ -617,6 +667,7 @@
 
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
             allAgents.forEach(name => {
+                if (deletedUsersBlacklist.has(name)) return;
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -659,14 +710,20 @@
                     Object.keys(globalSessions).forEach(key => {
                         let sObj = globalSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
+                        if (deletedUsersBlacklist.has(name) || deletedUsersBlacklist.has(key)) return;
+                        
                         if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
                             uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
                         }
                     });
                 }
 
-                Object.keys(globalReports).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; });
-                Object.keys(globalCallLogs).forEach(n => { if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; });
+                Object.keys(globalReports).forEach(n => { 
+                    if (!deletedUsersBlacklist.has(n) && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
+                });
+                Object.keys(globalCallLogs).forEach(n => { 
+                    if (!deletedUsersBlacklist.has(n) && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
+                });
 
                 let userKeys = Object.keys(uniqueUsers);
                 if (userKeys.length === 0) {
@@ -678,6 +735,8 @@
                 userKeys.forEach(nameKey => {
                     let uData = uniqueUsers[nameKey];
                     let displayName = uData.resolvedName || nameKey;
+                    if (deletedUsersBlacklist.has(displayName)) return;
+
                     let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
@@ -722,6 +781,7 @@
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allAgents.forEach(name => {
+                    if (deletedUsersBlacklist.has(name)) return;
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -739,7 +799,6 @@
 
                     agentCallingStats[name] = totalCalls;
 
-                    // Find Last Call Time in 12-hour AM/PM format
                     let latestTime = 'N/A';
                     if (filteredLogs.length > 0) {
                         filteredLogs.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
@@ -761,6 +820,7 @@
 
                 let rank = 1;
                 sortedLeaderboard.forEach(name => {
+                    if (deletedUsersBlacklist.has(name)) return;
                     let calls = agentCallingStats[name];
                     let lastCall = agentLastCallTime[name];
                     let rankBadgeBg = rank === 1 ? '#f59e0b' : (rank === 2 ? '#94a3b8' : (rank === 3 ? '#b45309' : '#e2e8f0'));
@@ -791,6 +851,7 @@
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allAgents.forEach(name => {
+                    if (deletedUsersBlacklist.has(name)) return;
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -813,7 +874,6 @@
                         let finalLogs = datesMap[dateStr];
                         let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                         
-                        // Find last call time in 12-hour AM/PM format for this specific date report
                         let sortedDateLogs = [...finalLogs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
                         let lastCallTime = 'N/A';
                         if (sortedDateLogs.length > 0 && sortedDateLogs[0].date) {
@@ -867,6 +927,7 @@
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
             allAgents.forEach(name => {
+                if (deletedUsersBlacklist.has(name)) return;
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
