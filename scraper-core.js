@@ -2476,10 +2476,13 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     }
 }
 
+// Fixed download function with correct endMC ID selector
 window.downloadCSV = function() {
     if(scrapedData.length > 0) {
         const start = document.getElementById('startMc').value;
         const end = document.getElementById('endMC').value;
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
+    } else {
+        alert("No records available to download.");
     }
 }
