@@ -641,7 +641,7 @@ function injectHistoryUIFramework() {
         mainHeading.style.position = 'relative';
         let creditTag = document.createElement('span');
         creditTag.id = 'devCreditTag';
-        creditTag.innerHTML = "Developed by <b>Mr. Nauman (Ph: 03700684849)</b>";
+        creditTag.innerHTML = (currentClient && currentClient.toLowerCase() === "Nexteklogistics") ? "Developed by <b>Mr. Nauman</b>" : "Developed by <b>Mr. Nauman (Ph: 03700684849)</b>";
         creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #6c757d; font-family: sans-serif; font-weight: normal;";
         mainHeading.appendChild(creditTag);
     }
