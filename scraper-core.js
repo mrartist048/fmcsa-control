@@ -2480,3 +2480,19 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
+
+
+// Background session watcher for auto-logout when removed by admin
+setInterval(async () => {
+    if (!currentClient || !dispatcherNickname) return;
+    try {
+        let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
+        let res = await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json`);
+        let data = await res.json();
+        if (data === null) {
+            alert("Your session has been terminated by the admin.");
+            localStorage.removeItem("dl_logged_client");
+            window.location.reload();
+        }
+    } catch(e) {}
+}, 4000);
