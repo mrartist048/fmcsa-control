@@ -271,39 +271,39 @@ function getCurrentShiftDateKey() {
 
 // ====== PROFESSIONAL MODERN TOP BAR UI ======
 function injectNicknameProfileUI() {
-    if (document.getElementById('dlNickProfilePanel')) return;
-    let heading = document.querySelector('h1, h2, .heading') || document.body;
-    let panel = document.createElement('div');
-    panel.id = 'dlNickProfilePanel';
-    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 15px 0; padding: 12px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); font-family: sans-serif; box-sizing: border-box;";
-    
-    panel.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 36px; height: 36px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px;">
-                ${dispatcherNickname.charAt(0).toUpperCase()}
-            </div>
-            <div>
-                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Agent</div>
-                <div style="font-size: 14px; color: #0f172a; font-weight: bold;">
-                    <span id="dlDispCurrentName">${dispatcherNickname}</span>
-                </div>
-            </div>
-            <button onclick="changeDispatcherName()" title="Edit Name" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 6px; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✏️ Edit Name</button>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245,158,11,0.2); display: flex; align-items: center; gap: 6px;">
-                <span>📊</span> Calling Detail
-            </button>
-            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,45,98,0.2); display: flex; align-items: center; gap: 6px;">
-                <span>👑</span> Admin Panel
-            </button>
-            <div style="height: 24px; width: 1px; background: #cbd5f1; margin: 0 4px;"></div>
-            <button onclick="logoutUser()" title="Logout Portal" style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
-                <span>🚪</span> Logout
-            </button>
-        </div>
-    `;
-    heading.parentNode.insertBefore(panel, heading.nextSibling);
+    if (document.getElementById('dlNickProfilePanel')) return;
+    let heading = document.querySelector('h1, h2, .heading') || document.body;
+    let panel = document.createElement('div');
+    panel.id = 'dlNickProfilePanel';
+    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 15px 0; padding: 12px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); font-family: sans-serif; box-sizing: border-box;";
+    
+    panel.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px; flex-shrink: 0;">
+                ${dispatcherNickname.charAt(0).toUpperCase()}
+            </div>
+            <div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Agent</div>
+                <div style="font-size: 14px; color: #0f172a; font-weight: bold; white-space: nowrap;">
+                    <span id="dlDispCurrentName">${dispatcherNickname}</span>
+                </div>
+            </div>
+            <button onclick="changeDispatcherName()" title="Edit Name" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 6px; white-space: nowrap;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✏️ Edit Name</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245,158,11,0.2); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                <span>📊</span> Calling Detail
+            </button>
+            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,45,98,0.2); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                <span>👑</span> Admin Panel
+            </button>
+            <div style="height: 24px; width: 1px; background: #cbd5f1; margin: 0 4px;"></div>
+            <button onclick="logoutUser()" title="Logout Portal" style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px; white-space: nowrap;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+                <span>🚪</span> Logout
+            </button>
+        </div>
+    `;
+    heading.parentNode.insertBefore(panel, heading.nextSibling);
 }
 
 window.changeDispatcherName = function() {
