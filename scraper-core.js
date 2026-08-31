@@ -407,7 +407,6 @@ async function checkGlobalSessions() {
             })
         });
 
-        // Update sidebar calling count summary
         updateSidebarShiftStats();
 
     } catch (e) {
@@ -527,7 +526,6 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== DYNAMIC CATEGORY DROPDOWN TOGGLE HANDLERS ======
 window.toggleCategoryDropdown = function(e) {
     e.stopPropagation();
     let list = document.getElementById('categoryDropdownCheckList');
@@ -716,10 +714,19 @@ function updateVisibleRecordCount() {
 }
 
 window.saveProposalTemplateSettings = function() {
-    localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
-    localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('propBodyInput').value);
+    localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('emailTemplateSubject').value);
+    localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('emailTemplateBody').value);
     alert("Template saved successfully.");
-    document.getElementById('proposalInputsBlock').style.display = 'none';
+};
+
+window.loadDefaultEmailTemplate = function() {
+    const defaultSub = "Profitable Truck Dispatch Services & High Paying Loads";
+    const defaultBody = "Hello,\n\nWe noticed your MC number and would love to help you find top-paying loads with minimal hassle. Let's grow your trucking business together.\n\nBest Regards,\nDispatch Team";
+    let subInput = document.getElementById('emailTemplateSubject');
+    let bodyInput = document.getElementById('emailTemplateBody');
+    if (subInput) subInput.value = defaultSub;
+    if (bodyInput) bodyInput.value = defaultBody;
+    saveProposalTemplateSettings();
 };
 
 window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
@@ -1278,8 +1285,8 @@ function renderFollowUpItems() {
                     <div style="font-size: 14px; font-weight: bold; color: var(--text-main);">${item.name}</div>
                     ${senderTag}
                 </div>
-                <div style="font-size: 12px; color:var(--text-main);"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
-                <div style="font-size: 12px; color:var(--text-main); margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; color: var(--text-main);"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; color: var(--text-main); margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
                 <div style="font-size: 12px; color: var(--text-muted); background: var(--table-hover); padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
