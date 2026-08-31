@@ -28,8 +28,6 @@ const allowedUsers = {
     "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_3 }, 
 };
 
-const MASTER_ADMIN_PASS = "admin890";
-
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
 // DYNAMIC FIREBASE URL SELECTOR
@@ -251,7 +249,7 @@ function setupDispatcherIdentity() {
         }
         localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
     }
-    injectNicknameProfileUI();
+    syncHeaderIdentityUI();
 }
 
 function getCurrentShiftDateKey() {
@@ -269,41 +267,14 @@ function getCurrentShiftDateKey() {
     return `${year}-${month}-${day}`;
 }
 
-// ====== PROFESSIONAL MODERN TOP BAR UI ======
-function injectNicknameProfileUI() {
-    if (document.getElementById('dlNickProfilePanel')) return;
-    let heading = document.querySelector('h1, h2, .heading') || document.body;
-    let panel = document.createElement('div');
-    panel.id = 'dlNickProfilePanel';
-    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 15px 0; padding: 12px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); font-family: sans-serif; box-sizing: border-box;";
+function syncHeaderIdentityUI() {
+    let nameSpan = document.getElementById('sidebarAgentName');
+    let avatarIcon = document.getElementById('sidebarAvatarIcon');
+    if (nameSpan) nameSpan.innerText = dispatcherNickname;
+    if (avatarIcon) avatarIcon.innerText = dispatcherNickname.charAt(0).toUpperCase();
     
-    panel.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 36px; height: 36px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px;">
-                ${dispatcherNickname.charAt(0).toUpperCase()}
-            </div>
-            <div>
-                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Agent</div>
-                <div style="font-size: 14px; color: #0f172a; font-weight: bold;">
-                    <span id="dlDispCurrentName">${dispatcherNickname}</span>
-                </div>
-            </div>
-            <button onclick="changeDispatcherName()" title="Edit Name" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 6px; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✏️ Edit Name</button>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245,158,11,0.2); display: flex; align-items: center; gap: 6px;">
-                <span>📊</span> Calling Detail
-            </button>
-            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,45,98,0.2); display: flex; align-items: center; gap: 6px;">
-                <span>👑</span> Admin Panel
-            </button>
-            <div style="height: 24px; width: 1px; background: #cbd5f1; margin: 0 4px;"></div>
-            <button onclick="logoutUser()" title="Logout Portal" style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
-                <span>🚪</span> Logout
-            </button>
-        </div>
-    `;
-    heading.parentNode.insertBefore(panel, heading.nextSibling);
+    let nameInput = document.getElementById('agentNameInput');
+    if (nameInput) nameInput.value = dispatcherNickname;
 }
 
 window.changeDispatcherName = function() {
@@ -312,8 +283,7 @@ window.changeDispatcherName = function() {
     if (newName && newName.trim() !== "") {
         dispatcherNickname = newName.trim();
         localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
-        let label = document.getElementById('dlDispCurrentName');
-        if (label) label.innerText = dispatcherNickname;
+        syncHeaderIdentityUI();
         updateActiveSessionData();
         window.location.reload();
     }
@@ -437,9 +407,20 @@ async function checkGlobalSessions() {
             })
         });
 
+        // Update sidebar calling count summary
+        updateSidebarShiftStats();
+
     } catch (e) {
         console.error("Session sync failed:", e);
     }
+}
+
+function updateSidebarShiftStats() {
+    let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
+    let shiftDateStr = getCurrentShiftDateKey();
+    let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
+    let countSpan = document.getElementById('sidebarTotalCallsCount');
+    if (countSpan) countSpan.innerText = todayLogs.length;
 }
 
 window.addEventListener('beforeunload', function () {
@@ -466,7 +447,7 @@ window.addEventListener('beforeunload', function () {
 
 let db;
 let currentHistoryId = null;
-let availableCategories = new Set(); // Global Set for Dynamic Categories
+let availableCategories = new Set();
 
 const request = indexedDB.open("DispatchLinkHistoryDB", 1);
 request.onupgradeneeded = function(e) {
@@ -478,7 +459,7 @@ request.onupgradeneeded = function(e) {
 request.onsuccess = function(e) {
     db = e.target.result;
     syncIndexedDBWithLocalStorage();
-    injectHistoryUIFramework();
+    initAppFramework();
 };
 
 function syncIndexedDBWithLocalStorage() {
@@ -509,318 +490,25 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Zip Code:\n" +
     "Summary:";
 
-function injectHistoryUIFramework() {
-    document.title = "Dispatch Link";
+function initAppFramework() {
+    syncHeaderIdentityUI();
+    updateSidebarShiftStats();
+    populateStateDropdown();
+    populateVehicleTypeCheckboxes();
 
-    let brandHeading = document.querySelector('h1, h2, .heading');
-    if (!brandHeading) {
-        const headings = document.querySelectorAll('div, h1, h2, h3');
-        for (let h of headings) {
-            if (h.textContent.includes("FMCSA SAFER") || h.textContent.includes("SAFER")) {
-                brandHeading = h;
-                break;
-            }
+    window.addEventListener('scroll', function() {
+        let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        let upBtn = document.getElementById('dlScrollUpBtn');
+        let downBtn = document.getElementById('dlScrollDownBtn');
+        let hasActiveCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell') !== null;
+
+        if (upBtn) {
+            upBtn.style.display = scrollTop > 250 ? 'flex' : 'none';
         }
-    }
-    if (brandHeading) {
-        brandHeading.innerHTML = "Dispatch Link <span style='font-size:14px; color:#6c757d; font-weight:normal;'>| Lead Processor & CRM</span>";
-    }
-
-    if (!document.getElementById('dlResponsiveTheme')) {
-        let styleTag = document.createElement('style');
-        styleTag.id = 'dlResponsiveTheme';
-        styleTag.innerHTML = `
-            .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
-            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
-            table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
-            table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
-            table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            
-            .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
-            .remarks-input-field { 
-                width: 100% !important; 
-                height: 38px !important; 
-                border: 1px solid #b6ccfe !important; 
-                border-radius: 6px !important; 
-                padding: 6px 10px !important; 
-                font-size: 12px !important; 
-                line-height: 1.4 !important;
-                box-sizing: border-box !important; 
-                color: #222 !important; 
-                background: #fafafa !important; 
-                resize: none !important;
-                font-family: monospace !important;
-                overflow: hidden !important;
-                transition: height 0.25s ease-in-out, border-color 0.2s, background 0.2s, box-shadow 0.2s; 
-            }
-            .remarks-input-field:focus { 
-                height: 120px !important; 
-                border-color: #002d62 !important; 
-                background: #ffffff !important; 
-                outline: none !important; 
-                overflow-y: auto !important;
-                box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
-            }
-            .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
-            .premium-pitch-btn:hover { background: #138496; }
-            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
-            .premium-followup-btn:hover { background: #e0a800; }
-            
-            .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
-            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: none !important; text-decoration: none !important; display: block; border-radius: 6px !important; }
-            .phone-clickable-cell:hover { background-color: #001a3a !important; }
-            .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
-            .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
-            .phone-clickable-cell.active-called-cell .clickable-phone-text { color: #0c5460 !important; font-weight: 900 !important; }
-            .phone-cell-content { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
-            .phone-icon-span { font-size: 14px; line-height: 1; }
-            .clickable-phone-text { color: #002d62; font-weight: bold; font-size: 12px; white-space: nowrap; transition: color 0.2s; }
-            .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: #e2eafc; padding: 3px 5px; border-radius: 3px; border: 1px solid #b6ccfe; z-index: 5; }
-            .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
-            .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            
-            /* ====== PERFECTED SELECT CATEGORIES DROPDOWN STYLING MATCHING VEHICLE TYPES ====== */
-            .dropdown-check-list { display: inline-block; position: relative; }
-            .dropdown-check-list .anchor { position: relative; cursor: pointer; display: inline-block; padding: 6px 12px; background: white; border: 1px solid #b6ccfe; border-radius: 4px; font-size: 12px; user-select: none; color: #002d62; font-weight: bold; }
-            .dropdown-check-list .anchor:active { background-color: #f1f1f1; }
-            .dropdown-check-list ul.items { display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 220px; top: 100%; left: 0; margin-top: 4px; text-align: left; list-style: none; max-height: 220px; overflow-y: auto; box-sizing: border-box; }
-            .dropdown-check-list.visible ul.items { display: block; }
-            .dropdown-check-list ul.items li { margin-bottom: 8px !important; font-size: 12px !important; white-space: nowrap !important; }
-            .dropdown-check-list ul.items li label { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; cursor: pointer !important; color: #333 !important; line-height: 1.3 !important; width: 100% !important; }
-            .dropdown-check-list ul.items li input[type="checkbox"] { margin: 0 !important; cursor: pointer !important; flex-shrink: 0 !important; width: 14px !important; height: 14px !important; }
-        `;
-        document.head.appendChild(styleTag);
-    }
-
-    if (!document.getElementById('dlFloatingNavPanel')) {
-        let navPanel = document.createElement('div');
-        navPanel.id = 'dlFloatingNavPanel';
-        navPanel.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; transition: opacity 0.3s ease-in-out;";
-        navPanel.innerHTML = `
-            <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: #002d62; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(0,45,98,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬆️</button>
-            <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⬇️</button>
-        `;
-        document.body.appendChild(navPanel);
-
-        window.addEventListener('scroll', function() {
-            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            let upBtn = document.getElementById('dlScrollUpBtn');
-            let downBtn = document.getElementById('dlScrollDownBtn');
-            let hasActiveCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell') !== null;
-
-            if (upBtn) {
-                upBtn.style.display = scrollTop > 250 ? 'flex' : 'none';
-            }
-            if (downBtn) {
-                downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
-            }
-        });
-    }
-
-    let coreTable = document.querySelector('table');
-    if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
-        let wrapperDiv = document.createElement('div');
-        wrapperDiv.className = 'table-responsive';
-        coreTable.parentNode.insertBefore(wrapperDiv, coreTable);
-        wrapperDiv.appendChild(coreTable);
-    }
-
-    let mainHeading = document.querySelector('h1, h2, .heading');
-    if (!mainHeading) {
-        const headings = document.querySelectorAll('div, h1, h2, h3');
-        for (let h of headings) {
-            if (h.textContent.includes("FMCSA SAFER") || h.textContent.includes("SAFER")) {
-                mainHeading = h;
-                break;
-            }
+        if (downBtn) {
+            downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
         }
-    }
-
-    if (mainHeading && !document.getElementById('devCreditTag')) {
-        mainHeading.style.position = 'relative';
-        let creditTag = document.createElement('span');
-        creditTag.id = 'devCreditTag';
-        creditTag.innerHTML = "Developed by <b>Mr. Nauman (Ph: 03700684849)</b>";
-        creditTag.style.cssText = "position: absolute; right: 0; bottom: 5px; font-size: 11px; color: #6c757d; font-family: sans-serif; font-weight: normal;";
-        mainHeading.appendChild(creditTag);
-    }
-
-    let startBtn = document.getElementById('startBtn');
-    if (startBtn && !document.getElementById('openHistoryBtn')) {
-        let historyBtn = document.createElement('button');
-        historyBtn.id = 'openHistoryBtn';
-        historyBtn.innerHTML = "📜 View History";
-        historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
-        historyBtn.onclick = (e) => { e.stopPropagation(); toggleHistoryDrawer(); };
-        startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
-
-        let followUpBtn = document.createElement('button');
-        followUpBtn.id = 'openFollowUpDrawerBtn';
-        followUpBtn.innerHTML = "📅 View Follow-Ups";
-        followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
-        followUpBtn.onclick = (e) => { e.stopPropagation(); toggleFollowUpDrawer(); };
-        startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
-    }
-
-    if (!document.getElementById('dlHistoryDrawer')) {
-        let drawer = document.createElement('div');
-        drawer.id = 'dlHistoryDrawer';
-        drawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
-        drawer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
-                <h3 style="color: #002d62; margin: 0; font-size: 18px;">Saved Sheets History</h3>
-                <button onclick="toggleHistoryDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
-            </div>
-            <div id="drawerHistoryList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
-        `;
-        document.body.appendChild(drawer);
-    }
-
-    if (!document.getElementById('dlFollowUpDrawer')) {
-        let fDrawer = document.createElement('div');
-        fDrawer.id = 'dlFollowUpDrawer';
-        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
-        fDrawer.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
-                <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
-                <button onclick="toggleFollowUpDrawer()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; font-weight: bold;">&times;</button>
-            </div>
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: #17a2b8; color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
-                <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: #002d62; border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
-            </div>
-            <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
-                <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;" oninput="renderFollowUpItems()">
-                <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: #002d62; padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
-            </div>
-            <div style="margin-bottom: 12px;">
-                <button onclick="downloadFollowUpsCSV()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: 4px; cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
-            </div>
-            <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
-        `;
-        document.body.appendChild(fDrawer);
-    }
-
-    if (!document.getElementById('dlDatePickerModal')) {
-        let modal = document.createElement('div');
-        modal.id = 'dlDatePickerModal';
-        modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
-        modal.innerHTML = `
-            <div style="background: white; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">⏰ Schedule Follow-Up</h3>
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Date:</label>
-                    <input type="date" id="dlModalDateInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
-                </div>
-                <div style="margin-bottom: 18px;">
-                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Time:</label>
-                    <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
-                </div>
-                <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button onclick="closeFollowUpModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmFollowUpSchedule()" style="background: #28a745; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Confirm Schedule</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-
-    if (!document.getElementById('dlTeamSelectModal')) {
-        let tModal = document.createElement('div');
-        tModal.id = 'dlTeamSelectModal';
-        tModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
-        tModal.innerHTML = `
-            <div style="background: white; padding: 25px; border-radius: 8px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">👥 Share with Team Member</h3>
-                <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select team member (Online or Offline will receive inbox message):</p>
-                <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;"></div>
-                <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button onclick="closeTeamSelectModal()" style="background: #6c757d; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmTeamShareAction()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Share Now</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(tModal);
-    }
-
-  if (!document.getElementById('dlDispositionModal')) {
-        let dModal = document.createElement('div');
-        dModal.id = 'dlDispositionModal';
-        dModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 100000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
-        dModal.innerHTML = `
-            <div style="background: #ffffff; width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box; position: relative;">
-                
-                <!-- Cross Close Button -->
-                <button onclick="document.getElementById('dlDispositionModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 22px; color: #6c757d; cursor: pointer; font-weight: bold; line-height: 1;" title="Close">&times;</button>
-
-                <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center; padding-right: 15px;">What is the Status of this call?</h3>
-                <p style="font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 15px;">Select call status for <b id="dispTargetPhoneNum" style="color: #002d62;"></b></p>
-                
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div onclick="submitCallDisposition('Hung up')" style="background: #ff5252; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(255,82,82,0.3);">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span>📞</span><span>Hung up</span></div>
-                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
-                    </div>
-
-                    <div onclick="submitCallDisposition('Voicemail')" style="background: #9c27b0; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(156,39,176,0.3);">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span>📭</span><span>Voicemail</span></div>
-                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
-                    </div>
-
-                    <div onclick="submitCallDisposition('Not interested')" style="background: #ff9800; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(255,152,0,0.3);">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span>👎</span><span>Not interested</span></div>
-                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
-                    </div>
-
-                    <div onclick="submitCallDisposition('Do not Call')" style="background: #2196f3; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(33,150,243,0.3);">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span>🚫</span><span>Do not Call</span></div>
-                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
-                    </div>
-
-                    <div onclick="submitCallDisposition('Follow up')" style="background: #4caf50; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(76,175,80,0.3);">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span>📅</span><span>Follow up</span></div>
-                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
-                    </div>
-
-                    <div onclick="submitCallDisposition('Sale Closed')" style="background: #009688; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(0,150,136,0.3);">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span>🤝</span><span>Sale Closed</span></div>
-                        <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(dModal);
-    }
-
-    injectAdvancedFilterBar();
-
-    let tableHeader = document.querySelector('table tr');
-    if (tableHeader && !document.getElementById('remarksHeaderCol')) {
-        let vehTh = document.createElement('th');
-        vehTh.id = 'vehicleTypeHeaderCol';
-        vehTh.innerText = "Vehicles";
-        
-        let remTh = document.createElement('th');
-        remTh.id = 'remarksHeaderCol';
-        remTh.className = 'remarks-cell-container';
-        remTh.innerText = "Remarks";
-
-        let followTh = document.createElement('th');
-        followTh.id = 'followUpHeaderCol';
-        followTh.innerText = "Action";
-
-        let powerUnitsTh = tableHeader.children[8];
-        if (powerUnitsTh && powerUnitsTh.nextSibling) {
-            tableHeader.insertBefore(vehTh, powerUnitsTh.nextSibling);
-        } else {
-            tableHeader.appendChild(vehTh);
-        }
-        tableHeader.appendChild(remTh);
-        tableHeader.appendChild(followTh);
-    }
-
-    injectEmailProposalPanel();
+    });
 }
 
 window.scrollToTopScreen = function() {
@@ -840,17 +528,13 @@ window.scrollToLastCalledLead = function() {
 };
 
 // ====== DYNAMIC CATEGORY DROPDOWN TOGGLE HANDLERS ======
-function toggleCategoryDropdown(e) {
+window.toggleCategoryDropdown = function(e) {
     e.stopPropagation();
     let list = document.getElementById('categoryDropdownCheckList');
     if (list) {
-        if (list.classList.contains('visible')) {
-            list.classList.remove('visible');
-        } else {
-            list.classList.add('visible');
-        }
+        list.classList.toggle('visible');
     }
-}
+};
 
 window.addEventListener('click', function(event) {
     if (!event.target.closest('#categoryDropdownCheckList')) {
@@ -879,60 +563,6 @@ function updateCategoryCheckboxes() {
         `;
     });
     container.innerHTML = html;
-}
-
-function injectAdvancedFilterBar() {
-    let table = document.querySelector('table');
-    if (!table || document.getElementById('advancedFilterWrapper')) return;
-
-    let filterDiv = document.createElement('div');
-    filterDiv.id = 'advancedFilterWrapper';
-    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
-    filterDiv.innerHTML = `
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
-                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
-                    <option value="">All States</option>
-                </select>
-            </div>
-            
-            <!-- ====== SELECT CATEGORIES DROPDOWN FIXED STYLING MATCHING VEHICLE TYPES ====== -->
-            <div id="categoryDropdownCheckList" class="dropdown-check-list" tabindex="100">
-                <span class="anchor" onclick="toggleCategoryDropdown(event)">Select Categories ▼</span>
-                <ul id="checkboxListContainer" class="items">
-                    <!-- Dynamic check lists populate here -->
-                </ul>
-            </div>
-
-            <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #b6ccfe; padding: 6px 12px; font-size: 12px; border-radius: 4px; color: #002d62; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #b6ccfe; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: left;">Filter by Vehicle:</div>
-                    <div id="vehicleCheckboxList"></div>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
-                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
-            </div>
-            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
-        </div>
-        <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
-            📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
-        </div>
-    `;
-    table.parentNode.insertBefore(filterDiv, table);
-    populateStateDropdown();
-    populateVehicleTypeCheckboxes();
-
-    document.addEventListener('click', function(e) {
-        let dropdown = document.getElementById('vehicleTypeDropdownContent');
-        let btn = document.querySelector('button[onclick*="toggleVehicleDropdown"]');
-        if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
-            dropdown.style.display = 'none';
-        }
-    });
 }
 
 window.toggleVehicleDropdown = function(e) {
@@ -1005,9 +635,9 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important; float: none !important;">
-                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; float: none !important; display: inline-block !important; width: 14px !important; height: 14px !important;"> 
-                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
+            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important;">
+                <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; width: 14px !important; height: 14px !important;"> 
+                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
             </label>
         `;
     });
@@ -1017,7 +647,7 @@ function populateVehicleTypeCheckboxes() {
 window.applyAdvancedFilters = function() {
     let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
     let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
-    let selectedCategories = Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value); // Category Multi-filter lookup
+    let selectedCategories = Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value);
     
     let selectedVehicles = [];
     document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
@@ -1085,30 +715,6 @@ function updateVisibleRecordCount() {
     if (badge) badge.innerText = visibleCount;
 }
 
-function injectEmailProposalPanel() {
-    let table = document.querySelector('table');
-    if (!table || document.getElementById('premiumProposalWrapper')) return;
-
-    let savedSubject = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Service Proposal";
-    let savedBody = localStorage.getItem(`dl_body_${currentClient}`) || "Hello,\n\nWe found your profile via FMCSA. We offer dispatching services at 5% rate.\n\nBest Regards.";
-
-    let proposalPanel = document.createElement('div');
-    proposalPanel.id = 'premiumProposalWrapper';
-    proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif;";
-    proposalPanel.innerHTML = `
-        <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
-            <span style="font-size: 12px; font-weight: bold;">⚙️ Click to Edit</span>
-        </div>
-        <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
-            <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px;"></div>
-            <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px;">${savedBody}</textarea></div>
-            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
-        </div>
-    `;
-    table.parentNode.insertBefore(proposalPanel, table);
-}
-
 window.saveProposalTemplateSettings = function() {
     localStorage.setItem(`dl_subj_${currentClient}`, document.getElementById('propSubjectInput').value);
     localStorage.setItem(`dl_body_${currentClient}`, document.getElementById('propBodyInput').value);
@@ -1147,12 +753,12 @@ window.copyEmailToClipboard = function(element, emailAddress) {
 };
 
 function buildEmailCellMarkup(emailAddress, companyName) {
-    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: #6c757d;">N/A</td>`;
+    if (!emailAddress || emailAddress === 'N/A') return `<td style="color: var(--text-muted);">N/A</td>`;
     let escapedName = companyName.replace(/'/g, "\\'");
     return `
         <td style="position: relative; vertical-align: middle;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${emailAddress}</span>
+                <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: var(--primary); font-weight: bold; cursor: pointer;">${emailAddress}</span>
                 <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📤 Send</a>
             </div>
         </td>
@@ -1191,6 +797,7 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
     }
 
     showPremiumNotification(`✅ Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
+    updateSidebarShiftStats();
 
     if (cellElement) {
         document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
@@ -1199,7 +806,7 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
 
     let downBtn = document.getElementById('dlScrollDownBtn');
     if (downBtn) downBtn.style.display = 'none';
-}
+};
 
 window.openDispositionModal = function(phoneNum) {
     pendingReviewPhone = phoneNum;
@@ -1227,7 +834,6 @@ window.openCallingDetailModal = function() {
     let logs = JSON.parse(localStorage.getItem(`dl_call_logs_${currentClient}_${dispatcherNickname}`)) || [];
     let shiftDateStr = getCurrentShiftDateKey();
     let todayLogs = logs.filter(l => l.shiftDate === shiftDateStr);
-    
     let totalCallsCount = todayLogs.length;
 
     let modal = document.createElement('div');
@@ -1235,31 +841,29 @@ window.openCallingDetailModal = function() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+        <div style="background: var(--bg-card); color: var(--text-main); width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
             <div style="background: #ff9800; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
                 <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <div style="padding: 20px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #002d62; font-size: 16px;">${totalCallsCount}</span>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: var(--primary); font-size: 16px;">${totalCallsCount}</span>
                 </div>
-                
                 <div style="margin-top: 20px; display: flex; gap: 8px;">
-                    <button onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
-                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
+                    <button onclick="openShiftShareModal()" style="background: var(--primary); color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: var(--slate-600); color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
                 </div>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
-}
+};
 
 window.openAdminPanelPrompt = function() {
     window.open('admin.html', '_blank');
 };
 
-// ====== INSTANT COLOR CHANGE & CALL/COPY HANDLERS ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -1304,7 +908,7 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
 };
 
 function buildPhoneCellMarkup(phoneNum) {
-    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: #6c757d; text-align: center;">N/A</td>`;
+    if (!phoneNum || phoneNum === 'N/A') return `<td style="color: var(--text-muted); text-align: center;">N/A</td>`;
     return `
         <td class="phone-clickable-container">
             <a href="tel:${phoneNum}" onclick="handlePhoneInteraction(this, '${phoneNum}'); return false;" class="phone-clickable-cell" title="Click to Call">
@@ -1383,7 +987,7 @@ window.confirmFollowUpSchedule = function() {
     }
 
     closeFollowUpModal();
-    if (document.getElementById('dlFollowUpDrawer').style.right === "0px") renderFollowUpItems();
+    if (document.getElementById('dlFollowUpDrawer').classList.contains('open')) renderFollowUpItems();
 };
 
 function formatTime12Hour(time24) {
@@ -1401,12 +1005,10 @@ window.toggleFollowUpDrawer = function() {
     let historyDrawer = document.getElementById('dlHistoryDrawer');
     if (!drawer) return;
     
-    if(historyDrawer) historyDrawer.style.right = "-420px"; 
+    if(historyDrawer) historyDrawer.classList.remove('open');
     
-    if (drawer.style.right === "0px") {
-        drawer.style.right = "-420px";
-    } else {
-        drawer.style.right = "0px";
+    drawer.classList.toggle('open');
+    if (drawer.classList.contains('open')) {
         let searchInput = document.getElementById('followUpSearchInput');
         if(searchInput) searchInput.value = ""; 
         currentFollowUpFilterMode = 'today';
@@ -1427,18 +1029,18 @@ function updateFollowUpFilterButtonsUI() {
     if (!btnToday || !btnAll) return;
 
     if (currentFollowUpFilterMode === 'today') {
-        btnToday.style.background = "#17a2b8";
+        btnToday.style.background = "var(--info)";
         btnToday.style.color = "white";
         btnToday.style.border = "none";
         btnAll.style.background = "#e2eafc";
-        btnAll.style.color = "#002d62";
+        btnAll.style.color = "var(--primary)";
         btnAll.style.border = "1px solid #b6ccfe";
     } else {
-        btnAll.style.background = "#17a2b8";
+        btnAll.style.background = "var(--info)";
         btnAll.style.color = "white";
         btnAll.style.border = "none";
         btnToday.style.background = "#e2eafc";
-        btnToday.style.color = "#002d62";
+        btnToday.style.color = "var(--primary)";
         btnToday.style.border = "1px solid #b6ccfe";
     }
 }
@@ -1480,7 +1082,7 @@ window.openTeamShareModal = async function(recordsToShare) {
 
     let radioListDiv = document.getElementById('dlTeamMembersRadioList');
     if (!radioListDiv) return;
-    radioListDiv.innerHTML = `<div style="text-align: center; color: #6c757d; font-size: 12px; padding: 15px;">Loading team members...</div>`;
+    radioListDiv.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 15px;">Loading team members...</div>`;
 
     let tModal = document.getElementById('dlTeamSelectModal');
     if (tModal) tModal.style.display = 'flex';
@@ -1502,7 +1104,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         let membersList = Array.from(allMembers).filter(n => n !== dispatcherNickname);
 
         if (membersList.length === 0) {
-            radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px; font-weight: bold;">No other team members found.</div>`;
+            radioListDiv.innerHTML = `<div style="text-align: center; color: var(--danger); font-size: 12px; padding: 15px; font-weight: bold;">No other team members found.</div>`;
             return;
         }
 
@@ -1518,7 +1120,7 @@ window.openTeamShareModal = async function(recordsToShare) {
 
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
-                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; font-size: 13px; color: var(--text-main);">
                     <input type="radio" name="teamMemberRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
                     <span><b>${name}</b> (${statusText})</span>
                 </label>
@@ -1527,7 +1129,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         radioListDiv.innerHTML = html;
     } catch (e) {
         console.error("Failed to fetch team members:", e);
-        radioListDiv.innerHTML = `<div style="text-align: center; color: #dc3545; font-size: 12px; padding: 15px;">Error loading team members.</div>`;
+        radioListDiv.innerHTML = `<div style="text-align: center; color: var(--danger); font-size: 12px; padding: 15px;">Error loading team members.</div>`;
     }
 };
 
@@ -1566,7 +1168,6 @@ window.confirmTeamShareAction = async function() {
                 body: JSON.stringify(existingList)
             });
             showPremiumNotification(`✅ Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
-            
             document.querySelectorAll('.followup-select-checkbox:checked').forEach(cb => cb.checked = false);
         } else {
             alert(`Selected lead(s) are already present in ${targetName}'s shared inbox.`);
@@ -1616,7 +1217,8 @@ async function pollIncomingSharedLeads() {
         if (newLeadsAdded) {
             localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(localFollowUps));
             showPremiumNotification(`📥 You received new shared follow-up leads from your team!`, 5000);
-            if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
+            let fDrawer = document.getElementById('dlFollowUpDrawer');
+            if (fDrawer && fDrawer.classList.contains('open')) {
                 renderFollowUpItems();
             }
             await fetch(inboxUrl, { method: 'DELETE' });
@@ -1639,7 +1241,7 @@ function renderFollowUpItems() {
     let todayDateStr = new Date().toISOString().split('T')[0];
 
     if (data.length === 0) {
-        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
+        listContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No active follow-up leads found.</p>`;
         return;
     }
 
@@ -1664,48 +1266,35 @@ function renderFollowUpItems() {
         }
 
         matchCount++;
-        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
+        let senderTag = item.sharedBy ? `<span style="background: var(--success); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
 
         itemsHTML += `
-            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-left: 4px solid var(--info); padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px;">
                     <span>Saved: ${item.addedAt}</span>
-                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
+                    <span style="background: var(--table-hover); color: var(--primary); padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
+                    <div style="font-size: 14px; font-weight: bold; color: var(--text-main);">${item.name}</div>
                     ${senderTag}
                 </div>
-                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
-                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
-                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
+                <div style="font-size: 12px; color:var(--text-main);"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; color:var(--text-main); margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; color: var(--text-muted); background: var(--table-hover); padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
-                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
-                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: var(--info); color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
                 </div>
             </div>
         `;
     });
 
     if (matchCount === 0) {
-        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
+        listContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
     } else {
         listContainer.innerHTML = itemsHTML;
-    }
-
-    if (!document.getElementById('dlBulkFollowUpActionBar')) {
-        let actionBar = document.createElement('div');
-        actionBar.id = 'dlBulkFollowUpActionBar';
-        actionBar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; align-items: center; background: #e2eafc; padding: 6px; border-radius: 4px; font-size: 11px;";
-        actionBar.innerHTML = `
-            <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
-                <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
-            </label>
-            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
-        `;
-        listContainer.parentNode.insertBefore(actionBar, listContainer);
     }
 
     let itemDivs = listContainer.querySelectorAll('div[style*="border-left"]');
@@ -1729,7 +1318,7 @@ function renderFollowUpItems() {
                 let teamBtn = document.createElement('button');
                 teamBtn.className = 'single-team-share-btn';
                 teamBtn.innerHTML = "👥 Share";
-                teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
+                teamBtn.style.cssText = "background: var(--primary); color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
                 teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
                 btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
             }
@@ -1792,12 +1381,10 @@ window.toggleHistoryDrawer = function() {
     let followUpDrawer = document.getElementById('dlFollowUpDrawer');
     if (!drawer) return;
     
-    if(followUpDrawer) followUpDrawer.style.right = "-420px"; 
+    if(followUpDrawer) followUpDrawer.classList.remove('open');
     
-    if (drawer.style.right === "0px") {
-        drawer.style.right = "-420px";
-    } else {
-        drawer.style.right = "0px";
+    drawer.classList.toggle('open');
+    if (drawer.classList.contains('open')) {
         renderHistoryItems();
     }
 };
@@ -1819,15 +1406,15 @@ function renderHistoryItems() {
         data = data.reverse();
 
         if (data.length === 0) {
-            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No history records found yet.</p>`;
+            listContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No saved sheet history found.</p>`;
             return;
         }
 
         let itemsHTML = "";
         data.forEach(item => {
             let displayStatus = item.status === "Interrupted (Auto-Saved)"
-                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
-                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
+                ? `<span style="color: var(--danger); font-weight:bold;">⚠️ ${item.status}</span>`
+                : `<span style="color: var(--success); font-weight:bold;">✅ ${item.status}</span>`;
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
@@ -1837,23 +1424,23 @@ function renderHistoryItems() {
             
             let csvBtnStyle = recordsCount === 0 
                 ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+                : "background: var(--success); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
 
             let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
             let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
 
             itemsHTML += `
-                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
-                    <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
-                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-left: 4px solid var(--primary); padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: bold;">${item.date}</div>
+                    <div style="font-size: 14px; font-weight: bold; color: var(--text-main); margin: 4px 0;">Range: ${item.range}</div>
                     <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
-                        <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                        <span style="background: var(--table-hover); color: var(--primary); padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
-                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
+                            <button onclick="loadHistorySheetToTable(${item.id})" style="background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
                             <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
-                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: var(--danger); color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -2080,7 +1667,8 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
                 }
                 localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
                 
-                if (document.getElementById('dlHistoryDrawer') && document.getElementById('dlHistoryDrawer').style.right === "0px") {
+                let hDrawer = document.getElementById('dlHistoryDrawer');
+                if (hDrawer && hDrawer.classList.contains('open')) {
                     renderHistoryItems();
                 }
             };
@@ -2307,8 +1895,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     scraping = true; 
     document.getElementById('startBtn').style.display = 'none';
-    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
-    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
 
@@ -2324,10 +1910,10 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         statusBox.style.alignItems = "center";
         statusBox.style.justifyContent = "space-between";
         statusBox.style.padding = "10px 15px";
-        statusBox.style.background = "#f8f9fa";
-        statusBox.style.color = "#333";
-        statusBox.style.border = "1px solid #e9ecef";
-        statusBox.style.borderLeft = "5px solid #002d62";
+        statusBox.style.background = "var(--bg-card)";
+        statusBox.style.color = "var(--text-main)";
+        statusBox.style.border = "1px solid var(--border-color)";
+        statusBox.style.borderLeft = "5px solid var(--primary)";
         statusBox.style.borderRadius = "4px";
     }
 
@@ -2430,20 +2016,20 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
-        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:var(--danger); font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:var(--success); font-size:11px; font-weight:bold;">Status: Stable</span>`;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
                 <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
+                    <div style="font-size: 13px; font-weight: bold; color: var(--text-main);">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: bold;">${timeString}</span>
                         ${latestErrorText}
                     </div>
                 </div>
-                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#002d62 ${degrees}deg, #ddd ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <div style="position: absolute; width: 30px; height: 30px; background: #f8f9fa; border-radius: 50%;"></div>
-                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #002d62;">${percentage}%</span>
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(var(--primary) ${degrees}deg, var(--border-color) ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div style="position: absolute; width: 30px; height: 30px; background: var(--bg-card); border-radius: 50%;"></div>
+                    <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: var(--primary);">${percentage}%</span>
                 </div>
             `;
         }
@@ -2456,15 +2042,13 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
-    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
-    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
 
     if (statusBox) {
         statusBox.style.padding = "15px";
         statusBox.style.display = "flex";
-        statusBox.style.borderLeft = "5px solid #28a745";
-        statusBox.innerHTML = `<strong style="size: 15px; color: #28a745; font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
+        statusBox.style.borderLeft = "5px solid var(--success)";
+        statusBox.innerHTML = `<strong style="font-size: 15px; color: var(--success); font-family: sans-serif;">Completed! Found ${scrapedData.length} valid records.</strong>`;
     }
 
     if(scrapedData.length > 0) {
@@ -2480,5 +2064,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
