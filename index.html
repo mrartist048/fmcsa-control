@@ -2,578 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dispatch Link | Enterprise CRM</title>
-    <!-- Favicon Integration -->
-    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Dispatch Link</title>
     <style>
-        :root {
-            --primary: #0284c7;
-            --primary-dark: #0369a1;
-            --slate-900: #0f172a;
-            --slate-800: #1e293b;
-            --slate-700: #334155;
-            --slate-600: #475569;
-            --slate-500: #64748b;
-            --slate-200: #e2e8f0;
-            --slate-100: #f1f5f9;
-            --slate-50: #f8fafc;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            
-            --bg-main: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-sidebar: #0f172a;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --table-hover: #f1f5f9;
-        }
-
-        /* DARK MODE VARIABLES */
-        body.dark-mode {
-            --bg-main: #090d16;
-            --bg-card: #131d31;
-            --bg-sidebar: #060911;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-color: #1e293b;
-            --table-hover: #1b2842;
-        }
-
-        * { box-sizing: border-box; }
-        
-        body { 
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; 
-            background-color: var(--bg-main); 
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 0; 
-            height: 100vh; 
-            overflow: hidden; 
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-
-        /* SIDEBAR NAVIGATION */
-        .sidebar { 
-            width: 260px; 
-            background: var(--bg-sidebar); 
-            color: white; 
-            display: flex; 
-            flex-direction: column; 
-            flex-shrink: 0; 
-            box-shadow: 4px 0 25px rgba(0,0,0,0.18); 
-            z-index: 100; 
-            transition: background-color 0.3s;
-        }
-        .sidebar-brand { 
-            padding: 24px 20px; 
-            border-bottom: 1px solid rgba(255,255,255,0.06); 
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .sidebar-brand-logo {
-            width: 36px; height: 36px; background: var(--primary); border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: white;
-        }
-        .sidebar-brand h2 { margin: 0; font-size: 16px; font-weight: 800; color: #ffffff; }
-        .sidebar-brand span { font-size: 10.5px; color: #38bdf8; font-weight: 700; display: block; margin-top: 2px; text-transform: uppercase; }
-        
-        .sidebar-menu { padding: 20px 14px 10px 14px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
-        .menu-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; padding: 0 12px 6px 12px; font-weight: 800; }
-        
-        .nav-btn { 
-            background: transparent; color: #94a3b8; border: none; padding: 11px 14px; 
-            text-align: left; font-size: 13px; font-weight: 600; border-radius: var(--radius-sm); 
-            cursor: pointer; display: flex; align-items: center; gap: 10px; transition: var(--transition); width: 100%; 
-        }
-        .nav-btn:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
-        .nav-btn.active { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 12px rgba(2,132,199,0.3); font-weight: 700; }
-
-        /* SIDEBAR CALLING STATS WIDGET */
-        .sidebar-calling-stats {
-            margin: 10px 14px 20px 14px; padding: 16px; background: rgba(255,255,255,0.03); 
-            border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06);
-        }
-        .sidebar-calling-stats h4 { margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; }
-        .sidebar-stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #cbd5e1; font-weight: 500; }
-        .sidebar-stat-row span:last-child { font-weight: 700; color: #ffffff; }
-
-        /* MAIN WRAPPER */
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: var(--bg-main); overflow: hidden; width: 100%; transition: background-color 0.3s; }
-
-        /* TOP HEADER PROFILE BAR */
-        .top-header { 
-            height: 72px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); 
-            display: flex; align-items: center; justify-content: space-between; padding: 0 28px; 
-            box-shadow: var(--shadow-sm); flex-shrink: 0; transition: background-color 0.3s, border-color 0.3s;
-            position: relative;
-        }
-        
-        .profile-menu-container { position: relative; display: inline-block; }
-        
-        .profile-trigger-card { 
-            display: flex; align-items: center; gap: 12px; background: var(--bg-main); 
-            border: 1px solid var(--border-color); padding: 6px 14px 6px 8px; border-radius: 30px; 
-            cursor: pointer; transition: var(--transition); 
-        }
-        .profile-trigger-card:hover { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2,132,199,0.1); }
-        
-        .user-avatar { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
-        .user-info .name { font-size: 13px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-        .user-info .role { font-size: 11px; color: var(--text-muted); font-weight: 600; }
-
-        /* DROPDOWN MENU */
-        .profile-dropdown-menu {
-            display: none; position: absolute; right: 0; top: calc(100% + 8px); 
-            background: var(--bg-card); border: 1px solid var(--border-color); 
-            box-shadow: var(--shadow-md); border-radius: var(--radius-md); 
-            width: 220px; z-index: 1000; overflow: hidden; padding: 6px; animation: fadeIn 0.2s ease-in-out;
-        }
-        .profile-dropdown-menu.show { display: block; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .dropdown-item {
-            display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
-            background: transparent; border: none; text-align: left; font-size: 13px; font-weight: 600;
-            color: var(--text-main); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition);
-        }
-        .dropdown-item:hover { background: var(--table-hover); color: var(--primary); }
-        .dropdown-item.danger { color: #dc2626; }
-        .dropdown-item.danger:hover { background: #fee2e2; color: #dc2626; }
-        .dropdown-divider { height: 1px; background: var(--border-color); margin: 6px 0; }
-
-        /* BODY CONTENT */
-        .admin-body { flex: 1; padding: 24px 28px; overflow-y: auto; background: var(--bg-main); transition: background-color 0.3s; }
-
-        .section-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0; letter-spacing: -0.3px; }
-        .section-desc { font-size: 12.5px; color: var(--text-muted); margin: 0 0 20px 0; font-weight: 500; }
-
-        /* SCANNER CARD & SETTINGS SECTION */
-        .scanner-card, .settings-card {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; transition: background-color 0.3s, border-color 0.3s;
-        }
-        .scraper-control-bar { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-        .input-field { display: flex; flex-direction: column; width: 220px; }
-        label { margin-bottom: 6px; font-weight: 700; font-size: 12px; color: var(--text-main); }
-        input[type="number"], input[type="text"], select, textarea { 
-            width: 100%; padding: 10px 14px; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); 
-            outline: none; font-size: 13.5px; font-weight: 600; color: var(--text-main); background: var(--bg-card); transition: var(--transition); 
-        }
-        input[type="number"], input[type="text"], select { height: 40px; }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
-
-        .btn-start { background-color: var(--primary); color: white; border: none; padding: 0 20px; height: 40px; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; }
-        .btn-start:hover { background-color: var(--primary-dark); }
-        .btn-stop { background-color: var(--danger); color: white; border: none; padding: 0 20px; height: 40px; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; display: none; }
-        .btn-download { background-color: var(--success); color: white; border: none; padding: 0 20px; height: 40px; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; display: none; }
-
-        .action-sub-links { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-        
-        #status { font-weight: 600; font-size: 13px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-main); border-left: 4px solid var(--primary); }
-
-        /* DATA TABLE CARD */
-        .table-card {
-            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 30px; transition: background-color 0.3s, border-color 0.3s;
-        }
-        .table-responsive { width: 100%; overflow-x: auto; }
-        table.table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
-        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; vertical-align: middle; color: var(--text-main); }
-        th { background-color: var(--border-color); color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
-        tr:hover td { background-color: var(--table-hover); }
-
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; text-transform: uppercase; }
-        .badge-active { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-
-        /* REMARKS TEXTAREA STYLING */
-        .remarks-input-field { 
-            width: 100% !important; height: 38px !important; border: 1.5px solid var(--border-color) !important; border-radius: var(--radius-sm) !important; 
-            padding: 6px 10px !important; font-size: 12px !important; background: var(--bg-card) !important; color: var(--text-main) !important; resize: none !important;
-            font-family: monospace !important; overflow: hidden !important; transition: height 0.25s ease-in-out, border-color 0.2s; 
-        }
-        .remarks-input-field:focus { height: 120px !important; border-color: var(--primary) !important; outline: none !important; overflow-y: auto !important; }
-
-        /* FOOTER BRANDING */
-        .app-footer {
-            padding: 16px 28px; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); font-weight: 500; flex-shrink: 0; transition: background-color 0.3s;
-        }
-
-        /* SIDE DRAWERS */
-        .side-drawer {
-            position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: var(--bg-card); color: var(--text-main); box-shadow: -5px 0 25px rgba(0,0,0,0.15); z-index: 999999; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 24px; box-sizing: border-box; display: flex; flex-direction: column;
-        }
-        .side-drawer.open { right: 0; }
+        body { font-family: sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
+        .container { max-width: 1250px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { color: #002d62; border-bottom: 2px solid #eeecf2; padding-bottom: 10px; }
+        .input-group { display: flex; gap: 15px; margin-bottom: 20px; }
+        .input-field { flex: 1; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn-container { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-start { background-color: #002d62; color: white; }
+        .btn-stop { background-color: #d9534f; color: white; }
+        .btn-download { background-color: #5cb85c; color: white; display: none; }
+        #status { font-weight: bold; margin-bottom: 15px; padding: 10px; background: #eef1f6; border-left: 4px solid #002d62; }
+        table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; }
+        th { background-color: #f8f9fa; color: #002d62; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; text-transform: uppercase; }
+        .badge-active { background-color: #d4edda; color: #155724; }
+        .badge-inactive { background-color: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
 
-<div class="admin-layout">
-    <!-- SIDEBAR NAVIGATION MENU -->
-    <div class="sidebar">
-        <div class="sidebar-brand">
-            <div class="sidebar-brand-logo">DL</div>
-            <div>
-                <h2>Dispatch Link</h2>
-                <span>Lead Processor & CRM</span>
-            </div>
+<div class="container">
+    <h2>Dispatch Link</h2>
+    <div class="input-group">
+        <div class="input-field">
+            <label>Starting MC Number:</label>
+            <input type="number" id="startMc" value="0">
         </div>
-
-        <div class="sidebar-menu">
-            <div class="menu-label">Main Menu</div>
-            <button class="nav-btn active" onclick="switchTab('scannerTab')" id="menuScannerBtn"><span>🏠</span> Dashboard</button>
-            <button class="nav-btn" onclick="switchTab('emailTemplatesTab')" id="menuEmailBtn"><span>✉️</span> Email Templates</button>
-            <button class="nav-btn" onclick="toggleHistoryDrawerCustom()"><span>📜</span> History</button>
-            <button class="nav-btn" onclick="toggleFollowUpDrawerCustom()"><span>📅</span> Follow-Ups</button>
-            <button class="nav-btn" onclick="switchTab('settingsTab')" id="menuSettingsBtn"><span>⚙️</span> Settings</button>
-        </div>
-
-        <!-- SIDEBAR CALLING STATS WIDGET -->
-        <div class="sidebar-calling-stats">
-            <h4><span>📞 Shift Calling Summary</span> <button onclick="openCallingDetailModal()" style="background:none; border:none; color:#38bdf8; cursor:pointer; font-size:11px; font-weight:bold;">View</button></h4>
-            <div class="sidebar-stat-row"><span>Total Calls Today:</span> <span id="sidebarTotalCallsCount">0</span></div>
-            <div class="sidebar-stat-row"><span>Status:</span> <span style="color: #4ade80;">Active Shift</span></div>
+        <div class="input-field">
+            <label>Ending MC Number:</label>
+            <input type="number" id="endMc" value="0">
         </div>
     </div>
-
-    <!-- MAIN WRAPPER CONTAINER -->
-    <div class="main-wrapper">
-        <!-- TOP PROFILE & PREMIUM DROPDOWN BAR -->
-        <div class="top-header">
-            <div style="font-size: 14px; font-weight: 700; color: var(--text-muted);">
-                Enterprise Dispatch CRM
-            </div>
-
-            <!-- PREMIUM PROFILE DROPDOWN MENU -->
-            <div class="profile-menu-container">
-                <div class="profile-trigger-card" onclick="toggleProfileDropdown(event)">
-                    <div class="user-avatar" id="sidebarAvatarIcon">N</div>
-                    <div class="user-info">
-                        <div class="name"><span id="sidebarAgentName">Agent</span> ▾</div>
-                        <div class="role">Active Dispatcher</div>
-                    </div>
-                </div>
-
-                <div id="profileDropdownMenu" class="profile-dropdown-menu">
-                    <button class="dropdown-item" onclick="switchTab('settingsTab'); closeProfileDropdown();">
-                        <span>⚙️</span> Account Settings
-                    </button>
-                    <button class="dropdown-item" onclick="openAdminPanelPrompt(); closeProfileDropdown();">
-                        <span>👑</span> Admin Panel
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="dropdown-item danger" onclick="logoutUser(); closeProfileDropdown();">
-                        <span>🚪</span> Secure Logout
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- DASHBOARD BODY CONTENT -->
-        <div class="admin-body">
-            
-            <!-- TAB 1: SCANNER & DASHBOARD -->
-            <div id="scannerTabContent">
-                <h1 class="section-title">MC Range Scanner</h1>
-                <p class="section-desc">Scan and manage MC numbers with advanced filtering and CRM tools.</p>
-
-                <!-- SCANNER CARD -->
-                <div class="scanner-card">
-                    <div class="scraper-control-bar">
-                        <div class="input-field">
-                            <label>Starting MC Number</label>
-                            <input type="number" id="startMc" value="0">
-                        </div>
-                        <div class="input-field">
-                            <label>Ending MC Number</label>
-                            <input type="number" id="endMc" value="0">
-                        </div>
-                        <div>
-                            <button class="btn-start" id="startBtn" onclick="startScraping()"><span>🚀</span> Start Scanning</button>
-                            <button class="btn-stop" id="stopBtn" onclick="stopScraping()" style="display:none;"><span>⏹️</span> Stop</button>
-                        </div>
-                    </div>
-
-                    <div class="action-sub-links">
-                        <button class="sub-link-btn btn-download" id="downloadBtn" onclick="downloadCSV()"><span>📥</span> Download Excel/CSV</button>
-                    </div>
-
-                    <div id="status">Status: Enter range and click Start.</div>
-                </div>
-
-                <!-- ADVANCED FILTER TOOLBAR -->
-                <div id="advancedFilterInjector"></div>
-
-                <!-- EMAIL PROPOSAL PANEL INJECTOR -->
-                <div id="emailProposalInjector"></div>
-
-                <!-- DATA TABLE CARD -->
-                <div class="table-card">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>MC Number</th>
-                                    <th>USDOT</th>
-                                    <th>Company Name</th>
-                                    <th>Entity Type</th>
-                                    <th>Operating Status</th>
-                                    <th>Phone</th>
-                                    <th>Address</th>
-                                    <th>Email</th>
-                                    <th>Power Units</th>
-                                    <th id="vehicleTypeHeaderCol">Vehicles</th>
-                                    <th id="remarksHeaderCol" class="remarks-cell-container">Remarks</th>
-                                    <th id="followUpHeaderCol">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultsTable">
-                                <tr><td colspan="12" style="text-align:center; color:var(--text-muted); padding: 30px; font-style: italic;">No data loaded yet.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: EMAIL TEMPLATES TAB -->
-            <div id="emailTemplatesTabContent" style="display: none;">
-                <h1 class="section-title">Email Proposal Templates</h1>
-                <p class="section-desc">Manage and save professional email proposals to send directly to carriers and dispatch leads.</p>
-
-                <div class="settings-card" style="max-width: 800px;">
-                    <h3 style="margin-top: 0; color: var(--primary); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">✉️ Setup Dispatch Proposal Template</h3>
-                    
-                    <div style="margin-bottom: 16px;">
-                        <label for="emailTemplateSubject">Email Subject Line:</label>
-                        <input type="text" id="emailTemplateSubject" placeholder="e.g., Profitable Truck Dispatch Services for [Company Name]" style="margin-top: 6px;">
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label for="emailTemplateBody">Email Message Body:</label>
-                        <textarea id="emailTemplateBody" rows="7" placeholder="Write your proposal here... Use tags like {company_name}, {mc_number}, {phone}" style="margin-top: 6px; resize: vertical; font-family: inherit;"></textarea>
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="saveCustomEmailTemplate()" class="btn-start" style="height: 38px; font-size: 13px;">Save Template</button>
-                        <button onclick="loadDefaultEmailTemplate()" style="background: var(--slate-600); color: white; border: none; padding: 0 16px; height: 38px; border-radius: var(--radius-sm); font-weight: bold; cursor: pointer; font-size: 13px;">Reset Default</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 3: SETTINGS PANEL -->
-            <div id="settingsTabContent" style="display: none;">
-                <h1 class="section-title">App Settings & Preferences</h1>
-                <p class="section-desc">Customize your agent profile, display themes, and workspace preferences.</p>
-
-                <div class="settings-card" style="max-width: 600px;">
-                    <h3 style="margin-top: 0; color: var(--primary); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">👤 Agent Profile Settings</h3>
-                    <div style="margin-bottom: 16px;">
-                        <label for="agentNameInput">Agent Name:</label>
-                        <input type="text" id="agentNameInput" placeholder="Enter your full name..." style="margin-top: 6px;">
-                    </div>
-                    <button onclick="saveAgentProfileSettings()" class="btn-start" style="height: 38px; font-size: 13px;">Save Name</button>
-                </div>
-
-                <div class="settings-card" style="max-width: 600px; margin-top: 20px;">
-                    <h3 style="margin-top: 0; color: var(--primary); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">🎨 Theme Appearance</h3>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px;">
-                        <div>
-                            <div style="font-weight: 700; font-size: 14px;">Dark Mode Theme</div>
-                            <div style="font-size: 12px; color: var(--text-muted);">Switch between light and dark UI themes for comfortable night dispatching.</div>
-                        </div>
-                        <button onclick="toggleDarkModeTheme()" id="darkModeToggleBtn" style="background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: var(--radius-sm); font-weight: bold; cursor: pointer; font-size: 13px;">🌙 Enable Dark Mode</button>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- FOOTER BAR -->
-        <div class="app-footer">
-            <span>© 2026 Dispatch Link. All rights reserved.</span>
-            <span id="devCreditTag">Developed by <b>Mr. Nauman (Ph: 03700684849)</b></span>
-        </div>
+    <div class="btn-container">
+        <button class="btn-start" id="startBtn" onclick="startScraping()">Start Scanning</button>
+        <button class="btn-stop" id="stopBtn" onclick="stopScraping()" style="display:none;">Stop</button>
+        <button class="btn-download" id="downloadBtn" onclick="downloadCSV()">Download Excel/CSV</button>
     </div>
+    <div id="status">Status: Enter range and click Start.</div>
+    <table>
+        <thead>
+            <tr>
+                <th>MC Number</th>
+                <th>USDOT</th>
+                <th>Company Name</th>
+                <th>Entity Type</th>
+                <th>Operating Status</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Email</th>
+                <th>Power Units</th>
+            </tr>
+        </thead>
+        <tbody id="resultsTable">
+            <tr><td colspan="9" style="text-align:center; color:#999;">No data loaded yet.</td></tr>
+        </tbody>
+    </table>
 </div>
 
-<!-- HISTORY DRAWER -->
-<div id="dlHistoryDrawer" class="side-drawer">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 15px;">
-        <h3 style="color: var(--primary); margin: 0; font-size: 18px;">Saved Sheets History</h3>
-        <button onclick="toggleHistoryDrawerCustom()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); font-weight: bold;">&times;</button>
-    </div>
-    <div id="drawerHistoryList" style="flex: 1; overflow-y: auto;">
-        <div style="text-align:center; color:var(--text-muted); padding:30px; font-style:italic;">No saved sheet history found.</div>
-    </div>
-</div>
-
-<!-- FOLLOW-UP DRAWER -->
-<div id="dlFollowUpDrawer" class="side-drawer">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--info); padding-bottom: 12px; margin-bottom: 15px;">
-        <h3 style="color: var(--info); margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
-        <button onclick="toggleFollowUpDrawerCustom()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); font-weight: bold;">&times;</button>
-    </div>
-    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-        <button onclick="filterFollowUpsByDate('today')" id="fubtnToday" style="flex: 1; background: var(--info); color: white; border: none; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📅 Today</button>
-        <button onclick="filterFollowUpsByDate('all')" id="fubtnAll" style="flex: 1; background: #e2eafc; color: var(--primary); border: 1px solid #b6ccfe; padding: 6px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;">📋 All</button>
-    </div>
-    <div style="display: flex; gap: 6px; margin-bottom: 10px; align-items: center;">
-        <input type="text" id="followUpSearchInput" placeholder="🔍 Search MC, Name, Phone..." style="flex: 1; padding: 8px; font-size: 12px; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-main);" oninput="renderFollowUpItems()">
-        <button onclick="clearFollowUpFilters()" style="background: #e2eafc; border: 1px solid #b6ccfe; color: var(--primary); padding: 7px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer;" title="Clear Filters">🔄</button>
-    </div>
-    <div style="margin-bottom: 12px;">
-        <button onclick="downloadFollowUpsCSV()" style="background: var(--success); color: white; border: none; padding: 6px 14px; font-weight: bold; font-size: 12px; border-radius: var(--radius-sm); cursor: pointer; width: 100%;">📥 Download Follow-Ups Sheet</button>
-    </div>
-    <div id="drawerFollowUpList" style="flex: 1; overflow-y: auto;">
-        <div style="text-align:center; color:var(--text-muted); padding:30px; font-style:italic;">No active follow-up leads found.</div>
-    </div>
-</div>
-
-<!-- FLOATING NAV BUTTONS -->
-<div id="dlFloatingNavPanel" style="position: fixed; bottom: 30px; right: 30px; z-index: 999999; display: flex; flex-direction: column; gap: 10px;">
-    <button id="dlScrollUpBtn" onclick="scrollToTopScreen()" title="Scroll to Top" style="background: var(--primary); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(2,132,199,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center;">⬆️</button>
-    <button id="dlScrollDownBtn" onclick="scrollToLastCalledLead()" title="Scroll to Last Called Lead" style="background: #17a2b8; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; box-shadow: 0 6px 16px rgba(23,162,184,0.35); cursor: pointer; font-size: 18px; font-weight: bold; display: none; align-items: center; justify-content: center;">⬇️</button>
-</div>
-
-<script>
-    function switchTab(tabId) {
-        document.getElementById('scannerTabContent').style.display = tabId === 'scannerTab' ? 'block' : 'none';
-        document.getElementById('emailTemplatesTabContent').style.display = tabId === 'emailTemplatesTab' ? 'block' : 'none';
-        document.getElementById('settingsTabContent').style.display = tabId === 'settingsTab' ? 'block' : 'none';
-        
-        document.getElementById('menuScannerBtn').classList.toggle('active', tabId === 'scannerTab');
-        document.getElementById('menuEmailBtn').classList.toggle('active', tabId === 'emailTemplatesTab');
-        document.getElementById('menuSettingsBtn').classList.toggle('active', tabId === 'settingsTab');
-    }
-
-    // Custom Robust Drawer Toggle Handlers
-    function toggleHistoryDrawerCustom() {
-        const drawer = document.getElementById('dlHistoryDrawer');
-        drawer.classList.toggle('open');
-        // Also call original core function if available
-        if(typeof toggleHistoryDrawer === 'function' && drawer.classList.contains('open')) {
-            try { toggleHistoryDrawer(); } catch(e){}
-        }
-        checkHistoryContent();
-    }
-
-    function toggleFollowUpDrawerCustom() {
-        const drawer = document.getElementById('dlFollowUpDrawer');
-        drawer.classList.toggle('open');
-        if(typeof toggleFollowUpDrawer === 'function' && drawer.classList.contains('open')) {
-            try { toggleFollowUpDrawer(); } catch(e){}
-        }
-        checkFollowUpContent();
-    }
-
-    function checkHistoryContent() {
-        const historyList = document.getElementById('drawerHistoryList');
-        if(historyList && historyList.children.length === 0) {
-            historyList.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px; font-style:italic;">No saved sheet history found.</div>`;
-        }
-    }
-
-    function checkFollowUpContent() {
-        const fuList = document.getElementById('drawerFollowUpList');
-        if(fuList && fuList.children.length === 0) {
-            fuList.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px; font-style:italic;">No active follow-up leads found.</div>`;
-        }
-    }
-
-    function toggleDarkModeTheme() {
-        const isDark = document.body.classList.toggle('dark-mode');
-        const btn = document.getElementById('darkModeToggleBtn');
-        if(btn) btn.textContent = isDark ? '☀️ Enable Light Mode' : '🌙 Enable Dark Mode';
-        localStorage.setItem('dispatchLinkDarkMode', isDark ? 'enabled' : 'disabled');
-    }
-
-    function saveAgentProfileSettings() {
-        const nameVal = document.getElementById('agentNameInput').value.trim();
-        if(nameVal) {
-            document.getElementById('sidebarAgentName').textContent = nameVal;
-            document.getElementById('sidebarAvatarIcon').textContent = nameVal.charAt(0).toUpperCase();
-            localStorage.setItem('dispatchLinkAgentName', nameVal);
-            alert('Agent name updated successfully!');
-        } else {
-            alert('Please enter a valid name.');
-        }
-    }
-
-    function saveCustomEmailTemplate() {
-        const subject = document.getElementById('emailTemplateSubject').value;
-        const body = document.getElementById('emailTemplateBody').value;
-        localStorage.setItem('dispatchLinkEmailSubject', subject);
-        localStorage.setItem('dispatchLinkEmailBody', body);
-        alert('Email proposal template saved successfully!');
-    }
-
-    function loadDefaultEmailTemplate() {
-        const defaultSub = "Profitable Truck Dispatch Services & High Paying Loads";
-        const defaultBody = "Hello,\n\nWe noticed your MC number and would love to help you find top-paying loads with minimal hassle. Let's grow your trucking business together.\n\nBest Regards,\nDispatch Team";
-        document.getElementById('emailTemplateSubject').value = defaultSub;
-        document.getElementById('emailTemplateBody').value = defaultBody;
-        saveCustomEmailTemplate();
-    }
-
-    // Profile Dropdown Toggle Logic
-    function toggleProfileDropdown(event) {
-        event.stopPropagation();
-        const menu = document.getElementById('profileDropdownMenu');
-        menu.classList.toggle('show');
-    }
-
-    function closeProfileDropdown() {
-        const menu = document.getElementById('profileDropdownMenu');
-        if(menu) menu.classList.remove('show');
-    }
-
-    window.addEventListener('click', () => {
-        closeProfileDropdown();
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-        if(localStorage.getItem('dispatchLinkDarkMode') === 'enabled') {
-            document.body.classList.add('dark-mode');
-            const btn = document.getElementById('darkModeToggleBtn');
-            if(btn) btn.textContent = '☀️ Enable Light Mode';
-        } else {
-            document.body.classList.remove('dark-mode');
-            const btn = document.getElementById('darkModeToggleBtn');
-            if(btn) btn.textContent = '🌙 Enable Dark Mode';
-        }
-
-        const savedName = localStorage.getItem('dispatchLinkAgentName');
-        if(savedName) {
-            document.getElementById('sidebarAgentName').textContent = savedName;
-            document.getElementById('sidebarAvatarIcon').textContent = savedName.charAt(0).toUpperCase();
-            const nameInput = document.getElementById('agentNameInput');
-            if(nameInput) nameInput.value = savedName;
-        }
-
-        const savedSub = localStorage.getItem('dispatchLinkEmailSubject');
-        const savedBody = localStorage.getItem('dispatchLinkEmailBody');
-        if(savedSub && savedBody) {
-            document.getElementById('emailTemplateSubject').value = savedSub;
-            document.getElementById('emailTemplateBody').value = savedBody;
-        } else {
-            loadDefaultEmailTemplate();
-        }
-    });
-</script>
 <script src="scraper-core.js"></script>
 </body>
 </html>
