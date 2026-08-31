@@ -30,7 +30,6 @@ const allowedUsers = {
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// DYNAMIC FIREBASE URL SELECTOR
 const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
     ? allowedUsers[currentClient].dbUrl 
     : FIREBASE_DB_URL_1;
@@ -55,6 +54,139 @@ const usStatesMap = {
     "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
+
+// ====== DYNAMICALLY INJECT REQUIRED UI STyles & Modals ======
+(function injectMissingUIComponents() {
+    if (document.getElementById('dlStyleInjections')) return;
+
+    let styleTag = document.createElement('style');
+    styleTag.id = 'dlStyleInjections';
+    styleTag.innerHTML = `
+        :root {
+            --primary: #002d62;
+            --primary-hover: #001a3a;
+            --info: #17a2b8;
+            --success: #28a745;
+            --danger: #dc3545;
+            --bg-card: #ffffff;
+            --text-main: #333333;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --table-hover: #f8f9fa;
+        }
+        .dl-drawer {
+            position: fixed; top: 0; right: -420px; width: 400px; height: 100%;
+            background: #ffffff; box-shadow: -5px 0 25px rgba(0,0,0,0.15); z-index: 999999;
+            transition: right 0.3s ease-in-out; display: flex; flex-direction: column; font-family: sans-serif;
+        }
+        .dl-drawer.open { right: 0; }
+        .dl-drawer-header {
+            background: var(--primary); color: white; padding: 16px 20px; display: flex;
+            justify-content: space-between; align-items: center; font-weight: bold; font-size: 16px;
+        }
+        .dl-drawer-body { padding: 15px; overflow-y: auto; flex: 1; background: #fdfdfd; }
+        
+        .phone-clickable-container { position: relative; cursor: pointer; }
+        .phone-clickable-cell { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: bold; text-decoration: none; padding: 2px 6px; border-radius: 4px; transition: background 0.2s; }
+        .phone-clickable-cell:hover { background: #e2eafc; }
+        .active-called-cell { background: #d4edda !important; border-radius: 4px; border: 1px solid #c3e6cb; }
+        .phone-hover-copy-icon { display: none; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 12px; cursor: pointer; background: #fff; padding: 2px 4px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .phone-clickable-container:hover .phone-hover-copy-icon { display: inline-block; }
+        
+        .phone-copy-badge, .premium-copy-badge { position: absolute; right: 5px; top: -18px; background: #28a745; color: white; font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: bold; z-index: 10; animation: fadeInOut 1.2s forwards; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(4px); } 20% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+        .premium-pitch-btn { background: #17a2b8; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+        .premium-pitch-btn:hover { background: #138496; }
+        .premium-followup-btn { background: #ffc107; color: #333; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .premium-followup-btn:hover { background: #e0a800; }
+        
+        .remarks-cell-container { width: 160px; }
+        .remarks-input-field { width: 100%; height: 55px; font-size: 11px; padding: 4px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: sans-serif; background: #fff; }
+    `;
+    document.head.appendChild(styleTag);
+
+    let containerDiv = document.createElement('div');
+    containerDiv.innerHTML = `
+        <!-- Follow-Up Drawer -->
+        <div id="dlFollowUpDrawer" class="dl-drawer">
+            <div class="dl-drawer-header">
+                <span>⭐ Active Follow-Up Leads</span>
+                <button onclick="toggleFollowUpDrawer()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer; font-weight:bold;">&times;</button>
+            </div>
+            <div style="padding: 10px 15px; background: #f8f9fa; border-bottom: 1px solid var(--border-color); display: flex; gap: 6px; align-items: center;">
+                <input type="text" id="followUpSearchInput" placeholder="Search MC, Name..." oninput="renderFollowUpItems()" style="flex:1; padding:6px; font-size:12px; border:1px solid var(--border-color); border-radius:4px;">
+                <button id="fubtnToday" onclick="filterFollowUpsByDate('today')" style="background:var(--info); color:white; border:none; padding:6px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">Today</button>
+                <button id="fubtnAll" onclick="filterFollowUpsByDate('all')" style="background:#e2eafc; color:var(--primary); border:1px solid #b6ccfe; padding:6px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">All</button>
+            </div>
+            <div style="padding: 8px 15px; background: #fff; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" onchange="toggleSelectAllFollowUps(this)" style="cursor: pointer;"> Select All
+                </label>
+                <button onclick="shareSelectedFollowUpsToTeam()" style="background: var(--primary); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">👥 Share Selected to Team</button>
+            </div>
+            <div id="drawerFollowUpList" class="dl-drawer-body"></div>
+            <div style="padding: 12px 15px; background: #f8f9fa; border-top: 1px solid var(--border-color); display: flex; gap: 8px;">
+                <button onclick="downloadFollowUpsCSV()" style="background: var(--success); color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; flex: 1;">📥 Export Follow-Ups CSV</button>
+            </div>
+        </div>
+
+        <!-- History Drawer -->
+        <div id="dlHistoryDrawer" class="dl-drawer">
+            <div class="dl-drawer-header">
+                <span>📁 Scraped Sheet History</span>
+                <button onclick="toggleHistoryDrawer()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer; font-weight:bold;">&times;</button>
+            </div>
+            <div id="drawerHistoryList" class="dl-drawer-body"></div>
+        </div>
+
+        <!-- Call Disposition Modal -->
+        <div id="dlDispositionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999999; align-items:center; justify-content:center; font-family:sans-serif;">
+            <div style="background:var(--bg-card); color:var(--text-main); width:340px; border-radius:8px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); text-align:center;">
+                <h3 style="margin-top:0; color:var(--primary); font-size:18px;">📞 Call Disposition Review</h3>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Number: <b id="dispTargetPhoneNum"></b></p>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button onclick="submitCallDisposition('Interested')" style="background:var(--success); color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">⭐ Interested / Hot Lead</button>
+                    <button onclick="submitCallDisposition('No Answer')" style="background:#ffc107; color:#333; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">⚠️ No Answer / Voicemail</button>
+                    <button onclick="submitCallDisposition('Not Interested')" style="background:var(--danger); color:white; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer;">❌ Not Interested</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date Picker Modal -->
+        <div id="dlDatePickerModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999999; align-items:center; justify-content:center; font-family:sans-serif;">
+            <div style="background:var(--bg-card); color:var(--text-main); width:320px; border-radius:8px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+                <h3 style="margin-top:0; color:var(--primary); font-size:16px;">📅 Schedule Follow-Up</h3>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px;">Date:</label>
+                    <input type="date" id="dlModalDateInput" style="width:100%; padding:8px; font-size:13px; border:1px solid var(--border-color); border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px;">Time:</label>
+                    <input type="time" id="dlModalTimeInput" style="width:100%; padding:8px; font-size:13px; border:1px solid var(--border-color); border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="confirmFollowUpSchedule()" style="background:var(--success); color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Confirm</button>
+                    <button onclick="closeFollowUpModal()" style="background:var(--danger); color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Member Selection Modal -->
+        <div id="dlTeamSelectModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999999; align-items:center; justify-content:center; font-family:sans-serif;">
+            <div style="background:var(--bg-card); color:var(--text-main); width:340px; border-radius:8px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+                <h3 style="margin-top:0; color:var(--primary); font-size:16px;">👥 Share Lead with Team Member</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Select team member to send this follow-up lead:</p>
+                <div id="dlTeamMembersRadioList" style="max-height:160px; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px; margin-bottom:15px; padding:5px;"></div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="confirmTeamShareAction()" style="background:var(--primary); color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Share Now</button>
+                    <button onclick="closeTeamSelectModal()" style="background:var(--slate-600, #6c757d); color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(containerDiv);
+})();
 
 // ====== AUTOMATIC 7-DAY DATA CLEANUP FUNCTION ======
 async function performAutomaticDataCleanup() {
@@ -108,9 +240,7 @@ function showLimitExceededModal(message) {
         <div style="background: #ffffff; padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
             <div style="font-size: 42px; margin-bottom: 10px;">⚠️</div>
             <h2 style="color: #dc3545; margin-top: 0; margin-bottom: 10px; font-size: 22px;">License Limit Exceeded!</h2>
-            <p style="color: #444; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
-                ${message}
-            </p>
+            <p style="color: #444; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">${message}</p>
             <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
                 Need to increase your active device/tab limit? <br>Contact Admin: <b>03700684849</b>
             </div>
@@ -129,34 +259,14 @@ function showPremiumNotification(message, duration = 4500) {
         </div>
     `;
     toast.style.cssText = `
-        position: fixed;
-        top: -100px;
-        right: 20px;
-        background: #002d62;
-        color: #ffffff;
-        padding: 14px 22px;
-        border-radius: 6px;
-        font-family: sans-serif;
-        font-size: 13px;
-        font-weight: bold;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-        border-left: 5px solid #17a2b8;
-        z-index: 1000000;
-        transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
-        opacity: 0;
+        position: fixed; top: -100px; right: 20px; background: #002d62; color: #ffffff; padding: 14px 22px;
+        border-radius: 6px; font-family: sans-serif; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+        border-left: 5px solid #17a2b8; z-index: 1000000; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s; opacity: 0;
     `;
     document.body.appendChild(toast);
     
-    setTimeout(() => {
-        toast.style.top = "20px";
-        toast.style.opacity = "1";
-    }, 100);
-
-    setTimeout(() => {
-        toast.style.top = "-100px";
-        toast.style.opacity = "0";
-        setTimeout(() => toast.remove(), 400);
-    }, duration);
+    setTimeout(() => { toast.style.top = "20px"; toast.style.opacity = "1"; }, 100);
+    setTimeout(() => { toast.style.top = "-100px"; toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, duration);
 }
 
 // ====== PROFESSIONAL LOGIN SCREEN WITH SHOW/HIDE PASSWORD ======
@@ -255,15 +365,10 @@ function setupDispatcherIdentity() {
 function getCurrentShiftDateKey() {
     let now = new Date();
     let hour = now.getHours();
-    
-    if (hour < 10) { 
-        now.setDate(now.getDate() - 1);
-    }
-    
+    if (hour < 10) { now.setDate(now.getDate() - 1); }
     let year = now.getFullYear();
     let month = String(now.getMonth() + 1).padStart(2, '0');
     let day = String(now.getDate()).padStart(2, '0');
-    
     return `${year}-${month}-${day}`;
 }
 
@@ -318,26 +423,17 @@ function initializeAccessControl() {
     showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     performAutomaticDataCleanup();
-
     checkGlobalSessions();
     setInterval(checkGlobalSessions, 30000);
 }
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        if (!currentClient || !allowedUsers[currentClient]) {
-            renderLoginScreen();
-        } else {
-            initializeAccessControl();
-        }
+        if (!currentClient || !allowedUsers[currentClient]) { renderLoginScreen(); } else { initializeAccessControl(); }
     });
 } else {
     setTimeout(() => {
-        if (!currentClient || !allowedUsers[currentClient]) {
-            renderLoginScreen();
-        } else {
-            initializeAccessControl();
-        }
+        if (!currentClient || !allowedUsers[currentClient]) { renderLoginScreen(); } else { initializeAccessControl(); }
     }, 300);
 }
 
@@ -390,25 +486,17 @@ async function checkGlobalSessions() {
         let isCurrentRegistered = !!activeSessionsMap[safeTabKey];
 
         if (!isCurrentRegistered && activeCount >= userLimit) {
-            if (typeof scraping !== 'undefined' && scraping) {
-                stopScraping();
-            }
+            if (typeof scraping !== 'undefined' && scraping) { stopScraping(); }
             showLimitExceededModal(`Your global license limit for "${currentClient}" has been reached. Max allowed active tabs/devices is <b>${userLimit}</b>, but currently <b>${activeCount}</b> sessions are active.`);
             return;
         }
 
         await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json`, {
             method: 'PUT',
-            body: JSON.stringify({
-                instanceId: tabUniqueId,
-                nickname: dispatcherNickname,
-                timestamp: now,
-                loginTime: loginTimeString
-            })
+            body: JSON.stringify({ instanceId: tabUniqueId, nickname: dispatcherNickname, timestamp: now, loginTime: loginTimeString })
         });
 
         updateSidebarShiftStats();
-
     } catch (e) {
         console.error("Session sync failed:", e);
     }
@@ -427,12 +515,8 @@ window.addEventListener('beforeunload', function () {
     if (typeof scraping !== 'undefined' && scraping && currentHistoryId) {
         let currentRangeStr = window.activeScrapeRange || "1 - 100";
         let backupObj = {
-            id: currentHistoryId,
-            date: new Date().toLocaleString('en-US', { hour12: true }),
-            range: currentRangeStr,
-            totalRecords: scrapedData.length,
-            status: "Interrupted (Auto-Saved)",
-            records: scrapedData
+            id: currentHistoryId, date: new Date().toLocaleString('en-US', { hour12: true }),
+            range: currentRangeStr, totalRecords: scrapedData.length, status: "Interrupted (Auto-Saved)", records: scrapedData
         };
         let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
         let idx = lsBackup.findIndex(r => r.id === currentHistoryId);
@@ -472,22 +556,14 @@ function syncIndexedDBWithLocalStorage() {
         let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
         
         if (dbRecords.length === 0 && lsBackup.length > 0) {
-            lsBackup.forEach(item => {
-                store.put(item);
-            });
+            lsBackup.forEach(item => { store.put(item); });
         } else if (dbRecords.length > 0) {
             localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
         }
     };
 }
 
-const DEFAULT_REMARKS_TEMPLATE = 
-    "Truck Type:\n" +
-    "Length:\n" +
-    "Accessories:\n" +
-    "Load:\n" +
-    "Zip Code:\n" +
-    "Summary:";
+const DEFAULT_REMARKS_TEMPLATE = "Truck Type:\nLength:\nAccessories:\nLoad:\nZip Code:\nSummary:";
 
 function initAppFramework() {
     syncHeaderIdentityUI();
@@ -501,12 +577,8 @@ function initAppFramework() {
         let downBtn = document.getElementById('dlScrollDownBtn');
         let hasActiveCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell') !== null;
 
-        if (upBtn) {
-            upBtn.style.display = scrollTop > 250 ? 'flex' : 'none';
-        }
-        if (downBtn) {
-            downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
-        }
+        if (upBtn) upBtn.style.display = scrollTop > 250 ? 'flex' : 'none';
+        if (downBtn) downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
     });
 }
 
@@ -529,17 +601,13 @@ window.scrollToLastCalledLead = function() {
 window.toggleCategoryDropdown = function(e) {
     e.stopPropagation();
     let list = document.getElementById('categoryDropdownCheckList');
-    if (list) {
-        list.classList.toggle('visible');
-    }
+    if (list) list.classList.toggle('visible');
 };
 
 window.addEventListener('click', function(event) {
     if (!event.target.closest('#categoryDropdownCheckList')) {
         let list = document.getElementById('categoryDropdownCheckList');
-        if (list && list.classList.contains('visible')) {
-            list.classList.remove('visible');
-        }
+        if (list && list.classList.contains('visible')) list.classList.remove('visible');
     }
 });
 
@@ -551,14 +619,7 @@ function updateCategoryCheckboxes() {
     let html = "";
     Array.from(availableCategories).sort().forEach(cat => {
         let isChecked = currentChecked.includes(cat) ? "checked" : "";
-        html += `
-            <li>
-                <label>
-                    <input type="checkbox" class="cat-checkbox" value="${cat}" ${isChecked} onchange="applyAdvancedFilters()"> 
-                    <span>${cat}</span>
-                </label>
-            </li>
-        `;
+        html += `<li><label><input type="checkbox" class="cat-checkbox" value="${cat}" ${isChecked} onchange="applyAdvancedFilters()"> <span>${cat}</span></label></li>`;
     });
     container.innerHTML = html;
 }
@@ -566,9 +627,7 @@ function updateCategoryCheckboxes() {
 window.toggleVehicleDropdown = function(e) {
     e.stopPropagation();
     let dropdown = document.getElementById('vehicleTypeDropdownContent');
-    if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-    }
+    if (dropdown) dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
 };
 
 function populateStateDropdown() {
@@ -653,7 +712,6 @@ window.applyAdvancedFilters = function() {
     });
 
     let rows = document.querySelectorAll('#resultsTable tr');
-
     rows.forEach((row, index) => {
         let record = scrapedData[index];
         if (!record) return;
@@ -705,9 +763,7 @@ function updateVisibleRecordCount() {
     let rows = document.querySelectorAll('#resultsTable tr');
     let visibleCount = 0;
     if (rows.length > 0) {
-        rows.forEach(r => {
-            if (r.style.display !== 'none') visibleCount++;
-        });
+        rows.forEach(r => { if (r.style.display !== 'none') visibleCount++; });
     }
     let badge = document.getElementById('visibleRecordCountBadge');
     if (badge) badge.innerText = visibleCount;
@@ -782,14 +838,7 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
-    let logEntry = {
-        phone: phoneNum,
-        dispatcher: dispatcherNickname,
-        shiftDate: getCurrentShiftDateKey(),
-        date: new Date().toLocaleString(),
-        status: dispositionStatus 
-    };
-    
+    let logEntry = { phone: phoneNum, dispatcher: dispatcherNickname, shiftDate: getCurrentShiftDateKey(), date: new Date().toLocaleString(), status: dispositionStatus };
     callLogs.push(logEntry);
     localStorage.setItem(storageKey, JSON.stringify(callLogs));
 
@@ -890,9 +939,7 @@ window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) 
         containerElement.appendChild(badge);
         setTimeout(() => badge.remove(), 1200);
 
-        setTimeout(() => {
-            openDispositionModal(phoneNum);
-        }, 3000);
+        setTimeout(() => { openDispositionModal(phoneNum); }, 3000);
     });
 };
 
@@ -908,9 +955,7 @@ window.handlePhoneInteraction = function(cellElement, phoneNum) {
     window.location.href = `tel:${phoneNum}`;
 
     navigator.clipboard.writeText(phoneNum).then(() => {
-        setTimeout(() => {
-            openDispositionModal(phoneNum);
-        }, 3000);
+        setTimeout(() => { openDispositionModal(phoneNum); }, 3000);
     });
 };
 
@@ -972,10 +1017,7 @@ window.confirmFollowUpSchedule = function() {
     let selectedDate = document.getElementById('dlModalDateInput').value;
     let selectedTime = document.getElementById('dlModalTimeInput').value;
 
-    if (!selectedDate) {
-        alert("Please select a valid date.");
-        return;
-    }
+    if (!selectedDate) { alert("Please select a valid date."); return; }
 
     record.addedAt = new Date().toLocaleString();
     record.followUpDate = selectedDate;
@@ -1013,7 +1055,6 @@ window.toggleFollowUpDrawer = function() {
     if (!drawer) return;
     
     if(historyDrawer) historyDrawer.classList.remove('open');
-    
     drawer.classList.toggle('open');
     if (drawer.classList.contains('open')) {
         let searchInput = document.getElementById('followUpSearchInput');
@@ -1036,19 +1077,11 @@ function updateFollowUpFilterButtonsUI() {
     if (!btnToday || !btnAll) return;
 
     if (currentFollowUpFilterMode === 'today') {
-        btnToday.style.background = "var(--info)";
-        btnToday.style.color = "white";
-        btnToday.style.border = "none";
-        btnAll.style.background = "#e2eafc";
-        btnAll.style.color = "var(--primary)";
-        btnAll.style.border = "1px solid #b6ccfe";
+        btnToday.style.background = "var(--info)"; btnToday.style.color = "white"; btnToday.style.border = "none";
+        btnAll.style.background = "#e2eafc"; btnAll.style.color = "var(--primary)"; btnAll.style.border = "1px solid #b6ccfe";
     } else {
-        btnAll.style.background = "var(--info)";
-        btnAll.style.color = "white";
-        btnAll.style.border = "none";
-        btnToday.style.background = "#e2eafc";
-        btnToday.style.color = "var(--primary)";
-        btnToday.style.border = "1px solid #b6ccfe";
+        btnAll.style.background = "var(--info)"; btnAll.style.color = "white"; btnAll.style.border = "none";
+        btnToday.style.background = "#e2eafc"; btnToday.style.color = "var(--primary)"; btnToday.style.border = "1px solid #b6ccfe";
     }
 }
 
@@ -1103,9 +1136,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         let reportsData = await reportsRes.json() || {};
         
         let allMembers = new Set();
-        Object.keys(sessionsData).forEach(k => {
-            if (sessionsData[k] && sessionsData[k].nickname) allMembers.add(sessionsData[k].nickname);
-        });
+        Object.keys(sessionsData).forEach(k => { if (sessionsData[k] && sessionsData[k].nickname) allMembers.add(sessionsData[k].nickname); });
         Object.keys(reportsData).forEach(name => allMembers.add(name));
 
         let membersList = Array.from(allMembers).filter(n => n !== dispatcherNickname);
@@ -1117,14 +1148,12 @@ window.openTeamShareModal = async function(recordsToShare) {
 
         let now = Date.now();
         const offlineThreshold = 60000;
-
         let html = "";
         membersList.forEach((name, idx) => {
             let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
             let sObj = userSessionKey ? sessionsData[userSessionKey] : null;
             let isOnline = sObj && sObj.timestamp && (now - sObj.timestamp < offlineThreshold);
             let statusText = isOnline ? "🟢 Online" : "⚪ Offline";
-
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
                 <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; font-size: 13px; color: var(--text-main);">
@@ -1148,9 +1177,7 @@ window.closeTeamSelectModal = function() {
 
 window.confirmTeamShareAction = async function() {
     let selectedRadio = document.querySelector('input[name="teamMemberRadio"]:checked');
-    if (!selectedRadio) {
-        return alert("Please select a team member from the list.");
-    }
+    if (!selectedRadio) return alert("Please select a team member from the list.");
 
     let targetName = selectedRadio.value;
     pendingShareRecords.forEach(r => r.sharedBy = dispatcherNickname);
@@ -1170,10 +1197,7 @@ window.confirmTeamShareAction = async function() {
         });
 
         if (addedCount > 0) {
-            await fetch(shareUrl, {
-                method: 'PUT',
-                body: JSON.stringify(existingList)
-            });
+            await fetch(shareUrl, { method: 'PUT', body: JSON.stringify(existingList) });
             showPremiumNotification(`✅ Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
             document.querySelectorAll('.followup-select-checkbox:checked').forEach(cb => cb.checked = false);
         } else {
@@ -1186,20 +1210,15 @@ window.confirmTeamShareAction = async function() {
     }
 };
 
-window.shareSingleFollowUpToTeam = function(record) {
-    openTeamShareModal([record]);
-};
+window.shareSingleFollowUpToTeam = function(record) { openTeamShareModal([record]); };
 
 window.shareSelectedFollowUpsToTeam = function() {
     let selectedCheckboxes = document.querySelectorAll('.followup-select-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        return alert("Please select at least one follow-up record to share with your team.");
-    }
+    if (selectedCheckboxes.length === 0) return alert("Please select at least one follow-up record to share with your team.");
 
     let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
     let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
     let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
-
     openTeamShareModal(selectedRecords);
 };
 
@@ -1225,16 +1244,13 @@ async function pollIncomingSharedLeads() {
             localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(localFollowUps));
             showPremiumNotification(`📥 You received new shared follow-up leads from your team!`, 5000);
             let fDrawer = document.getElementById('dlFollowUpDrawer');
-            if (fDrawer && fDrawer.classList.contains('open')) {
-                renderFollowUpItems();
-            }
+            if (fDrawer && fDrawer.classList.contains('open')) renderFollowUpItems();
             await fetch(inboxUrl, { method: 'DELETE' });
         }
     } catch (e) {
         console.error("Polling shared leads failed:", e);
     }
 }
-
 setInterval(pollIncomingSharedLeads, 60000);
 
 function renderFollowUpItems() {
@@ -1259,9 +1275,7 @@ function renderFollowUpItems() {
         let fuDate = item.followUpDate || "N/A";
         let fuTime = item.followUpTime || "N/A";
 
-        if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) {
-            return;
-        }
+        if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) return;
 
         let mcString = (item.mc || "").toString().toLowerCase();
         let nameString = (item.name || "").toLowerCase();
@@ -1389,11 +1403,8 @@ window.toggleHistoryDrawer = function() {
     if (!drawer) return;
     
     if(followUpDrawer) followUpDrawer.classList.remove('open');
-    
     drawer.classList.toggle('open');
-    if (drawer.classList.contains('open')) {
-        renderHistoryItems();
-    }
+    if (drawer.classList.contains('open')) { renderHistoryItems(); }
 };
 
 function renderHistoryItems() {
@@ -1425,13 +1436,8 @@ function renderHistoryItems() {
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
-            let resumeBtnStyle = recordsCount === 0 
-                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
-            
-            let csvBtnStyle = recordsCount === 0 
-                ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" 
-                : "background: var(--success); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+            let resumeBtnStyle = recordsCount === 0 ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" : "background: #ff9800; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
+            let csvBtnStyle = recordsCount === 0 ? "background: #cccccc; color: #666666; border: none; padding: 5px 10px; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: bold;" : "background: var(--success); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;";
 
             let resumeActionAttr = recordsCount === 0 ? "" : `onclick="resumeHistorySheet(${item.id})"`;
             let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
@@ -1475,9 +1481,7 @@ window.loadHistorySheetToTable = async function(id) {
         availableCategories.clear();
         scrapedData.forEach(r => {
             if (r.carrierDetails) {
-                r.carrierDetails.split(', ').forEach(cat => {
-                    if (cat.trim()) availableCategories.add(cat.trim());
-                });
+                r.carrierDetails.split(', ').forEach(cat => { if (cat.trim()) availableCategories.add(cat.trim()); });
             }
         });
         updateCategoryCheckboxes();
@@ -1494,7 +1498,6 @@ window.loadHistorySheetToTable = async function(id) {
 
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
-        
         let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
 
         for (let index = 0; index < scrapedData.length; index++) {
@@ -1557,16 +1560,13 @@ window.resumeHistorySheet = async function(id) {
         availableCategories.clear();
         scrapedData.forEach(r => {
             if (r.carrierDetails) {
-                r.carrierDetails.split(', ').forEach(cat => {
-                    if (cat.trim()) availableCategories.add(cat.trim());
-                });
+                r.carrierDetails.split(', ').forEach(cat => { if (cat.trim()) availableCategories.add(cat.trim()); });
             }
         });
         updateCategoryCheckboxes();
 
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
-        
         let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
         for (let index = 0; index < scrapedData.length; index++) {
             let record = scrapedData[index];
@@ -1600,11 +1600,8 @@ window.resumeHistorySheet = async function(id) {
         let nextStartMc = startRange;
         if (scrapedData.length > 0) {
             let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
-            if (!isNaN(maxScannedMc) && maxScannedMc >= startRange) {
-                nextStartMc = maxScannedMc + 1;
-            }
+            if (!isNaN(maxScannedMc) && maxScannedMc >= startRange) nextStartMc = maxScannedMc + 1;
         }
-        
         startScraping(nextStartMc, endRange);
     };
 };
@@ -1667,17 +1664,11 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
             tx.oncomplete = function() {
                 let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
                 let index = lsBackup.findIndex(r => r.id === currentHistoryId);
-                if (index !== -1) {
-                    lsBackup[index] = data;
-                } else {
-                    lsBackup.push(data);
-                }
+                if (index !== -1) { lsBackup[index] = data; } else { lsBackup.push(data); }
                 localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
                 
                 let hDrawer = document.getElementById('dlHistoryDrawer');
-                if (hDrawer && hDrawer.classList.contains('open')) {
-                    renderHistoryItems();
-                }
+                if (hDrawer && hDrawer.classList.contains('open')) { renderHistoryItems(); }
             };
         }
     };
@@ -1695,9 +1686,7 @@ window.stopScraping = function() {
         statusBox.style.padding = "10px 15px";
         statusBox.innerHTML = "<strong>⏸️ Processing Paused Safely. Click Start to resume/run again.</strong>";
     }
-    if (currentHistoryId) {
-        updateRealTimeHistory(scrapedData, false);
-    }
+    if (currentHistoryId) { updateRealTimeHistory(scrapedData, false); }
 }
 
 async function processSingleMCWithDetailedError(mc, statusBox) {
@@ -1715,15 +1704,11 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
                 let session = sData[k];
-                if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
-                    activeCount++;
-                }
+                if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) activeCount++;
             });
 
             if (userLimit > 0 && activeCount > userLimit) {
-                if (statusBox) {
-                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeCount}/${userLimit}). Pausing scraping...</strong>`;
-                }
+                if (statusBox) statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeCount}/${userLimit}). Pausing scraping...</strong>`;
                 return { status: "limit_exceeded" };
             }
 
@@ -1732,9 +1717,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             
             if (!response.ok) {
                 attempt++;
-                if (statusBox) {
-                    statusBox.innerHTML = `<strong>⚠️ Safer Server Issue (Attempt ${attempt}/${maxRetries}). Retrying...</strong>`;
-                }
+                if (statusBox) statusBox.innerHTML = `<strong>⚠️ Safer Server Issue (Attempt ${attempt}/${maxRetries}). Retrying...</strong>`;
                 await new Promise(r => setTimeout(r, 2000 * attempt));
                 continue;
             }
@@ -1764,13 +1747,9 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 if (text.startsWith("Operating Authority Status:")) {
                     if (cells[i+1]) {
                         let rawStatus = cells[i+1].textContent.toUpperCase();
-                        if (rawStatus.includes("NOT AUTHORIZED")) {
-                            record.status = "NOT AUTHORIZED";
-                        } else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) {
-                            record.status = "AUTHORIZED";
-                        } else {
-                            record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
-                        }
+                        if (rawStatus.includes("NOT AUTHORIZED")) record.status = "NOT AUTHORIZED";
+                        else if (rawStatus.includes("AUTHORIZED") || rawStatus.includes("ACTIVE")) record.status = "AUTHORIZED";
+                        else record.status = cells[i+1].textContent.replace(/\s+/g, ' ').trim();
                     }
                 }
                 if (text.startsWith("Power Units:")) { if(cells[i+1]) record.powerUnits = cells[i+1].textContent.trim().replace(/\s+/g, ' '); }
@@ -1780,9 +1759,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                 }
             }
 
-            if (record.status !== "AUTHORIZED") { 
-                return { status: "filtered_out" }; 
-            }
+            if (record.status !== "AUTHORIZED") return { status: "filtered_out" }; 
 
             let tables = el.querySelectorAll('table');
             let allDetails = [];
@@ -1805,7 +1782,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                     });
                 });
             });
-            if (allDetails.length > 0) { record.carrierDetails = allDetails.join(', '); }
+            if (allDetails.length > 0) record.carrierDetails = allDetails.join(', ');
 
             if (record.usdot !== 'N/A') {
                 try {
@@ -1836,9 +1813,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                             });
                         });
 
-                        if (vehicleMapList.length > 0) {
-                            record.vehicleType = vehicleMapList.join(" | ");
-                        }
+                        if (vehicleMapList.length > 0) record.vehicleType = vehicleMapList.join(" | ");
 
                         let smsCells = smsEl.querySelectorAll('td, th, span, label, a');
                         for (let j = 0; j < smsCells.length; j++) {
@@ -1846,8 +1821,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                             if (smsText.toLowerCase().includes("email") || smsText.includes("@")) {
                                 let emailMatch = smsText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
                                 if (emailMatch && !emailMatch[0].includes("fmcsa") && !emailMatch[0].includes("dot.gov")) { 
-                                    record.email = emailMatch[0]; 
-                                    break; 
+                                    record.email = emailMatch[0]; break; 
                                 }
                             }
                         }
@@ -1859,17 +1833,13 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
                             }
                         }
                     }
-                } catch (smsErr) { 
-                    console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); 
-                }
+                } catch (smsErr) { console.warn(`SMS Portal warning for USDOT ${record.usdot}:`, smsErr.message); }
             }
             return { status: "success", data: record };
 
         } catch (err) {
             attempt++;
-            if (statusBox) {
-                statusBox.innerHTML = `<strong>⚠️ Safer Server Issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
-            }
+            if (statusBox) statusBox.innerHTML = `<strong>⚠️ Safer Server Issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
             await new Promise(r => setTimeout(r, 3000 * attempt));
         }
     }
@@ -1929,12 +1899,8 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         const formattedDate = now.toLocaleString('en-US', { hour12: true });
 
         const initialHistoryItem = {
-            id: Date.now(),
-            date: formattedDate,
-            range: currentRangeStr,
-            totalRecords: scrapedData.length,
-            status: "Interrupted (Auto-Saved)",
-            records: scrapedData
+            id: Date.now(), date: formattedDate, range: currentRangeStr,
+            totalRecords: scrapedData.length, status: "Interrupted (Auto-Saved)", records: scrapedData
         };
 
         currentHistoryId = initialHistoryItem.id;
@@ -1952,9 +1918,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     let effectiveStart = start;
     if (scrapedData.length > 0) {
         let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
-        if (!isNaN(maxScannedMc) && maxScannedMc >= start && maxScannedMc < end) {
-            effectiveStart = maxScannedMc + 1;
-        }
+        if (!isNaN(maxScannedMc) && maxScannedMc >= start && maxScannedMc < end) effectiveStart = maxScannedMc + 1;
     }
 
     for (let mc = effectiveStart; mc <= end; mc++) {
@@ -1976,7 +1940,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
             errorDetailsList = []; 
             if (result.status === "success" && result.data) {
                 let record = result.data;
-                
                 let isAlreadyExists = scrapedData.some(existing => String(existing.mc) === String(record.mc));
                 
                 if (!isAlreadyExists) {
