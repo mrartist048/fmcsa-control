@@ -144,6 +144,36 @@
         .nav-btn:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
         .nav-btn.active { background: #0284c7; color: white; box-shadow: 0 4px 12px rgba(2,132,199,0.35); }
 
+        /* PROFESSIONAL LICENSE USAGE WIDGET IN SIDEBAR */
+        .sidebar-license-widget {
+            margin: 12px 16px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .sidebar-license-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #38bdf8;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-license-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .sidebar-license-row:last-child {
+            margin-bottom: 0;
+        }
+
         /* MAIN CONTENT AREA */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
         
@@ -271,6 +301,22 @@
                     <span>📋</span> Shift Reports & Ratios
                 </button>
             </div>
+
+            <!-- LICENSE USAGE STATS WIDGET PLACED PROFESSIONALLY IN SIDEBAR BOTTOM -->
+            <div class="sidebar-license-widget">
+                <div class="sidebar-license-title">
+                    <span>License Status</span>
+                    <span>🔒</span>
+                </div>
+                <div class="sidebar-license-row">
+                    <span>Max Allowed Tabs:</span>
+                    <b id="sidebarMaxLimit">-</b>
+                </div>
+                <div class="sidebar-license-row">
+                    <span>Active Sessions:</span>
+                    <b id="sidebarActiveSessions" style="color: #38bdf8;">-</b>
+                </div>
+            </div>
         </div>
 
         <!-- MAIN VIEW PORT -->
@@ -353,7 +399,6 @@
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
         let calendarPicker = null;
         
-        // PERSISTENT BLACKLIST STORAGE (Page refresh hone par bhi yaad rahega)
         let deletedUsersBlacklist = new Set();
 
         function loadBlacklist() {
@@ -384,7 +429,6 @@
                 authOverlay.style.display = 'flex';
             }
             
-            // Initialize Flatpickr Single Calendar with Range Mode Support
             calendarPicker = flatpickr("#unifiedDateRangePicker", {
                 mode: "range",
                 dateFormat: "Y-m-d",
@@ -441,9 +485,13 @@
                 currentClient = companyInput;
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
-                loadBlacklist(); // Load deleted users memory for this company
+                
+                // Update Sidebar License limit display
+                document.getElementById('sidebarMaxLimit').innerText = userConfig.maxLaptops || "Unlimited";
+
+                loadBlacklist();
                 setDateFilterPreset('today');
-                fetchAdminData(); // Real-time listeners setup
+                fetchAdminData();
             } else {
                 errorMsg.style.display = 'block';
                 document.getElementById('adminPasswordInput').style.borderColor = '#dc2626';
@@ -479,7 +527,6 @@
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
-        // INSTANT REAL-TIME DATA LISTENER SETUP VIA FIREBASE SDK COMPAT
         let dbRefsInitialized = false;
         let activeDatabases = [];
 
@@ -488,6 +535,7 @@
 
             if (dbRefsInitialized) {
                 renderContent();
+                updateLicenseStatsWidget();
                 return;
             }
 
@@ -511,6 +559,7 @@
                         if (index === 0) globalSessions = {};
                         globalSessions = { ...globalSessions, ...val };
                         renderContent();
+                        updateLicenseStatsWidget();
                     });
 
                     // Shift Reports Listener
@@ -531,15 +580,42 @@
                 });
 
                 dbRefsInitialized = true;
+                updateLicenseStatsWidget();
             } catch (e) {
                 console.error("Real-time listener error:", e);
+            }
+        }
+
+        function updateLicenseStatsWidget() {
+            if (!currentClient || !allowedUsers[currentClient]) return;
+            let maxLimit = allowedUsers[currentClient].maxLaptops || 0;
+            let now = Date.now();
+            let activeCount = 0;
+            const offlineThreshold = 60000; // 60 seconds
+
+            if (globalSessions) {
+                Object.keys(globalSessions).forEach(k => {
+                    let session = globalSessions[k];
+                    if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
+                        activeCount++;
+                    }
+                });
+            }
+
+            let activeElem = document.getElementById('sidebarActiveSessions');
+            if (activeElem) {
+                activeElem.innerText = `${activeCount} / ${maxLimit} active`;
+                if (activeCount > maxLimit) {
+                    activeElem.style.color = "#f87171"; // Red if limit exceeded
+                } else {
+                    activeElem.style.color = "#38bdf8"; // Blue/cyan normal
+                }
             }
         }
 
         async function deleteUserRecord(userName) {
             if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
 
-            // Blacklist mein add karke localStorage mein save kar lein
             deletedUsersBlacklist.add(userName);
             saveBlacklist();
 
@@ -561,7 +637,6 @@
 
                 await Promise.allSettled(promises);
 
-                // Local objects se saaf karein
                 if (globalSessions) {
                     Object.keys(globalSessions).forEach(k => {
                         let s = globalSessions[k];
@@ -574,6 +649,7 @@
                 delete globalReports[userName];
                 
                 renderContent();
+                updateLicenseStatsWidget();
                 alert(`User "${userName}" has been successfully deleted.`);
             } catch (err) {
                 console.error("Delete error:", err);
