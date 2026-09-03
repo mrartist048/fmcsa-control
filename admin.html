@@ -333,6 +333,10 @@
                     <button onclick="fetchAdminData()" class="btn-refresh-top">
                         <span>🔄</span> Refresh
                     </button>
+                    <!-- DELETE SELECTED USERS BUTTON -->
+                    <button onclick="deleteSelectedUsers()" id="deleteSelectedBtn" class="btn-danger" style="display: none; background: #ea580c;">
+                        🗑️ Delete Selected (<span id="selectedCount">0</span>)
+                    </button>
                     <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">
                         📥 Export CSV
                     </button>
@@ -357,8 +361,8 @@
             <div id="onlineFilterBar" class="filter-bar">
                 <div class="filter-group">
                     <span style="font-size: 12px; font-weight: 700; color: #0f172a; width: 100%;">👤 User Status Filter:</span>
-                    <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn active">All Users</button>
-                    <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn">🟢 Online Only</button>
+                    <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn">All Users</button>
+                    <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn active">🟢 Online Only</button>
                     <button onclick="setOnlineFilter('offline')" id="statusOffline" class="filter-btn">⚪ Offline Only</button>
                 </div>
             </div>
@@ -395,11 +399,12 @@
 
         let currentClient = "";
         let activeTab = 'online';
-        let onlineFilterMode = 'all'; 
+        let onlineFilterMode = 'online'; // DEFAULT ONLINE ONLY
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
         let calendarPicker = null;
         
         let deletedUsersBlacklist = new Set();
+        let selectedUserNames = new Set(); // MULTI-SELECT USERS STORAGE
 
         function loadBlacklist() {
             if (!currentClient) return;
@@ -486,7 +491,6 @@
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
                 
-                // Update Sidebar License limit display
                 document.getElementById('sidebarMaxLimit').innerText = userConfig.maxLaptops || "Unlimited";
 
                 loadBlacklist();
@@ -558,6 +562,20 @@
                         let val = snapshot.val() || {};
                         if (index === 0) globalSessions = {};
                         globalSessions = { ...globalSessions, ...val };
+
+                        Object.keys(globalSessions).forEach(k => {
+                            let sObj = globalSessions[k];
+                            let name = sObj?.nickname || sObj?.name || k;
+                            if (deletedUsersBlacklist.has(name) || deletedUsersBlacklist.has(k)) {
+                                let lastActive = sObj?.timestamp || 0;
+                                if (Date.now() - lastActive < 120000) {
+                                    deletedUsersBlacklist.delete(name);
+                                    deletedUsersBlacklist.delete(k);
+                                    saveBlacklist();
+                                }
+                            }
+                        });
+
                         renderContent();
                         updateLicenseStatsWidget();
                     });
@@ -596,8 +614,11 @@
             if (globalSessions) {
                 Object.keys(globalSessions).forEach(k => {
                     let session = globalSessions[k];
-                    if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
-                        activeCount++;
+                    let name = session?.nickname || session?.name || k;
+                    if (!deletedUsersBlacklist.has(name) && !deletedUsersBlacklist.has(k)) {
+                        if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
+                            activeCount++;
+                        }
                     }
                 });
             }
@@ -606,9 +627,9 @@
             if (activeElem) {
                 activeElem.innerText = `${activeCount} / ${maxLimit} active`;
                 if (activeCount > maxLimit) {
-                    activeElem.style.color = "#f87171"; // Red if limit exceeded
+                    activeElem.style.color = "#f87171";
                 } else {
-                    activeElem.style.color = "#38bdf8"; // Blue/cyan normal
+                    activeElem.style.color = "#38bdf8";
                 }
             }
         }
@@ -617,6 +638,7 @@
             if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
 
             deletedUsersBlacklist.add(userName);
+            selectedUserNames.delete(userName);
             saveBlacklist();
 
             try {
@@ -657,6 +679,72 @@
             }
         }
 
+        function toggleUserSelection(userName, checkboxElem) {
+            if (checkboxElem.checked) {
+                selectedUserNames.add(userName);
+            } else {
+                selectedUserNames.delete(userName);
+            }
+
+            let delBtn = document.getElementById('deleteSelectedBtn');
+            let countSpan = document.getElementById('selectedCount');
+            if (selectedUserNames.size > 0) {
+                delBtn.style.display = 'flex';
+                countSpan.innerText = selectedUserNames.size;
+            } else {
+                delBtn.style.display = 'none';
+            }
+        }
+
+        async function deleteSelectedUsers() {
+            if (selectedUserNames.size === 0) return;
+            if (!confirm(`Are you sure you want to delete the selected user(s)?`)) return;
+
+            let usersToRemove = Array.from(selectedUserNames);
+            usersToRemove.forEach(userName => deletedUsersBlacklist.add(userName));
+            saveBlacklist();
+
+            try {
+                let promises = [];
+                usersToRemove.forEach(userName => {
+                    activeDatabases.forEach(db => {
+                        promises.push(db.ref(`sessions/${currentClient}/${userName}`).remove());
+                        promises.push(db.ref(`call_logs/${currentClient}/${userName}`).remove());
+                        promises.push(db.ref(`shift_reports/${currentClient}/${userName}`).remove());
+                    });
+
+                    const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+                    urls.forEach(url => {
+                        promises.push(fetch(`${url}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }));
+                        promises.push(fetch(`${url}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }));
+                        promises.push(fetch(`${url}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }));
+                    });
+
+                    if (globalSessions) {
+                        Object.keys(globalSessions).forEach(k => {
+                            let s = globalSessions[k];
+                            if (k === userName || s?.nickname === userName || s?.name === userName) {
+                                delete globalSessions[k];
+                            }
+                        });
+                    }
+                    delete globalCallLogs[userName];
+                    delete globalReports[userName];
+                });
+
+                await Promise.allSettled(promises);
+                selectedUserNames.clear();
+                document.getElementById('deleteSelectedBtn').style.display = 'none';
+
+                renderContent();
+                updateLicenseStatsWidget();
+                alert("Selected user(s) have been successfully deleted.");
+            } catch (err) {
+                console.error("Bulk delete error:", err);
+                alert("Failed to delete selected users completely.");
+            }
+        }
+
         function switchTab(tab) {
             activeTab = tab;
             document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
@@ -668,6 +756,7 @@
             let filterBar = document.getElementById('filterBar');
             let onlineFilterBar = document.getElementById('onlineFilterBar');
             let exportBtn = document.getElementById('exportBtn');
+            let deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
             let pageTitle = document.getElementById('pageTitle');
 
             if (tab === 'online') {
@@ -675,11 +764,13 @@
                 filterBar.style.display = 'none';
                 onlineFilterBar.style.display = 'flex';
                 exportBtn.style.display = 'none';
+                if(selectedUserNames.size > 0 && deleteSelectedBtn) deleteSelectedBtn.style.display = 'flex';
             } else if (tab === 'leaderboard') {
                 pageTitle.innerText = "Top Calling Leaderboard";
                 filterBar.style.display = 'flex';
                 onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'none';
+                if(deleteSelectedBtn) deleteSelectedBtn.style.display = 'none';
             } else if (tab === 'reports') {
                 pageTitle.innerText = "Shift Reports & Ratios (USA Time)";
                 filterBar.style.display = 'flex';
@@ -687,6 +778,7 @@
                 exportBtn.style.display = 'block';
                 exportBtn.innerText = "📥 Export CSV";
                 exportBtn.onclick = exportCSV;
+                if(deleteSelectedBtn) deleteSelectedBtn.style.display = 'none';
             }
             renderContent();
         }
@@ -826,11 +918,16 @@
                     renderedCount++;
                     let badge = isOnline ? `<span class="badge badge-online">🟢 Online</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
                     let formattedLastActive = lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
+                    let isChecked = selectedUserNames.has(displayName) ? 'checked' : '';
                     
                     html += `
                         <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'}; width: 100%;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 8px;">
-                                <b style="font-size: 15px; color: #0f172a; word-break: break-all;">👤 ${displayName}</b> ${badge}
+                                <div style="display: flex; align-items: center; gap: 8px; word-break: break-all;">
+                                    <input type="checkbox" ${isChecked} onchange="toggleUserSelection('${displayName.replace(/'/g, "\\'")}', this)" style="width: 16px; height: 16px; cursor: pointer;">
+                                    <b style="font-size: 15px; color: #0f172a;">👤 ${displayName}</b>
+                                </div>
+                                ${badge}
                             </div>
                             <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; gap: 8px; flex-wrap: wrap;">
                                 <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
