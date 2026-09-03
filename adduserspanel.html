@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch Link | Admin & Client Management Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-hover: #1e293b;
+            --accent: #0284c7;
+            --accent-hover: #0369a1;
+            --success: #16a34a;
+            --danger: #dc3545;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 30px 15px;
+            box-sizing: border-box;
+        }
+
+        .admin-wrapper {
+            width: 100%;
+            max-width: 640px;
+        }
+
+        .admin-card {
+            background: var(--card-bg);
+            padding: 35px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(15, 23, 42, 0.04);
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+
+        .panel-title-area h2 {
+            color: var(--primary);
+            margin: 0 0 4px 0;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .panel-title-area p {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: 13px;
+        }
+
+        /* Modern Tabs */
+        .tab-buttons {
+            display: flex;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-muted);
+            flex: 1;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--card-bg);
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+        }
+
+        /* Form Controls */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 13px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            outline: none;
+            box-sizing: border-box;
+            background: #fff;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.12);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 8px;
+        }
+
+        .search-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0 18px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .search-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 13px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 6px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .success-msg {
+            background: #dcfce7;
+            color: #166534;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 14px;
+            text-align: center;
+            display: none;
+            border: 1px solid #bbf7d0;
+        }
+
+        /* Analytics Dashboard Cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 14px 10px;
+            border-radius: 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .stat-card.total-box::before { background: var(--accent); }
+        .stat-card.active-box::before { background: var(--success); }
+        .stat-card.expired-box::before { background: var(--danger); }
+
+        .stat-val {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+
+        .stat-lbl {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Filter Pills */
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 6px;
+        }
+
+        .pill-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .pill-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Professional Data Table */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            max-height: 320px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: white;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 480px;
+        }
+
+        .user-table th, .user-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .user-table th {
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .user-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        .action-btn-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .action-edit-btn {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .action-edit-btn:hover { background: #bae6fd; }
+
+        .action-del-btn {
+            background: #fee2e2;
+            color: #991b1b;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .action-del-btn:hover { background: #fecaca; }
+        
+        .badge-active { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
+        .badge-expired { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
+
+        /* Responsive Breakpoints */
+        @media(max-width: 600px) {
+            body { padding: 10px; }
+            .admin-card { padding: 20px 16px; border-radius: 12px; }
+            .form-grid { display: flex; flex-direction: column; gap: 0; }
+            .stats-row { gap: 8px; }
+            .stat-val { font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-wrapper">
+        <div class="admin-card">
+            
+            <div class="panel-header">
+                <div class="panel-title-area">
+                    <h2>Dispatch Link Control Center</h2>
+                    <p>Manage enterprise clients, licenses, and tracking databases.</p>
+                </div>
+            </div>
+
+            <div class="tab-buttons">
+                <button class="tab-btn active" id="tabAddBtn" onclick="switchTab('add')">🛠️ Add / Edit User</button>
+                <button class="tab-btn" id="tabListBtn" onclick="switchTab('list')">👥 All Users Directory</button>
+            </div>
+
+            <!-- TAB 1: ADD / UPDATE USER -->
+            <div id="sectionAddUser">
+                <div class="form-group full-width">
+                    <label>Select Target Firebase Database:</label>
+                    <select id="dbUrlSelect">
+                        <option value="https://data-scrapper-eddcf-default-rtdb.firebaseio.com/">Database 1 (Default Cluster)</option>
+                        <option value="https://data-scraper-2-default-rtdb.firebaseio.com/">Database 2 (Secondary Cluster)</option>
+                        <option value="https://data-scraper-3-default-rtdb.firebaseio.com/">Database 3 (Enterprise Cluster)</option>
+                    </select>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Company / Username:</label>
+                        <div class="search-box">
+                            <input type="text" id="newUsername" placeholder="e.g. swiftlogistics">
+                            <button onclick="searchExistingUser()" class="search-btn">🔍 Search</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Secure Password:</label>
+                        <input type="text" id="newPassword" placeholder="Enter password">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Max Allowed Active Tabs:</label>
+                        <input type="number" id="newMaxLaptops" value="2" min="1">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Subscription Expiry Date:</label>
+                        <input type="date" id="newExpiresDate">
+                    </div>
+                </div>
+
+                <button onclick="saveOrUpdateUserToFirebase()" class="submit-btn">Save / Update License Record</button>
+                <div id="successMsg" class="success-msg">✨ User credentials successfully committed to Firebase!</div>
+            </div>
+
+            <!-- TAB 2: ALL USERS LIST ACROSS ALL DATABASES -->
+            <div id="sectionAllUsers" style="display: none;">
+                
+                <!-- Stats Dashboard Row -->
+                <div class="stats-row">
+                    <div class="stat-card total-box">
+                        <div class="stat-lbl">Total Clients</div>
+                        <div class="stat-val" id="statTotal">0</div>
+                    </div>
+                    <div class="stat-card active-box">
+                        <div class="stat-lbl">Active Lic</div>
+                        <div class="stat-val" id="statActive" style="color: var(--success);">0</div>
+                    </div>
+                    <div class="stat-card expired-box">
+                        <div class="stat-lbl">Expired</div>
+                        <div class="stat-val" id="statExpired" style="color: var(--danger);">0</div>
+                    </div>
+                </div>
+
+                <!-- Filter & Search Bar -->
+                <div class="filter-container">
+                    <div class="filter-pills">
+                        <button class="pill-btn active" id="pillAll" onclick="setFilter('all')">All</button>
+                        <button class="pill-btn" id="pillActive" onclick="setFilter('active')">Active</button>
+                        <button class="pill-btn" id="pillExpired" onclick="setFilter('expired')">Expired</button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <input type="text" id="tableSearchInput" placeholder="🔍 Quick search username..." oninput="applyTableFilters()">
+                </div>
+
+                <div class="table-container">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Username & Limits</th>
+                                <th>Cluster Node</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allUsersTableBody">
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Fetching node data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <button onclick="fetchAllUsersFromAllDBs()" class="submit-btn" style="background: var(--accent); margin-top: 16px;">🔄 Synchronize & Refresh Directory</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DB_CONFIGS = [
+            { name: "Database 1", url: "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/" },
+            { name: "Database 2", url: "https://data-scraper-2-default-rtdb.firebaseio.com/" },
+            { name: "Database 3", url: "https://data-scraper-3-default-rtdb.firebaseio.com/" }
+        ];
+
+        let globalUsersCache = [];
+        let currentStatusFilter = 'all';
+
+        function switchTab(tabName) {
+            let addSec = document.getElementById('sectionAddUser');
+            let listSec = document.getElementById('sectionAllUsers');
+            let addBtn = document.getElementById('tabAddBtn');
+            let listBtn = document.getElementById('tabListBtn');
+
+            if (tabName === 'add') {
+                addSec.style.display = 'block';
+                listSec.style.display = 'none';
+                addBtn.classList.add('active');
+                listBtn.classList.remove('active');
+            } else {
+                addSec.style.display = 'none';
+                listSec.style.display = 'block';
+                listBtn.classList.add('active');
+                addBtn.classList.remove('active');
+                fetchAllUsersFromAllDBs();
+            }
+        }
+
+        async function searchExistingUser() {
+            let dbUrl = document.getElementById('dbUrlSelect').value;
+            let username = document.getElementById('newUsername').value.trim();
+
+            if (!username) { alert("Please enter a username to search."); return; }
+
+            try {
+                let res = await fetch(`${dbUrl}allowedUsers/${username}.json`);
+                let userData = await res.json();
+
+                if (userData) {
+                    document.getElementById('newPassword').value = userData.pass || '';
+                    document.getElementById('newMaxLaptops').value = userData.maxLaptops || 2;
+                    document.getElementById('newExpiresDate').value = userData.expires || '';
+                    alert("User record located successfully!");
+                } else {
+                    alert("User not found in this cluster node.");
+                }
+            } catch (error) {
+                console.error("Search error:", error);
+                alert("Connection error while querying.");
+            }
+        }
+
+        async function saveOrUpdateUserToFirebase() {
+            let dbUrl = document.getElementById('dbUrlSelect').value;
+            let username = document.getElementById('newUsername').value.trim();
+            let password = document.getElementById('newPassword').value.trim();
+            let maxLaptops = parseInt(document.getElementById('newMaxLaptops').value) || 1;
+            let expires = document.getElementById('newExpiresDate').value;
+            let msgBox = document.getElementById('successMsg');
+
+            if (!username || !password || !expires) {
+                alert("Please complete all required fields!");
+                return;
+            }
+
+            let userData = {
+                pass: password,
+                maxLaptops: maxLaptops,
+                expires: expires,
+                dbUrl: dbUrl
+            };
+
+            try {
+                let response = await fetch(`${dbUrl}allowedUsers/${username}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    msgBox.style.display = 'block';
+                    setTimeout(() => { msgBox.style.display = 'none'; }, 4000);
+                } else {
+                    alert("Failed to write to Firebase node.");
+                }
+            } catch (error) {
+                console.error("Network/CORS error:", error);
+                alert("Connection failure during save operation.");
+            }
+        }
+
+        async function fetchAllUsersFromAllDBs() {
+            let tbody = document.getElementById('allUsersTableBody');
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Synchronizing clusters...</td></tr>`;
+
+            globalUsersCache = [];
+            let todayStr = new Date().toISOString().split('T')[0];
+
+            for (let dbObj of DB_CONFIGS) {
+                try {
+                    let res = await fetch(`${dbObj.url}allowedUsers.json`);
+                    let usersData = await res.json() || {};
+
+                    for (let username in usersData) {
+                        let u = usersData[username];
+                        let expDate = u.expires || '';
+                        let isExpired = expDate !== '' && expDate < todayStr;
+
+                        globalUsersCache.push({
+                            username: username,
+                            dbName: dbObj.name,
+                            dbUrl: dbObj.url,
+                            pass: u.pass || '',
+                            maxLaptops: u.maxLaptops || 1,
+                            expires: expDate || 'N/A',
+                            isExpired: isExpired
+                        });
+                    }
+                } catch (e) {
+                    console.error(`Failed cluster fetch ${dbObj.name}:`, e);
+                }
+            }
+
+            updateDashboardStats();
+            applyTableFilters();
+        }
+
+        function updateDashboardStats() {
+            let total = globalUsersCache.length;
+            let expired = globalUsersCache.filter(u => u.isExpired).length;
+            let active = total - expired;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statActive').innerText = active;
+            document.getElementById('statExpired').innerText = expired;
+        }
+
+        function setFilter(status) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('pill' + status.charAt(0).toUpperCase() + status.slice(1)).classList.add('active');
+            applyTableFilters();
+        }
+
+        function applyTableFilters() {
+            let query = document.getElementById('tableSearchInput').value.toLowerCase().trim();
+
+            let filtered = globalUsersCache.filter(u => {
+                let matchesSearch = u.username.toLowerCase().includes(query);
+                let matchesStatus = true;
+                if (currentStatusFilter === 'active') matchesStatus = !u.isExpired;
+                if (currentStatusFilter === 'expired') matchesStatus = u.isExpired;
+                return matchesSearch && matchesStatus;
+            });
+
+            renderUserTable(filtered);
+        }
+
+        function renderUserTable(users) {
+            let tbody = document.getElementById('allUsersTableBody');
+            if (users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 20px;">No matching records found.</td></tr>`;
+                return;
+            }
+
+            let allRows = "";
+            users.forEach(u => {
+                let safeUser = encodeURIComponent(u.username);
+                let safeUrl = encodeURIComponent(u.dbUrl);
+                let safePass = encodeURIComponent(u.pass);
+                let safeExpiry = encodeURIComponent(u.expires);
+
+                let statusBadge = u.isExpired 
+                    ? `<span class="badge-expired">Expired</span>` 
+                    : `<span class="badge-active">Active</span>`;
+
+                allRows += `
+                    <tr>
+                        <td><b>${u.username}</b><br><span style="font-size:10px; color:var(--text-muted);">Max Tabs: ${u.maxLaptops}</span></td>
+                        <td><span style="font-size:10px; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-weight:600;">${u.dbName}</span></td>
+                        <td>${u.expires}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <div class="action-btn-group">
+                                <button onclick="editUserFromList('${safeUser}', '${safeUrl}', '${safePass}', '${u.maxLaptops}', '${safeExpiry}')" class="action-edit-btn" title="Edit Record">✏️ Edit</button>
+                                <button onclick="deleteUser('${u.dbUrl}', '${u.username}')" class="action-del-btn" title="Delete Record">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = allRows;
+        }
+
+        function editUserFromList(username, dbUrl, pass, maxLaptops, expires) {
+            switchTab('add');
+            document.getElementById('dbUrlSelect').value = decodeURIComponent(dbUrl);
+            document.getElementById('newUsername').value = decodeURIComponent(username);
+            document.getElementById('newPassword').value = decodeURIComponent(pass);
+            document.getElementById('newMaxLaptops').value = maxLaptops;
+            document.getElementById('newExpiresDate').value = decodeURIComponent(expires);
+        }
+
+        async function deleteUser(dbUrl, username) {
+            if (confirm(`Permanently delete user cluster record for "${username}"?`)) {
+                try {
+                    let deleteRes = await fetch(`${dbUrl}allowedUsers/${username}.json`, { method: 'DELETE' });
+                    if (deleteRes.ok) {
+                        alert("Record successfully deleted.");
+                        fetchAllUsersFromAllDBs();
+                    } else {
+                        alert("Deletion failed.");
+                    }
+                } catch (e) {
+                    console.error("Delete error:", e);
+                    alert("Connection error during removal.");
+                }
+            }
+        }
+    </script>
+</body>
+</html>
