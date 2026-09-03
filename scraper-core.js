@@ -22,7 +22,7 @@ const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// Firebase se teeno databases سے live users fetch karne ka updated function
+// Firebase se teeno databases se live users fetch karne ka updated function
 async function fetchAllowedUsersFromFirebase() {
     try {
         let urls = [
@@ -31,13 +31,11 @@ async function fetchAllowedUsersFromFirebase() {
             `${FIREBASE_DB_URL_3}allowedUsers.json`
         ];
 
-        // Teeno databases se aik sath data fetch karna
         let responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json()).catch(() => null)));
         
         allowedUsers = {};
         responses.forEach(firebaseUsers => {
             if (firebaseUsers) {
-                // Sabhi databases ke users ko aik object mein merge kar dena
                 allowedUsers = Object.assign({}, allowedUsers, firebaseUsers);
             }
         });
@@ -118,7 +116,7 @@ function showLimitExceededModal(message) {
 
     let modal = document.createElement('div');
     modal.id = 'dlLimitExceededModal';
-    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 99999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
+    modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
         <div style="background: #ffffff; padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
@@ -130,7 +128,7 @@ function showLimitExceededModal(message) {
             <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
                 Need to increase your active device/tab limit? <br>Contact Admin: <b>03700684849</b>
             </div>
-            <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
+            <button onclick="window.location.reload();" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">Retry / Refresh</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -367,8 +365,10 @@ async function initializeAccessControl() {
 
     performAutomaticDataCleanup();
 
-    checkGlobalSessions();
-    setInterval(checkGlobalSessions, 10000); // Har 10 seconds baad active sessions check honge taake limit foran catch ho
+    // 1st Instant Check on load
+    await checkGlobalSessions();
+    // Continuous Heartbeat every 8 seconds
+    setInterval(checkGlobalSessions, 8000);
 }
 
 if (document.readyState === 'loading') {
@@ -388,7 +388,7 @@ if (document.readyState === 'loading') {
         } else {
             initializeAccessControl();
         }
-    }, 300);
+    }, 200);
 }
 
 async function updateActiveSessionData() {
@@ -427,7 +427,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 20000; // 20 seconds strict timeout taake band hone wale tabs foran expire hon
+        const offlineThreshold = 18000; // 18 seconds strict threshold
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -439,6 +439,7 @@ async function checkGlobalSessions() {
         let activeCount = Object.keys(activeSessionsMap).length;
         let isCurrentRegistered = !!activeSessionsMap[safeTabKey];
 
+        // Agar yeh tab pehle se registered nahi hai aur active tabs ki ginti limit se zyada ho chuki hai
         if (!isCurrentRegistered && activeCount >= userLimit) {
             if (typeof scraping !== 'undefined' && scraping) {
                 stopScraping();
@@ -447,6 +448,7 @@ async function checkGlobalSessions() {
             return;
         }
 
+        // Agar limit poori nahi hui ya yeh tab pehle se registered hai toh apna session update rakho
         await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json`, {
             method: 'PUT',
             body: JSON.stringify({
@@ -464,22 +466,6 @@ async function checkGlobalSessions() {
 
 window.addEventListener('beforeunload', function () {
     if (!currentClient) return;
-    if (typeof scraping !== 'undefined' && scraping && currentHistoryId) {
-        let currentRangeStr = window.activeScrapeRange || "1 - 100";
-        let backupObj = {
-            id: currentHistoryId,
-            date: new Date().toLocaleString('en-US', { hour12: true }),
-            range: currentRangeStr,
-            totalRecords: scrapedData.length,
-            status: "Interrupted (Auto-Saved)",
-            records: scrapedData
-        };
-        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        let idx = lsBackup.findIndex(r => r.id === currentHistoryId);
-        if (idx !== -1) lsBackup[idx] = backupObj;
-        else lsBackup.push(backupObj);
-        localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-    }
     let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
 });
@@ -1512,7 +1498,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        const offlineThreshold = 20000;
+        const offlineThreshold = 18000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2120,7 +2106,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 20000;
+            const offlineThreshold = 18000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
