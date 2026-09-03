@@ -706,7 +706,7 @@ function injectHistoryUIFramework() {
                 position: relative !important;
                 clear: both !important;
             }
-            table.table { width: 100% !important; min-width: 1500px !important; border-collapse: collapse !important; table-layout: auto !important; }
+            table.table { width: max-content !important; min-width: 100% !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 10px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
             table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
