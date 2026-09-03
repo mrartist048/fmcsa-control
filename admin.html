@@ -390,18 +390,7 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        // Allowed Users List Verification
-        const allowedUsers = {
-            "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28" },    
-            "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30" },  
-            "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-01" }, 
-            "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30" },         
-            "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30" },  
-            "Loadlink": { pass: "Loadlink#trial", maxLaptops: 3, expires: "2026-08-14" },
-            "Nexteklogistics": { pass: "Nexteklogistics#123", maxLaptops: 1, expires: "2026-09-22" },
-            "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30" }, 
-        };
-
+        let allowedUsers = {};
         const MASTER_ADMIN_PASS = "admin890";
 
         let currentClient = "";
@@ -412,6 +401,26 @@
         
         let deletedUsersBlacklist = new Set();
         let selectedUserNames = new Set(); // MULTI-SELECT USERS STORAGE
+
+        // Fetch allowedUsers dynamically from all Firebase endpoints
+        async function fetchAllowedUsersFromFirebase() {
+            try {
+                let urls = [
+                    `${FIREBASE_DB_URL_1}allowedUsers.json`,
+                    `${FIREBASE_DB_URL_2}allowedUsers.json`,
+                    `${FIREBASE_DB_URL_3}allowedUsers.json`
+                ];
+                let responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json()).catch(() => null)));
+                allowedUsers = {};
+                responses.forEach(firebaseUsers => {
+                    if (firebaseUsers) {
+                        allowedUsers = Object.assign({}, allowedUsers, firebaseUsers);
+                    }
+                });
+            } catch (e) {
+                console.error("Could not fetch remote users from Firebase:", e);
+            }
+        }
 
         function loadBlacklist() {
             if (!currentClient) return;
@@ -435,7 +444,8 @@
             } catch(e) {}
         }
 
-        window.onload = function() {
+        window.onload = async function() {
+            await fetchAllowedUsersFromFirebase();
             let authOverlay = document.getElementById('authOverlay');
             if (authOverlay) {
                 authOverlay.style.display = 'flex';
@@ -485,11 +495,12 @@
             }
         }
 
-        function verifyAdminPassword() {
+        async function verifyAdminPassword() {
             let companyInput = document.getElementById('adminCompanyInput').value.trim();
             let passInput = document.getElementById('adminPasswordInput').value;
             let errorMsg = document.getElementById('authErrorMsg');
 
+            await fetchAllowedUsersFromFirebase();
             let userConfig = allowedUsers[companyInput];
             let isValid = userConfig && (passInput === userConfig.pass || passInput === MASTER_ADMIN_PASS);
 
@@ -541,7 +552,7 @@
         let dbRefsInitialized = false;
         let activeDatabases = [];
 
-        function fetchAdminData() {
+        async function fetchAdminData() {
             if (!currentClient) return;
 
             if (dbRefsInitialized) {
@@ -551,9 +562,15 @@
             }
 
             try {
-                const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+                const clientDbUrl = (allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
+                    ? allowedUsers[currentClient].dbUrl 
+                    : FIREBASE_DB_URL_1;
+                
+                const urls = [clientDbUrl, FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+                // Remove duplicates if any
+                let uniqueUrls = [...new Set(urls)];
 
-                urls.forEach((url, index) => {
+                uniqueUrls.forEach((url, index) => {
                     let appName = `adminApp_${index}`;
                     let secondaryApp;
                     try {
@@ -657,8 +674,9 @@
                     promises.push(db.ref(`shift_reports/${currentClient}/${userName}`).remove());
                 });
 
-                const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
-                urls.forEach(url => {
+                const clientDbUrl = (allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) ? allowedUsers[currentClient].dbUrl : FIREBASE_DB_URL_1;
+                const urls = [clientDbUrl, FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+                [...new Set(urls)].forEach(url => {
                     promises.push(fetch(`${url}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }));
                     promises.push(fetch(`${url}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }));
                     promises.push(fetch(`${url}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }));
@@ -737,8 +755,9 @@
                         promises.push(db.ref(`shift_reports/${currentClient}/${userName}`).remove());
                     });
 
-                    const urls = [FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
-                    urls.forEach(url => {
+                    const clientDbUrl = (allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) ? allowedUsers[currentClient].dbUrl : FIREBASE_DB_URL_1;
+                    const urls = [clientDbUrl, FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
+                    [...new Set(urls)].forEach(url => {
                         promises.push(fetch(`${url}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }));
                         promises.push(fetch(`${url}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }));
                         promises.push(fetch(`${url}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }));
