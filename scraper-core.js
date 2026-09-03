@@ -690,7 +690,6 @@ function injectHistoryUIFramework() {
 
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; background: transparent !important; }
             
-            /* FIXED: Force dedicated independent scrolling for leads container */
             .table-responsive { 
                 width: 100% !important; 
                 max-width: 100% !important;
