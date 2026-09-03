@@ -17,7 +17,7 @@ const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
 // ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
-const allowedUsers = {
+let allowedUsers = {
     "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28", dbUrl: FIREBASE_DB_URL_1 },    
     "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30", dbUrl: FIREBASE_DB_URL_1 },  
     "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-28", dbUrl: FIREBASE_DB_URL_2 }, 
@@ -25,12 +25,25 @@ const allowedUsers = {
     "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },  
     "Loadlink": { pass: "Loadlink#trial", maxLaptops: 3, expires: "2026-08-14", dbUrl: FIREBASE_DB_URL_2 },
     "Nexteklogistics": { pass: "Nexteklogistics#123", maxLaptops: 1, expires: "2026-09-22", dbUrl: FIREBASE_DB_URL_2 },
-    "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_3 }, 
+    "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_3 },  
 };
 
 const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
+
+// Firebase se live users fetch karne ka function (Admin Page sync ke liye)
+async function fetchAllowedUsersFromFirebase() {
+    try {
+        let res = await fetch(`${FIREBASE_DB_URL_1}allowedUsers.json`);
+        let firebaseUsers = await res.json();
+        if (firebaseUsers) {
+            allowedUsers = Object.assign({}, allowedUsers, firebaseUsers);
+        }
+    } catch (e) {
+        console.error("Could not fetch remote users from Firebase, using default list:", e);
+    }
+}
 
 // DYNAMIC FIREBASE URL SELECTOR
 const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) 
@@ -212,10 +225,13 @@ window.togglePasswordVisibility = function() {
     }
 };
 
-window.processLogin = function() {
+window.processLogin = async function() {
     let uInput = document.getElementById('dlLoginUser').value.trim();
     let pInput = document.getElementById('dlLoginPass').value.trim();
     let errBox = document.getElementById('dlLoginError');
+
+    // Login se pehle Firebase se latest users load kar lein
+    await fetchAllowedUsersFromFirebase();
 
     let userConfig = allowedUsers[uInput];
     if (!userConfig || userConfig.pass !== pInput) {
@@ -327,7 +343,9 @@ window.logoutUser = function() {
     window.location.reload();
 };
 
-function initializeAccessControl() {
+async function initializeAccessControl() {
+    await fetchAllowedUsersFromFirebase();
+
     if (!currentClient || !allowedUsers[currentClient]) {
         renderLoginScreen();
         return;
@@ -466,7 +484,7 @@ window.addEventListener('beforeunload', function () {
 
 let db;
 let currentHistoryId = null;
-let availableCategories = new Set(); // Global Set for Dynamic Categories
+let availableCategories = new Set();
 
 const request = indexedDB.open("DispatchLinkHistoryDB", 1);
 request.onupgradeneeded = function(e) {
@@ -544,7 +562,7 @@ function injectHistoryUIFramework() {
                 border-radius: 6px !important; 
                 padding: 6px 10px !important; 
                 font-size: 12px !important; 
-                line-height: 1.4 !important;
+                line-height: 1.4;
                 box-sizing: border-box !important; 
                 color: #222 !important; 
                 background: #fafafa !important; 
@@ -580,7 +598,6 @@ function injectHistoryUIFramework() {
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
             .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
             
-            /* ====== PERFECTED SELECT CATEGORIES DROPDOWN STYLING MATCHING VEHICLE TYPES ====== */
             .dropdown-check-list { display: inline-block; position: relative; }
             .dropdown-check-list .anchor { position: relative; cursor: pointer; display: inline-block; padding: 6px 12px; background: white; border: 1px solid #b6ccfe; border-radius: 4px; font-size: 12px; user-select: none; color: #002d62; font-weight: bold; }
             .dropdown-check-list .anchor:active { background-color: #f1f1f1; }
@@ -744,45 +761,36 @@ function injectHistoryUIFramework() {
         document.body.appendChild(tModal);
     }
 
-  if (!document.getElementById('dlDispositionModal')) {
+    if (!document.getElementById('dlDispositionModal')) {
         let dModal = document.createElement('div');
         dModal.id = 'dlDispositionModal';
         dModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 100000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         dModal.innerHTML = `
             <div style="background: #ffffff; width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box; position: relative;">
-                
-                <!-- Cross Close Button -->
                 <button onclick="document.getElementById('dlDispositionModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 22px; color: #6c757d; cursor: pointer; font-weight: bold; line-height: 1;" title="Close">&times;</button>
-
                 <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center; padding-right: 15px;">What is the Status of this call?</h3>
                 <p style="font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 15px;">Select call status for <b id="dispTargetPhoneNum" style="color: #002d62;"></b></p>
-                
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <div onclick="submitCallDisposition('Hung up')" style="background: #ff5252; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(255,82,82,0.3);">
                         <div style="display: flex; align-items: center; gap: 10px;"><span>📞</span><span>Hung up</span></div>
                         <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
-
                     <div onclick="submitCallDisposition('Voicemail')" style="background: #9c27b0; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(156,39,176,0.3);">
                         <div style="display: flex; align-items: center; gap: 10px;"><span>📭</span><span>Voicemail</span></div>
                         <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
-
                     <div onclick="submitCallDisposition('Not interested')" style="background: #ff9800; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(255,152,0,0.3);">
                         <div style="display: flex; align-items: center; gap: 10px;"><span>👎</span><span>Not interested</span></div>
                         <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
-
                     <div onclick="submitCallDisposition('Do not Call')" style="background: #2196f3; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(33,150,243,0.3);">
                         <div style="display: flex; align-items: center; gap: 10px;"><span>🚫</span><span>Do not Call</span></div>
                         <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
-
                     <div onclick="submitCallDisposition('Follow up')" style="background: #4caf50; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(76,175,80,0.3);">
                         <div style="display: flex; align-items: center; gap: 10px;"><span>📅</span><span>Follow up</span></div>
                         <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
                     </div>
-
                     <div onclick="submitCallDisposition('Sale Closed')" style="background: #009688; color: white; padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 3px 10px rgba(0,150,136,0.3);">
                         <div style="display: flex; align-items: center; gap: 10px;"><span>🤝</span><span>Sale Closed</span></div>
                         <div style="width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></div>
@@ -839,7 +847,6 @@ window.scrollToLastCalledLead = function() {
     }
 };
 
-// ====== DYNAMIC CATEGORY DROPDOWN TOGGLE HANDLERS ======
 function toggleCategoryDropdown(e) {
     e.stopPropagation();
     let list = document.getElementById('categoryDropdownCheckList');
@@ -897,12 +904,9 @@ function injectAdvancedFilterBar() {
                 </select>
             </div>
             
-            <!-- ====== SELECT CATEGORIES DROPDOWN FIXED STYLING MATCHING VEHICLE TYPES ====== -->
             <div id="categoryDropdownCheckList" class="dropdown-check-list" tabindex="100">
                 <span class="anchor" onclick="toggleCategoryDropdown(event)">Select Categories ▼</span>
-                <ul id="checkboxListContainer" class="items">
-                    <!-- Dynamic check lists populate here -->
-                </ul>
+                <ul id="checkboxListContainer" class="items"></ul>
             </div>
 
             <div style="position: relative; display: inline-block;">
@@ -1017,7 +1021,7 @@ function populateVehicleTypeCheckboxes() {
 window.applyAdvancedFilters = function() {
     let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
     let searchQuery = (document.getElementById('universalSearchInput')?.value || "").toLowerCase().trim();
-    let selectedCategories = Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value); // Category Multi-filter lookup
+    let selectedCategories = Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value);
     
     let selectedVehicles = [];
     document.querySelectorAll('#vehicleCheckboxList input[type="checkbox"]:checked').forEach(cb => {
@@ -1259,7 +1263,6 @@ window.openAdminPanelPrompt = function() {
     window.open('admin.html', '_blank');
 };
 
-// ====== INSTANT COLOR CHANGE & CALL/COPY HANDLERS ======
 window.copyPhoneToClipboardDirect = function(event, containerElement, phoneNum) {
     event.stopPropagation();
     if (!phoneNum || phoneNum === 'N/A') return;
@@ -2480,5 +2483,3 @@ window.downloadCSV = function() {
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
     }
 }
-
-
