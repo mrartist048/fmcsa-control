@@ -616,12 +616,10 @@ function applyThemeModeClasses() {
             table.table td { background: var(--table-bg) !important; color: var(--text-main) !important; border-bottom: 1px solid var(--table-border) !important; }
             input[type="text"], input[type="number"], select { background: var(--input-bg) !important; color: var(--input-text) !important; border-color: var(--input-border) !important; }
             
-            /* Target Heading, Status box, ETA & Table Headers & Filters */
             h1, h2, h3, h4, h5, h6, .container h1, .container h2, div[style*="Dispatch Link"] { color: #f8fafc !important; }
             #status { background: #1e293b !important; color: #38bdf8 !important; border: 1px solid #334155 !important; border-left: 5px solid #38bdf8 !important; }
             .badge-active { background: #065f46 !important; color: #34d399 !important; }
             
-            /* Dark Mode for Filter Dropdowns (Categories & Vehicles) */
             .dropdown-check-list .anchor { background: #1e293b !important; color: #f8fafc !important; border-color: #475569 !important; }
             .dropdown-check-list ul.items { background: #1e293b !important; border-color: #475569 !important; }
             .dropdown-check-list ul.items li label { color: #f8fafc !important; }
@@ -685,16 +683,28 @@ function injectHistoryUIFramework() {
             ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
             ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-            .custom-dark-scrollbar::-webkit-scrollbar { width: 5px; }
+            .custom-dark-scrollbar::-webkit-scrollbar { width: 5px; height: 6px; }
             .custom-dark-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
             .custom-dark-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
             .custom-dark-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
 
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; background: transparent !important; }
             
-            /* Table Responsive wrapper for independent horizontal scrolling */
-            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-top: 15px !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
-            table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
+            /* FIXED: Table Responsive container with proper independent scrollbars */
+            .table-responsive { 
+                width: 100% !important; 
+                max-width: 100% !important;
+                overflow-x: auto !important; 
+                overflow-y: visible !important;
+                -webkit-overflow-scrolling: touch !important; 
+                margin-top: 15px !important; 
+                margin-bottom: 20px !important; 
+                border: 1px solid var(--table-border, #ddd) !important; 
+                border-radius: 6px !important; 
+                background: var(--table-bg, #fff); 
+                display: block !important;
+            }
+            table.table { width: 100% !important; min-width: 1300px !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
             table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
@@ -1169,7 +1179,6 @@ function injectAdvancedFilterBar() {
         </div>
     `;
     
-    // Completely standalone placement outside table container
     let tableContainer = table.closest('.table-responsive');
     if (tableContainer) {
         tableContainer.parentNode.insertBefore(filterDiv, tableContainer);
@@ -2679,7 +2688,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 }
 
 window.downloadCSV = function() {
-    if(scrapedData.length > 0) {
+    if(scrapedData.logger !== undefined || scrapedData.length > 0) {
         const start = document.getElementById('startMc').value;
         const end = document.getElementById('endMc').value;
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
