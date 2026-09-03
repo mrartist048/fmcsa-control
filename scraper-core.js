@@ -28,8 +28,6 @@ const allowedUsers = {
     "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_3 }, 
 };
 
-const MASTER_ADMIN_PASS = "admin890";
-
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 let currentThemeMode = localStorage.getItem("dl_theme_mode") || "light";
 
@@ -690,7 +688,7 @@ function injectHistoryUIFramework() {
             .custom-dark-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
             .custom-dark-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-            .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
+            .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; background: transparent !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
             table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
@@ -775,14 +773,6 @@ function injectHistoryUIFramework() {
                 downBtn.style.display = (scrollTop < 300 && hasActiveCalledCell) ? 'flex' : 'none';
             }
         });
-    }
-
-    let coreTable = document.querySelector('table');
-    if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
-        let wrapperDiv = document.createElement('div');
-        wrapperDiv.className = 'table-responsive';
-        coreTable.parentNode.insertBefore(wrapperDiv, coreTable);
-        wrapperDiv.appendChild(coreTable);
     }
 
     if (!document.getElementById('dlHistoryDrawer')) {
@@ -1140,7 +1130,7 @@ function injectAdvancedFilterBar() {
 
     let filterDiv = document.createElement('div');
     filterDiv.id = 'advancedFilterWrapper';
-    filterDiv.style.cssText = "background: var(--card-bg, #ffffff); padding: 12px 18px; margin: 15px 0; border: 1px solid var(--card-border, #e2e8f0); border-radius: 8px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.02);";
+    filterDiv.style.cssText = "background: var(--card-bg, #ffffff); padding: 12px 18px; margin: 15px 0; border: 1px solid var(--card-border, #e2e8f0); border-radius: 8px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.02); width: 100%; box-sizing: border-box;";
     filterDiv.innerHTML = `
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -1157,7 +1147,7 @@ function injectAdvancedFilterBar() {
 
             <div style="position: relative; display: inline-block;">
                 <button type="button" onclick="toggleVehicleDropdown(event)" style="border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box; background: var(--card-bg, #ffffff);">
                     <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
