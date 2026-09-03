@@ -106,13 +106,13 @@ function showLimitExceededModal(message) {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 99999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: #ffffff; padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
+        <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
             <div style="font-size: 42px; margin-bottom: 10px;">⚠️</div>
             <h2 style="color: #dc3545; margin-top: 0; margin-bottom: 10px; font-size: 22px;">License Limit Exceeded!</h2>
-            <p style="color: #444; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+            <p style="font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
                 ${message}
             </p>
-            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; color: #333; margin-bottom: 20px;">
+            <div style="background: var(--bg-main, #f8f9fa); padding: 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 12px; margin-bottom: 20px;">
                 Need to increase your active device/tab limit? <br>Contact Admin: <b>03700684849</b>
             </div>
             <button onclick="document.getElementById('dlLimitExceededModal').remove()" style="background: #002d62; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%;">OK, Understood</button>
@@ -616,6 +616,11 @@ function applyThemeModeClasses() {
                 --dropdown-border: #334155;
                 --card-bg: #1e293b;
                 --card-border: #334155;
+                --table-bg: #1e293b;
+                --table-border: #334155;
+                --input-bg: #0f172a;
+                --input-text: #f8fafc;
+                --input-border: #475569;
             }
             body { background: var(--bg-main) !important; color: var(--text-main) !important; }
             #dlMainContentWrapper { background: var(--bg-main) !important; color: var(--text-main) !important; }
@@ -624,6 +629,10 @@ function applyThemeModeClasses() {
             .sidebar-nav-btn:hover { background: var(--sidebar-hover) !important; color: #fff !important; }
             .dropdown-item { padding: 8px 12px; font-size: 12px; font-weight: bold; color: var(--text-main); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
             .dropdown-item:hover { background: #334155 !important; }
+            .table-responsive { background: var(--table-bg) !important; border-color: var(--table-border) !important; }
+            table.table th { background: #0f172a !important; color: #f8fafc !important; border-bottom: 1px solid var(--table-border) !important; }
+            table.table td { background: var(--table-bg) !important; color: var(--text-main) !important; border-bottom: 1px solid var(--table-border) !important; }
+            input[type="text"], input[type="number"], select { background: var(--input-bg) !important; color: var(--input-text) !important; border-color: var(--input-border) !important; }
         `;
     } else {
         styleTag.innerHTML = `
@@ -643,6 +652,11 @@ function applyThemeModeClasses() {
                 --dropdown-border: #cbd5e1;
                 --card-bg: #ffffff;
                 --card-border: #e2e8f0;
+                --table-bg: #ffffff;
+                --table-border: #ddd;
+                --input-bg: #ffffff;
+                --input-text: #0f172a;
+                --input-border: #cbd5e1;
             }
             body { background: var(--bg-main) !important; color: var(--text-main) !important; }
             #dlMainContentWrapper { background: var(--bg-main) !important; color: var(--text-main) !important; }
@@ -651,6 +665,9 @@ function applyThemeModeClasses() {
             .sidebar-nav-btn:hover { background: var(--sidebar-hover) !important; color: #fff !important; }
             .dropdown-item { padding: 8px 12px; font-size: 12px; font-weight: bold; color: #334155; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
             .dropdown-item:hover { background: #f1f5f9 !important; }
+            .table-responsive { background: var(--table-bg) !important; border-color: var(--table-border) !important; }
+            table.table th { background: #f8fafc !important; color: #0f172a !important; border-bottom: 1px solid var(--table-border) !important; }
+            table.table td { background: var(--table-bg) !important; color: var(--text-main) !important; border-bottom: 1px solid var(--table-border) !important; }
         `;
     }
 }
@@ -771,7 +788,7 @@ function injectHistoryUIFramework() {
     if (!document.getElementById('dlHistoryDrawer')) {
         let drawer = document.createElement('div');
         drawer.id = 'dlHistoryDrawer';
-        drawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 9999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
+        drawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: var(--card-bg, #ffffff); color: var(--text-main, #333); box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 9999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         drawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #002d62; padding-bottom: 10px; margin-bottom: 15px;">
                 <h3 style="color: #002d62; margin: 0; font-size: 18px;">Saved Sheets History</h3>
@@ -785,7 +802,7 @@ function injectHistoryUIFramework() {
     if (!document.getElementById('dlFollowUpDrawer')) {
         let fDrawer = document.createElement('div');
         fDrawer.id = 'dlFollowUpDrawer';
-        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: #ffffff; box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 9999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
+        fDrawer.style.cssText = "position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: var(--card-bg, #ffffff); color: var(--text-main, #333); box-shadow: -5px 0 15px rgba(0,0,0,0.15); z-index: 9999999; transition: right 0.3s ease-in-out; padding: 20px; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column;";
         fDrawer.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-bottom: 10px;">
                 <h3 style="color: #17a2b8; margin: 0; font-size: 18px;">📅 Follow-Up Pipeline</h3>
@@ -815,18 +832,18 @@ function injectHistoryUIFramework() {
         eModal.id = 'dlEmailSetupModal';
         eModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         eModal.innerHTML = `
-            <div style="background: white; width: 420px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden;">
+            <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); width: 420px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden;">
                 <div style="background: #0f172a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; font-size: 16px;">✉️ Email Setup & Template</h3>
                     <button onclick="document.getElementById('dlEmailSetupModal').style.display='none'" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
                 </div>
-                <div style="padding: 20px; color: #333;">
+                <div style="padding: 20px;">
                     <div style="margin-bottom: 15px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Email Subject</label>
+                        <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Email Subject</label>
                         <input type="text" id="modalPropSubject" value="${savedSubject}" style="width: 100%; padding: 8px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Email Body <span style="font-weight: normal; color: #64748b;">(Use {company} for company name)</span></label>
+                        <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Email Body <span style="font-weight: normal; color: #64748b;">(Use {company} for company name)</span></label>
                         <textarea id="modalPropBody" style="width: 100%; height: 120px; padding: 8px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; resize: vertical;" class="custom-dark-scrollbar">${savedBody}</textarea>
                     </div>
                     <div style="display: flex; gap: 8px;">
@@ -843,31 +860,31 @@ function injectHistoryUIFramework() {
         sModal.id = 'dlPortalSettingsModal';
         sModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         sModal.innerHTML = `
-            <div style="background: white; width: 385px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden;">
+            <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); width: 385px; border-radius: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden;">
                 <div style="background: #0f172a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; font-size: 16px;">⚙️ Portal Settings</h3>
                     <button onclick="document.getElementById('dlPortalSettingsModal').style.display='none'" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
                 </div>
-                <div style="padding: 20px; color: #333;">
-                    <div style="margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <div style="padding: 20px;">
+                    <div style="margin-bottom: 15px; background: var(--bg-main, #f8fafc); padding: 10px; border-radius: 6px; border: 1px solid var(--card-border, #e2e8f0);">
                         <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">License Usage Stats</div>
-                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #0f172a;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px;">
                             <span>Max Allowed Devices/Tabs:</span> <b id="settingsMaxLimitDisplay">-</b>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #0f172a; margin-top: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px;">
                             <span>Currently Active Sessions:</span> <b id="settingsActiveSessionsDisplay" style="color: #0284c7;">-</b>
                         </div>
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Active Client / Company:</label>
+                        <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Active Client / Company:</label>
                         <input type="text" value="${currentClient}" disabled style="width: 100%; padding: 8px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f1f5f9; color: #64748b; box-sizing: border-box;">
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label style="font-size: 12px; font-weight: bold; color: #333; display: block; margin-bottom: 5px;">Dispatcher Nickname:</label>
+                        <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Dispatcher Nickname:</label>
                         <input type="text" id="settingsNicknameInput" value="${dispatcherNickname}" style="width: 100%; padding: 8px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                     </div>
-                    <div style="margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                        <span style="font-size: 13px; font-weight: bold; color: #333;">🌙 Theme Mode:</span>
+                    <div style="margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-main, #f1f5f9); padding: 10px; border-radius: 6px; border: 1px solid var(--card-border, #e2e8f0);">
+                        <span style="font-size: 13px; font-weight: bold;">🌙 Theme Mode:</span>
                         <div style="display: flex; gap: 6px;">
                             <button onclick="switchThemeMode('light')" id="themeBtnLight" style="padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; border: none;">☀️ Light</button>
                             <button onclick="switchThemeMode('dark')" id="themeBtnDark" style="padding: 6px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; cursor: pointer; border: none;">🌙 Dark</button>
@@ -885,14 +902,14 @@ function injectHistoryUIFramework() {
         modal.id = 'dlDatePickerModal';
         modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         modal.innerHTML = `
-            <div style="background: white; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
                 <h3 style="color: #002d62; margin-top: 0; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">⏰ Schedule Follow-Up</h3>
                 <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Date:</label>
+                    <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px;">Select Date:</label>
                     <input type="date" id="dlModalDateInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div style="margin-bottom: 18px;">
-                    <label style="display: block; font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px;">Select Time:</label>
+                    <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px;">Select Time:</label>
                     <input type="time" id="dlModalTimeInput" style="width: 100%; padding: 8px; font-size: 13px; border: 1px solid #b6ccfe; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
@@ -909,7 +926,7 @@ function injectHistoryUIFramework() {
         tModal.id = 'dlTeamSelectModal';
         tModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         tModal.innerHTML = `
-            <div style="background: white; padding: 25px; border-radius: 8px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); padding: 25px; border-radius: 8px; width: 340px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
                 <h3 style="color: #002d62; margin-top: 0; margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #002d62; padding-bottom: 8px;">👥 Share with Team Member</h3>
                 <p style="font-size: 12px; color: #6c757d; margin-bottom: 12px;">Select team member:</p>
                 <div id="dlTeamMembersRadioList" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 8px; border-radius: 4px;" class="custom-dark-scrollbar"></div>
@@ -927,7 +944,7 @@ function injectHistoryUIFramework() {
         dModal.id = 'dlDispositionModal';
         dModal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 100000000; display: none; align-items: center; justify-content: center; font-family: sans-serif;";
         dModal.innerHTML = `
-            <div style="background: #ffffff; width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box; position: relative;">
+            <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); width: 380px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; padding: 20px; box-sizing: border-box; position: relative;">
                 <button onclick="document.getElementById('dlDispositionModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 22px; color: #6c757d; cursor: pointer; font-weight: bold; line-height: 1;" title="Close">&times;</button>
                 <h3 style="color: #002d62; margin-top: 0; margin-bottom: 5px; font-size: 18px; text-align: center; padding-right: 15px;">What is the Status of this call?</h3>
                 <p style="font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 15px;">Select call status for <b id="dispTargetPhoneNum" style="color: #002d62;"></b></p>
@@ -1128,7 +1145,7 @@ function injectAdvancedFilterBar() {
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">📍 State:</span>
-                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #0f172a; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
+                <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
             </div>
@@ -1139,9 +1156,9 @@ function injectAdvancedFilterBar() {
             </div>
 
             <div style="position: relative; display: inline-block;">
-                <button type="button" onclick="toggleVehicleDropdown(event)" style="background: white; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; border-radius: 6px; color: #0f172a; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
-                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; background: white; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
-                    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
+                <button type="button" onclick="toggleVehicleDropdown(event)" style="border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Select Vehicle Types ▼</button>
+                <div id="vehicleTypeDropdownContent" style="display: none; position: absolute; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 6px; z-index: 1000; width: 170px; top: 100%; left: 0; margin-top: 4px; text-align: left; box-sizing: border-box;">
+                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Filter by Vehicle:</div>
                     <div id="vehicleCheckboxList"></div>
                 </div>
             </div>
@@ -1240,9 +1257,9 @@ function populateVehicleTypeCheckboxes() {
     fixedTypes.forEach(vType => {
         let isChecked = checkedSet.has(vType) ? "checked" : "";
         html += `
-            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; color: #333 !important; text-align: left !important; width: 100% !important;">
+            <label style="display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 8px !important; font-size: 12px !important; margin-bottom: 8px !important; cursor: pointer !important; width: 100% !important;">
                 <input type="checkbox" value="${vType}" ${isChecked} onchange="applyAdvancedFilters()" style="cursor: pointer !important; margin: 0 !important; flex-shrink: 0 !important; width: 14px !important; height: 14px !important;"> 
-                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; color: #333 !important; font-size: 12px !important;">${vType}</span>
+                <span style="text-align: left !important; flex: 1 !important; white-space: nowrap !important; display: inline-block !important; font-size: 12px !important;">${vType}</span>
             </label>
         `;
     });
@@ -1330,7 +1347,7 @@ window.triggerOneClickEmailPitch = function(emailAddress, companyName) {
     setTimeout(() => {
         try {
             if (!activeWindow || activeWindow.location.href === 'about:blank' || activeWindow.document.body.innerHTML === '') {
-                if (activeWindow) activeWindow.location.href = gmailUrl;
+                window.open(gmailUrl, '_blank');
             }
         } catch (e) {
             window.open(gmailUrl, '_blank');
@@ -1438,12 +1455,12 @@ window.openCallingDetailModal = function() {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000000; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: white; width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+        <div style="background: var(--card-bg, #ffffff); color: var(--text-main, #333); width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
             <div style="background: #0f172a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
                 <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
-            <div style="padding: 20px; color: #333;">
+            <div style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
                     <strong>Total Calls Logged:</strong> <span style="font-weight: bold; color: #0284c7; font-size: 16px;">${totalCallsCount}</span>
                 </div>
@@ -1718,7 +1735,7 @@ window.openTeamShareModal = async function(recordsToShare) {
 
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
-                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px; color: #333;">
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #f1f3f4; cursor: pointer; font-size: 13px;">
                     <input type="radio" name="teamMemberRadio" value="${name}" ${checkedAttr} style="cursor: pointer;">
                     <span><b>${name}</b> (${statusText})</span>
                 </label>
@@ -1867,7 +1884,7 @@ function renderFollowUpItems() {
         let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
 
         itemsHTML += `
-            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+            <div style="background: var(--bg-main, #fdfdfd); border: 1px solid var(--card-border, #e9ecef); border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
                     <span>Saved: ${item.addedAt}</span>
                     <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
@@ -1876,9 +1893,9 @@ function renderFollowUpItems() {
                     <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
                     ${senderTag}
                 </div>
-                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
-                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
-                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
+                <div style="font-size: 12px;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                <div style="font-size: 12px; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                <div style="font-size: 12px; background: var(--card-bg, #f1f3f4); padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
@@ -2043,11 +2060,11 @@ function renderHistoryItems() {
             let csvActionAttr = recordsCount === 0 ? "" : `onclick="downloadHistoryCSV(${item.id})"`;
 
             itemsHTML += `
-                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
+                <div style="background: var(--bg-main, #f8f9fa); border: 1px solid var(--card-border, #e9ecef); border-left: 4px solid #002d62; padding: 12px; margin-bottom: 10px; border-radius: 6px; font-family: sans-serif;">
                     <div style="font-size: 11px; color: #6c757d; font-weight: bold;">${item.date}</div>
-                    <div style="font-size: 14px; font-weight: bold; color: #333; margin: 4px 0;">Range: ${item.range}</div>
+                    <div style="font-size: 14px; font-weight: bold; margin: 4px 0;">Range: ${item.range}</div>
                     <div style="font-size: 12px; margin-bottom: 8px;">Status: ${displayStatus}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid #eee; padding-top: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid var(--card-border, #eee); padding-top: 8px;">
                         <span style="background: #e2eafc; color: #002d62; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px;">${recordsCount} Active</span>
                         <div style="display: flex; gap: 4px; align-items: center;">
                             <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
@@ -2514,8 +2531,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         statusBox.style.alignItems = "center";
         statusBox.style.justifyContent = "space-between";
         statusBox.style.padding = "10px 15px";
-        statusBox.style.background = "#ffffff";
-        statusBox.style.color = "#333";
         statusBox.style.border = "1px solid #e2e8f0";
         statusBox.style.borderLeft = "5px solid #0284c7";
         statusBox.style.borderRadius = "6px";
@@ -2625,14 +2640,14 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
                 <div style="font-family: sans-serif; display: flex; flex-direction: column; gap: 2px; text-align: left;">
-                    <div style="font-size: 13px; font-weight: bold; color: #333;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
+                    <div style="font-size: 13px; font-weight: bold;">Scanning MC ${mc} (${totalProcessed}/${totalToScan})</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span style="font-size: 11px; color: #6c757d; font-weight: bold;">${timeString}</span>
                         ${latestErrorText}
                     </div>
                 </div>
                 <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#0284c7 ${degrees}deg, #e2e8f0 ${degrees}deg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <div style="position: absolute; width: 30px; height: 30px; background: #ffffff; border-radius: 50%;"></div>
+                    <div style="position: absolute; width: 30px; height: 30px; background: var(--card-bg, #ffffff); border-radius: 50%;"></div>
                     <span style="position: relative; font-family: sans-serif; font-size: 11px; font-weight: bold; color: #0284c7;">${percentage}%</span>
                 </div>
             `;
