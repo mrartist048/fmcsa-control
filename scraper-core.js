@@ -678,33 +678,34 @@ function injectHistoryUIFramework() {
         let styleTag = document.createElement('style');
         styleTag.id = 'dlResponsiveTheme';
         styleTag.innerHTML = `
-            ::-webkit-scrollbar { width: 6px; height: 6px; }
+            ::-webkit-scrollbar { width: 8px; height: 10px; }
             ::-webkit-scrollbar-track { background: #0b1120; }
-            ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+            ::-webkit-scrollbar-thumb { background: #334155; border-radius: 5px; }
             ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-            .custom-dark-scrollbar::-webkit-scrollbar { width: 5px; height: 6px; }
+            .custom-dark-scrollbar::-webkit-scrollbar { width: 5px; height: 8px; }
             .custom-dark-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
             .custom-dark-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
             .custom-dark-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
 
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; background: transparent !important; }
             
-            /* FIXED: Table Responsive container with proper independent scrollbars */
+            /* FIXED: Force horizontal scrollbar visibility and smooth touch scrolling */
             .table-responsive { 
                 width: 100% !important; 
                 max-width: 100% !important;
-                overflow-x: auto !important; 
-                overflow-y: visible !important;
+                overflow-x: scroll !important; 
+                overflow-y: hidden !important;
                 -webkit-overflow-scrolling: touch !important; 
                 margin-top: 15px !important; 
-                margin-bottom: 20px !important; 
+                margin-bottom: 25px !important; 
                 border: 1px solid var(--table-border, #ddd) !important; 
                 border-radius: 6px !important; 
                 background: var(--table-bg, #fff); 
                 display: block !important;
+                position: relative !important;
             }
-            table.table { width: 100% !important; min-width: 1300px !important; border-collapse: collapse !important; }
+            table.table { width: 100% !important; min-width: 1400px !important; border-collapse: collapse !important; }
             table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
             table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
@@ -2688,7 +2689,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 }
 
 window.downloadCSV = function() {
-    if(scrapedData.logger !== undefined || scrapedData.length > 0) {
+    if(scrapedData.length > 0) {
         const start = document.getElementById('startMc').value;
         const end = document.getElementById('endMc').value;
         triggerCSVDownload(scrapedData, `DispatchLink_Data_${start}_to_${end}.csv`);
