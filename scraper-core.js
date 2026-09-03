@@ -16,32 +16,22 @@ const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.c
 const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
 const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-// ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS ======
-let allowedUsers = {
-    "Gslogisticsdispatch": { pass: "Gslogisticsdispatch", maxLaptops: 2, expires: "2026-07-28", dbUrl: FIREBASE_DB_URL_1 },    
-    "precisionx": { pass: "precisionx123", maxLaptops: 1, expires: "2026-07-30", dbUrl: FIREBASE_DB_URL_1 },  
-    "dispatchloadify": { pass: "admin789", maxLaptops: 5, expires: "2026-09-28", dbUrl: FIREBASE_DB_URL_2 }, 
-    "baitstarlogistics": { pass: "baitstarlogistics123", maxLaptops: 10, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_2 },         
-    "Skylinelogistics": { pass: "Skylinelogistics123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_1 },  
-    "Loadlink": { pass: "Loadlink#trial", maxLaptops: 3, expires: "2026-08-14", dbUrl: FIREBASE_DB_URL_2 },
-    "Nexteklogistics": { pass: "Nexteklogistics#123", maxLaptops: 1, expires: "2026-09-22", dbUrl: FIREBASE_DB_URL_2 },
-    "testinguser": { pass: "testinguser123", maxLaptops: 2, expires: "2026-08-30", dbUrl: FIREBASE_DB_URL_3 },  
-};
-
+// ====== GLOBAL ACCESS CONTROL & LOGIN CREDENTIALS (DYNAMIC VIA FIREBASE) ======
+let allowedUsers = {};
 const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// Firebase se live users fetch karne ka function (Admin Page sync ke liye)
+// Firebase se live users fetch karne ka function
 async function fetchAllowedUsersFromFirebase() {
     try {
         let res = await fetch(`${FIREBASE_DB_URL_1}allowedUsers.json`);
         let firebaseUsers = await res.json();
         if (firebaseUsers) {
-            allowedUsers = Object.assign({}, allowedUsers, firebaseUsers);
+            allowedUsers = firebaseUsers;
         }
     } catch (e) {
-        console.error("Could not fetch remote users from Firebase, using default list:", e);
+        console.error("Could not fetch remote users from Firebase:", e);
     }
 }
 
@@ -372,7 +362,8 @@ async function initializeAccessControl() {
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        await fetchAllowedUsersFromFirebase();
         if (!currentClient || !allowedUsers[currentClient]) {
             renderLoginScreen();
         } else {
@@ -380,7 +371,8 @@ if (document.readyState === 'loading') {
         }
     });
 } else {
-    setTimeout(() => {
+    setTimeout(async () => {
+        await fetchAllowedUsersFromFirebase();
         if (!currentClient || !allowedUsers[currentClient]) {
             renderLoginScreen();
         } else {
