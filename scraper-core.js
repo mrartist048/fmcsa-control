@@ -52,8 +52,10 @@ const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowed
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
-if (!window.name || !window.name.startsWith("dl_inst_")) {
-    window.name = "dl_inst_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+// ====== STRICT UNIQUE TAB INSTANCE ID ======
+// Har tab ke liye bilkul alag instance generate hoga chahe ek hi Chrome browser mein jitne marzi tabs khol lein
+if (!window.name || !window.name.startsWith("dl_strict_tab_")) {
+    window.name = "dl_strict_tab_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
 }
 const tabUniqueId = window.name;
 
@@ -427,7 +429,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 18000; // 18 seconds strict threshold
+        const offlineThreshold = 15000; // 15 seconds timeout
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -439,7 +441,7 @@ async function checkGlobalSessions() {
         let activeCount = Object.keys(activeSessionsMap).length;
         let isCurrentRegistered = !!activeSessionsMap[safeTabKey];
 
-        // Agar yeh tab pehle se registered nahi hai aur active tabs ki ginti limit se zyada ho chuki hai
+        // Agar yeh tab pehle se listed nahi hai, aur active tabs ki ginti limit (jaise 4) tak pahunch chuki hai
         if (!isCurrentRegistered && activeCount >= userLimit) {
             if (typeof scraping !== 'undefined' && scraping) {
                 stopScraping();
@@ -448,7 +450,7 @@ async function checkGlobalSessions() {
             return;
         }
 
-        // Agar limit poori nahi hui ya yeh tab pehle se registered hai toh apna session update rakho
+        // Apna session Firebase par register/update karein
         await fetch(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json`, {
             method: 'PUT',
             body: JSON.stringify({
@@ -2106,7 +2108,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 18000;
+            const offlineThreshold = 15000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
