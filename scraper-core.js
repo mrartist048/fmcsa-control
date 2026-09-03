@@ -231,7 +231,6 @@ window.processLogin = async function() {
     let pInput = document.getElementById('dlLoginPass').value.trim();
     let errBox = document.getElementById('dlLoginError');
 
-    // Login se pehle Firebase se latest users load kar lein
     await fetchAllowedUsersFromFirebase();
 
     let userConfig = allowedUsers[uInput];
@@ -369,7 +368,7 @@ async function initializeAccessControl() {
     performAutomaticDataCleanup();
 
     checkGlobalSessions();
-    setInterval(checkGlobalSessions, 30000);
+    setInterval(checkGlobalSessions, 10000); // Har 10 seconds baad active sessions check honge taake limit foran catch ho
 }
 
 if (document.readyState === 'loading') {
@@ -428,7 +427,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 45000; // 45 seconds strict timeout
+        const offlineThreshold = 20000; // 20 seconds strict timeout taake band hone wale tabs foran expire hon
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -1513,7 +1512,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        const offlineThreshold = 45000;
+        const offlineThreshold = 20000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2121,7 +2120,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 45000;
+            const offlineThreshold = 20000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
