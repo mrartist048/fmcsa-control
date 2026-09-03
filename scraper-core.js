@@ -52,12 +52,12 @@ const FIREBASE_DB_URL = (currentClient && allowedUsers[currentClient] && allowed
 let userLimit = 0;
 let dispatcherNickname = ""; 
 
-// ====== STRICT UNIQUE TAB INSTANCE ID ======
-// Har tab ke liye bilkul alag instance generate hoga chahe ek hi Chrome browser mein jitne marzi tabs khol lein
-if (!window.name || !window.name.startsWith("dl_strict_tab_")) {
-    window.name = "dl_strict_tab_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+// ====== INDEPENDENT TAB SESSION STORAGE ID ======
+// Yeh ensure karega ke duplicate ya naye tabs ki bilkul alag unique ID bane aur limit cross ho sake
+if (!sessionStorage.getItem("dl_tab_instance_id")) {
+    sessionStorage.setItem("dl_tab_instance_id", "dl_tab_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now() + "_" + Math.floor(Math.random() * 100000));
 }
-const tabUniqueId = window.name;
+const tabUniqueId = sessionStorage.getItem("dl_tab_instance_id");
 
 const usStatesMap = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
