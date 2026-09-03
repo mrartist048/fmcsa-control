@@ -1169,7 +1169,7 @@ function injectAdvancedFilterBar() {
         </div>
     `;
     
-    // Insert filter above table responsive container
+    // Completely standalone placement outside table container
     let tableContainer = table.closest('.table-responsive');
     if (tableContainer) {
         tableContainer.parentNode.insertBefore(filterDiv, tableContainer);
