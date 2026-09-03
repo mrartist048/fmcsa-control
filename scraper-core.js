@@ -22,14 +22,25 @@ const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// Firebase se live users fetch karne ka function
+// Firebase se teeno databases se live users fetch karne ka updated function
 async function fetchAllowedUsersFromFirebase() {
     try {
-        let res = await fetch(`${FIREBASE_DB_URL_1}allowedUsers.json`);
-        let firebaseUsers = await res.json();
-        if (firebaseUsers) {
-            allowedUsers = firebaseUsers;
-        }
+        let urls = [
+            `${FIREBASE_DB_URL_1}allowedUsers.json`,
+            `${FIREBASE_DB_URL_2}allowedUsers.json`,
+            `${FIREBASE_DB_URL_3}allowedUsers.json`
+        ];
+
+        // Teeno databases se aik sath data fetch karna
+        let responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json()).catch(() => null)));
+        
+        allowedUsers = {};
+        responses.forEach(firebaseUsers => {
+            if (firebaseUsers) {
+                // Sabhi databases ke users ko aik object mein merge kar dena
+                allowedUsers = Object.assign({}, allowedUsers, firebaseUsers);
+            }
+        });
     } catch (e) {
         console.error("Could not fetch remote users from Firebase:", e);
     }
