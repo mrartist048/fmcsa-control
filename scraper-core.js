@@ -22,7 +22,7 @@ const MASTER_ADMIN_PASS = "admin890";
 
 let currentClient = localStorage.getItem("dl_logged_client") || "";
 
-// Firebase se teeno databases se live users fetch karne ka updated function
+// Firebase se teeno databases سے live users fetch karne ka updated function
 async function fetchAllowedUsersFromFirebase() {
     try {
         let urls = [
@@ -428,7 +428,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 60000;
+        const offlineThreshold = 45000; // 45 seconds strict timeout
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -1513,7 +1513,7 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        const offlineThreshold = 60000;
+        const offlineThreshold = 45000;
 
         let html = "";
         membersList.forEach((name, idx) => {
@@ -2121,7 +2121,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             const sRes = await fetch(sessionUrl);
             const sData = await sRes.json() || {};
             let now = Date.now();
-            const offlineThreshold = 60000;
+            const offlineThreshold = 45000;
             
             let activeCount = 0;
             Object.keys(sData).forEach(k => {
