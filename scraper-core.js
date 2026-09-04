@@ -65,7 +65,7 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== AUTOMATIC 7-DAY DATA CLEANUP & SHIFT RESET (USA TIMEZONE) ======
+// ====== AUTOMATIC SHIFT-BASED DATA CLEANUP & RESET (USA TIMEZONE) ======
 function getCurrentShiftDateKey() {
     let now = new Date();
     let options = { timeZone: "America/New_York", year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false };
@@ -96,18 +96,15 @@ function getCurrentShiftDateKey() {
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
     
-    let usNowStr = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
-    let now = new Date(usNowStr).getTime();
-    
-    let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
-    let oneDayInMillis = 24 * 60 * 60 * 1000;
-
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
     
+    // Current shift date key get karein (USA Timezone ke mutabiq)
+    let currentShiftKey = getCurrentShiftDateKey();
+    
+    // Sirf current shift date ke logs filter karein taake refresh ya laptop band hone par 0 na ho
     let filteredLogs = callLogs.filter(log => {
-        let logTime = new Date(log.date).getTime();
-        return !isNaN(logTime) && (now - logTime) < oneDayInMillis;
+        return log.shiftDate === currentShiftKey;
     });
 
     if (filteredLogs.length !== callLogs.length) {
@@ -122,8 +119,7 @@ async function performAutomaticDataCleanup() {
             let remoteLogs = await res.json();
             if (Array.isArray(remoteLogs)) {
                 let freshRemoteLogs = remoteLogs.filter(log => {
-                    let logTime = new Date(log.date).getTime();
-                    return !isNaN(logTime) && (now - logTime) < sevenDaysInMillis;
+                    return log.shiftDate === currentShiftKey;
                 });
                 if (freshRemoteLogs.length !== remoteLogs.length) {
                     await fetch(callLogUrl, {
