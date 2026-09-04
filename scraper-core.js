@@ -65,7 +65,7 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== AUTOMATIC 7-DAY DATA CLEANUP & SHIFT RESET ======
+// ====== AUTOMATIC 7-DAY DATA CLEANUP FUNCTION ======
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
     let now = Date.now();
@@ -73,13 +73,10 @@ async function performAutomaticDataCleanup() {
 
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
-    let oneDayInMillis = 24 * 60 * 60 * 1000;
-    
     let filteredLogs = callLogs.filter(log => {
         let logTime = new Date(log.date).getTime();
-        return !isNaN(logTime) && (now - logTime) < oneDayInMillis;
+        return !isNaN(logTime) && (now - logTime) < sevenDaysInMillis;
     });
-
     if (filteredLogs.length !== callLogs.length) {
         localStorage.setItem(storageKey, JSON.stringify(filteredLogs));
     }
@@ -148,7 +145,7 @@ function showPremiumNotification(message, duration = 4500) {
     setTimeout(() => { toast.style.top = "-100px"; toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, duration);
 }
 
-// ====== PROFESSIONAL LOGIN SCREEN ======
+// ====== PROFESSIONAL LOGIN SCREEN WITH SHOW/HIDE PASSWORD ======
 function renderLoginScreen() {
     if (document.getElementById('dlLoginOverlay')) return;
 
@@ -252,56 +249,42 @@ function getCurrentShiftDateKey() {
     return `${year}-${month}-${day}`;
 }
 
-// ====== PROFESSIONAL RIGHT-ALIGNED PROFILE BAR WITH DROPDOWN ======
+// ====== PROFESSIONAL MODERN TOP BAR UI ======
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
     let heading = document.querySelector('h1, h2, .heading') || document.body;
     let panel = document.createElement('div');
     panel.id = 'dlNickProfilePanel';
-    panel.style.cssText = "display: flex; justify-content: flex-end; align-items: center; width: 100%; margin: 15px 0; padding: 6px 10px; font-family: sans-serif; box-sizing: border-box; position: relative;";
+    panel.style.cssText = "display: flex; justify-content: space-between; align-items: center; width: 100%; margin: 15px 0; padding: 12px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); font-family: sans-serif; box-sizing: border-box;";
     
     panel.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); position: relative; cursor: pointer;" onclick="toggleAgentDropdown(event)">
-            <div style="width: 28px; height: 28px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px;">
                 ${dispatcherNickname.charAt(0).toUpperCase()}
             </div>
-            <div style="display: flex; flex-direction: column; text-align: left;">
-                <span style="font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Active Agent</span>
-                <span id="dlDispCurrentName" style="font-size: 13px; color: #0f172a; font-weight: bold; display: flex; align-items: center; gap: 4px;">
-                    ${dispatcherNickname} <span style="font-size: 9px; color: #64748b;">▼</span>
-                </span>
-            </div>
-
-            <!-- Professional Dropdown Menu -->
-            <div id="dlAgentDropdownMenu" style="display: none; position: absolute; top: 48px; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); width: 180px; z-index: 99999; padding: 6px 0; font-family: sans-serif;">
-                <div onclick="openCallingDetailModal(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #334155; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
-                    <span>Calling Detail</span>
+            <div>
+                <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Active Agent</div>
+                <div style="font-size: 14px; color: #0f172a; font-weight: bold;">
+                    <span id="dlDispCurrentName">${dispatcherNickname}</span>
                 </div>
-                <div onclick="changeDispatcherName(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #334155; font-weight: 600; cursor: pointer;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">Edit Name</div>
-                <div onclick="openAdminPanelPrompt(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #334155; font-weight: 600; cursor: pointer;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">Admin Panel</div>
-                <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
-                <div onclick="logoutUser(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #dc2626; font-weight: 600; cursor: pointer;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'">Logout</div>
             </div>
+            <button onclick="changeDispatcherName()" title="Edit Name" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 6px; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">✏️ Edit Name</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245,158,11,0.2); display: flex; align-items: center; gap: 6px;">
+                <span>📊</span> Calling Detail
+            </button>
+            <button onclick="openAdminPanelPrompt()" style="background: #002d62; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,45,98,0.2); display: flex; align-items: center; gap: 6px;">
+                <span>👑</span> Admin Panel
+            </button>
+            <div style="height: 24px; width: 1px; background: #cbd5f1; margin: 0 4px;"></div>
+            <button onclick="logoutUser()" title="Logout Portal" style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+                <span>🚪</span> Logout
+            </button>
         </div>
     `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
-
-    // Close dropdown when clicked outside
-    document.addEventListener('click', function(e) {
-        let dropdown = document.getElementById('dlAgentDropdownMenu');
-        if (dropdown && !e.target.closest('#dlNickProfilePanel')) {
-            dropdown.style.display = 'none';
-        }
-    });
 }
-
-window.toggleAgentDropdown = function(e) {
-    e.stopPropagation();
-    let dropdown = document.getElementById('dlAgentDropdownMenu');
-    if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-    }
-};
 
 window.changeDispatcherName = function() {
     let oldName = localStorage.getItem(`dl_nick_${currentClient}`) || "";
@@ -343,7 +326,7 @@ async function initializeAccessControl() {
     }
 
     setupDispatcherIdentity();
-    showPremiumNotification(`License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
+    showPremiumNotification(`🚀 License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     performAutomaticDataCleanup();
 
@@ -407,7 +390,7 @@ async function checkGlobalSessions() {
         const data = await res.json() || {};
         
         let activeSessionsMap = {};
-        const offlineThreshold = 12000;
+        const offlineThreshold = 12000; // 12 seconds heartbeat threshold
 
         Object.keys(data).forEach(key => {
             let session = data[key];
@@ -823,9 +806,9 @@ window.scrollToLastCalledLead = function() {
     let activeCalledCell = document.querySelector('.phone-clickable-cell.active-called-cell');
     if (activeCalledCell) {
         activeCalledCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        showPremiumNotification("Jumped to last called lead!", 2000);
+        showPremiumNotification("📍 Jumped to last called lead!", 2000);
     } else {
-        showPremiumNotification("No call logged yet in this session.", 2500);
+        showPremiumNotification("⚠️ No call logged yet in this session.", 2500);
     }
 };
 
@@ -880,7 +863,7 @@ function injectAdvancedFilterBar() {
     filterDiv.innerHTML = `
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">State:</span>
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">📍 State:</span>
                 <select id="stateDropdownSelect" style="padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px; background: white; color: #002d62; font-weight: bold; font-family: monospace;" onchange="applyAdvancedFilters()">
                     <option value="">All States</option>
                 </select>
@@ -899,13 +882,13 @@ function injectAdvancedFilterBar() {
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
-                <span style="font-size: 13px; font-weight: bold; color: #002d62;">Search:</span>
+                <span style="font-size: 13px; font-weight: bold; color: #002d62;">🔍 Search:</span>
                 <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
             </div>
-            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Reset</button>
+            <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">🔄 Reset</button>
         </div>
         <div style="background: #002d62; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">
-            Showing: <span id="visibleRecordCountBadge">0</span> Records
+            📊 Showing: <span id="visibleRecordCountBadge">0</span> Records
         </div>
     `;
     table.parentNode.insertBefore(filterDiv, table);
@@ -1083,13 +1066,13 @@ function injectEmailProposalPanel() {
     proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif;";
     proposalPanel.innerHTML = `
         <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 13px; color: #002d62;">Setup Email Proposal Template</strong>
-            <span style="font-size: 12px; font-weight: bold;">Click to Edit</span>
+            <strong style="font-size: 13px; color: #002d62;">📋 Setup Email Proposal Template</strong>
+            <span style="font-size: 12px; font-weight: bold;">⚙️ Click to Edit</span>
         </div>
         <div id="proposalInputsBlock" style="display: none; margin-top: 12px; border-top: 1px dashed #b6ccfe; padding-top: 12px;">
             <div style="margin-bottom: 10px;"><input type="text" id="propSubjectInput" value="${savedSubject}" style="width: 100%; padding: 8px; font-size: 13px;"></div>
             <div style="margin-bottom: 10px;"><textarea id="propBodyInput" style="width: 100%; height: 80px; font-size: 13px;">${savedBody}</textarea></div>
-            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">Save Template</button>
+            <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">💾 Save Template</button>
         </div>
     `;
     table.parentNode.insertBefore(proposalPanel, table);
@@ -1139,7 +1122,7 @@ function buildEmailCellMarkup(emailAddress, companyName) {
         <td style="position: relative; vertical-align: middle;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                 <span onclick="copyEmailToClipboard(this.parentNode, '${emailAddress}')" style="color: #002d62; font-weight: bold; cursor: pointer;">${emailAddress}</span>
-                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">Send</a>
+                <a href="#" onclick="triggerOneClickEmailPitch('${emailAddress}', '${escapedName}'); return false;" class="premium-pitch-btn">📤 Send</a>
             </div>
         </td>
     `;
@@ -1176,7 +1159,7 @@ window.logCallCountWithDisposition = async function(phoneNum, cellElement, dispo
         console.error("Failed to sync call log to DB:", e);
     }
 
-    showPremiumNotification(`Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
+    showPremiumNotification(`✅ Call Logged [${dispositionStatus}] for ${phoneNum}`, 2500);
 
     if (cellElement) {
         document.querySelectorAll('.phone-clickable-cell').forEach(el => el.classList.remove('active-called-cell'));
@@ -1222,8 +1205,8 @@ window.openCallingDetailModal = function() {
     
     modal.innerHTML = `
         <div style="background: white; width: 360px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
-            <div style="background: #002d62; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 16px;">Current Shift Details</h3>
+            <div style="background: #ff9800; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px;">📊 Current Shift Details</h3>
                 <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: none; border: none; color: white; font-size: 22px; cursor: pointer; font-weight: bold;">&times;</button>
             </div>
             <div style="padding: 20px;">
@@ -1232,7 +1215,8 @@ window.openCallingDetailModal = function() {
                 </div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 8px;">
-                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">Close</button>
+                    <button onclick="openShiftShareModal()" style="background: #002d62; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; flex: 1; font-size: 13px;">📤 Share Shift Report</button>
+                    <button onclick="document.getElementById('dlCallingDetailModal').remove()" style="background: #6c757d; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
                 </div>
             </div>
         </div>
@@ -1359,7 +1343,7 @@ window.confirmFollowUpSchedule = function() {
     followUpStore.push(record);
     localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
     
-    showPremiumNotification(`Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
+    showPremiumNotification(`⭐ Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
     if (pendingFollowUpRowBtn) {
         let row = pendingFollowUpRowBtn.closest('tr');
@@ -1491,14 +1475,14 @@ window.openTeamShareModal = async function(recordsToShare) {
         }
 
         let now = Date.now();
-        let offlineThreshold = 12000;
+        const offlineThreshold = 12000;
 
         let html = "";
         membersList.forEach((name, idx) => {
             let userSessionKey = Object.keys(sessionsData).find(k => sessionsData[k].nickname === name);
             let sObj = userSessionKey ? sessionsData[userSessionKey] : null;
             let isOnline = sObj && sObj.timestamp && (now - sObj.timestamp < offlineThreshold);
-            let statusText = isOnline ? "Online" : "Offline";
+            let statusText = isOnline ? "🟢 Online" : "⚪ Offline";
 
             let checkedAttr = idx === 0 ? "checked" : "";
             html += `
@@ -1549,7 +1533,7 @@ window.confirmTeamShareAction = async function() {
                 method: 'PUT',
                 body: JSON.stringify(existingList)
             });
-            showPremiumNotification(`Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
+            showPremiumNotification(`✅ Successfully shared ${addedCount} lead(s) with ${targetName}!`, 4000);
             
             document.querySelectorAll('.followup-select-checkbox:checked').forEach(cb => cb.checked = false);
         } else {
@@ -1599,7 +1583,7 @@ async function pollIncomingSharedLeads() {
 
         if (newLeadsAdded) {
             localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(localFollowUps));
-            showPremiumNotification(`You received new shared follow-up leads from your team!`, 5000);
+            showPremiumNotification(`📥 You received new shared follow-up leads from your team!`, 5000);
             if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
                 renderFollowUpItems();
             }
@@ -1648,13 +1632,13 @@ function renderFollowUpItems() {
         }
 
         matchCount++;
-        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Sent by: ${item.sharedBy}</span>` : "";
+        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">👤 Sent by: ${item.sharedBy}</span>` : "";
 
         itemsHTML += `
             <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
                     <span>Saved: ${item.addedAt}</span>
-                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">${fuDate} @ ${fuTime}</span>
+                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">📅 ${fuDate} @ ${fuTime}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
@@ -1666,8 +1650,8 @@ function renderFollowUpItems() {
                     <b>Remarks:</b> ${item.remarks || 'No remarks added'}
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
-                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Send</button>
-                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Drop</button>
+                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">📤 Send</button>
+                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Drop</button>
                 </div>
             </div>
         `;
@@ -1687,7 +1671,7 @@ function renderFollowUpItems() {
             <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
                 <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
             </label>
-            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">Share Selected</button>
+            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">👥 Share Selected</button>
         `;
         listContainer.parentNode.insertBefore(actionBar, listContainer);
     }
@@ -1712,7 +1696,7 @@ function renderFollowUpItems() {
             if (btnContainer && !btnContainer.querySelector('.single-team-share-btn')) {
                 let teamBtn = document.createElement('button');
                 teamBtn.className = 'single-team-share-btn';
-                teamBtn.innerHTML = "Share";
+                teamBtn.innerHTML = "👥 Share";
                 teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
                 teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
                 btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
@@ -1810,8 +1794,8 @@ function renderHistoryItems() {
         let itemsHTML = "";
         data.forEach(item => {
             let displayStatus = item.status === "Interrupted (Auto-Saved)"
-                ? `<span style="color: #d9534f; font-weight:bold;">${item.status}</span>`
-                : `<span style="color: #28a745; font-weight:bold;">${item.status}</span>`;
+                ? `<span style="color: #d9534f; font-weight:bold;">⚠️ ${item.status}</span>`
+                : `<span style="color: #28a745; font-weight:bold;">✅ ${item.status}</span>`;
 
             let recordsCount = item.records ? item.records.length : (item.totalRecords || 0);
 
@@ -1837,7 +1821,7 @@ function renderHistoryItems() {
                             <button ${resumeActionAttr} style="${resumeBtnStyle}">Resume</button>
                             <button onclick="loadHistorySheetToTable(${item.id})" style="background: #002d62; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Open</button>
                             <button ${csvActionAttr} style="${csvBtnStyle}">CSV</button>
-                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">Delete</button>
+                            <button onclick="deleteHistoryItem(${item.id})" style="background: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Delete">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -1910,7 +1894,7 @@ window.loadHistorySheetToTable = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         populateStateDropdown();
@@ -1980,7 +1964,7 @@ window.resumeHistorySheet = async function(id) {
                 <td class="remarks-cell-container">
                     <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
                 </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">Follow</button></td>
+                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">⭐ Follow</button></td>
             </tr>`;
         }
         populateStateDropdown();
@@ -2082,7 +2066,7 @@ window.stopScraping = function() {
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
         statusBox.style.padding = "10px 15px";
-        statusBox.innerHTML = "<strong>Processing Paused Safely. Click Start to resume/run again.</strong>";
+        statusBox.innerHTML = "<strong>⏸️ Processing Paused Safely. Click Start to resume/run again.</strong>";
     }
     if (currentHistoryId) {
         updateRealTimeHistory(scrapedData, false);
@@ -2111,7 +2095,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
 
             if (userLimit > 0 && activeCount > userLimit) {
                 if (statusBox) {
-                    statusBox.innerHTML = `<strong>Global License Limit Exceeded (${activeCount}/${userLimit}). Pausing scraping...</strong>`;
+                    statusBox.innerHTML = `<strong>⚠️ Global License Limit Exceeded (${activeCount}/${userLimit}). Pausing scraping...</strong>`;
                 }
                 return { status: "limit_exceeded" };
             }
@@ -2122,7 +2106,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
             if (!response.ok) {
                 attempt++;
                 if (statusBox) {
-                    statusBox.innerHTML = `<strong>Safer Server Issue (Attempt ${attempt}/${maxRetries}). Retrying...</strong>`;
+                    statusBox.innerHTML = `<strong>⚠️ Safer Server Issue (Attempt ${attempt}/${maxRetries}). Retrying...</strong>`;
                 }
                 await new Promise(r => setTimeout(r, 2000 * attempt));
                 continue;
@@ -2257,7 +2241,7 @@ async function processSingleMCWithDetailedError(mc, statusBox) {
         } catch (err) {
             attempt++;
             if (statusBox) {
-                statusBox.innerHTML = `<strong>Safer Server Issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
+                statusBox.innerHTML = `<strong>⚠️ Safer Server Issue on MC ${mc}. Retrying (${attempt}/${maxRetries})...</strong>`;
             }
             await new Promise(r => setTimeout(r, 3000 * attempt));
         }
@@ -2396,7 +2380,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
                         <td class="remarks-cell-container">
                             <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
                         </td>
-                        <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">Follow</button></td>
+                        <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">⭐ Follow</button></td>
                     `;
                     tableBody.appendChild(newRow);
                 }
@@ -2414,7 +2398,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
-        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
+        let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">⚠️ Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
 
         if (statusBox && scraping) {
             statusBox.innerHTML = `
