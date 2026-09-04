@@ -65,15 +65,45 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== AUTOMATIC 7-DAY DATA CLEANUP & SHIFT RESET ======
+// ====== AUTOMATIC 7-DAY DATA CLEANUP & SHIFT RESET (USA TIMEZONE) ======
+function getCurrentShiftDateKey() {
+    let now = new Date();
+    let options = { timeZone: "America/New_York", year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false };
+    let formatter = new Intl.DateTimeFormat([], options);
+    let parts = formatter.formatToParts(now);
+    
+    let year, month, day, hour;
+    parts.forEach(p => {
+        if (p.type === 'year') year = p.value;
+        if (p.type === 'month') month = p.value;
+        if (p.type === 'day') day = p.value;
+        if (p.type === 'hour') hour = parseInt(p.value);
+    });
+
+    let targetDate = new Date(`${year}-${month}-${day}T00:00:00`);
+    
+    if (hour < 3) {
+        targetDate.setDate(targetDate.getDate() - 1);
+    }
+
+    let uYear = targetDate.getFullYear();
+    let uMonth = String(targetDate.getMonth() + 1).padStart(2, '0');
+    let uDay = String(targetDate.getDate()).padStart(2, '0');
+    
+    return `${uYear}-${uMonth}-${uDay}`;
+}
+
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
-    let now = Date.now();
+    
+    let usNowStr = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+    let now = new Date(usNowStr).getTime();
+    
     let sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
+    let oneDayInMillis = 24 * 60 * 60 * 1000;
 
     let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
     let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
-    let oneDayInMillis = 24 * 60 * 60 * 1000;
     
     let filteredLogs = callLogs.filter(log => {
         let logTime = new Date(log.date).getTime();
@@ -242,16 +272,6 @@ function setupDispatcherIdentity() {
     injectNicknameProfileUI();
 }
 
-function getCurrentShiftDateKey() {
-    let now = new Date();
-    let hour = now.getHours();
-    if (hour < 10) { now.setDate(now.getDate() - 1); }
-    let year = now.getFullYear();
-    let month = String(now.getMonth() + 1).padStart(2, '0');
-    let day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
 // ====== PROFESSIONAL RIGHT-ALIGNED FLOATING UI & ROUNDED NAME BADGE ======
 function injectNicknameProfileUI() {
     if (document.getElementById('dlNickProfilePanel')) return;
@@ -291,7 +311,6 @@ function injectNicknameProfileUI() {
     `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
 
-    // Close dropdown when clicked outside
     document.addEventListener('click', function(e) {
         let dropdown = document.getElementById('dlAgentDropdownMenu');
         if (dropdown && !e.target.closest('#dlNickProfilePanel')) {
