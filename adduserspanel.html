@@ -35,7 +35,7 @@
 
         .admin-wrapper {
             width: 100%;
-            max-width: 640px;
+            max-width: 680px;
         }
 
         .admin-card {
@@ -293,7 +293,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 11px;
-            min-width: 450px;
+            min-width: 500px;
         }
 
         .user-table th, .user-table td {
@@ -499,6 +499,7 @@
                         <thead>
                             <tr>
                                 <th>User & Limits</th>
+                                <th>Password</th>
                                 <th>Node</th>
                                 <th>Expiry</th>
                                 <th>Status</th>
@@ -506,7 +507,7 @@
                             </tr>
                         </thead>
                         <tbody id="allUsersTableBody">
-                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 15px;">Fetching data...</td></tr>
+                            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 15px;">Fetching data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -654,7 +655,7 @@
 
         async function fetchAllUsersFromAllDBs() {
             let tbody = document.getElementById('allUsersTableBody');
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 15px;">Synchronizing clusters...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 15px;">Synchronizing clusters...</td></tr>`;
 
             globalUsersCache = [];
             
@@ -756,7 +757,7 @@
             let displayName = (dbName === 'All') ? 'All Databases' : dbName;
             
             if (users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 15px;">No records found in ${displayName}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger); padding: 15px;">No records found in ${displayName}.</td></tr>`;
                 return;
             }
 
@@ -777,6 +778,7 @@
                 allRows += `
                     <tr>
                         <td><b>${u.username}</b><br><span style="font-size:9px; color:var(--text-muted);">Tabs: ${u.maxLaptops}</span></td>
+                        <td><code style="background:#1f2937; padding:2px 6px; border-radius:4px; color:#fb923c; font-family:monospace; border:1px solid #374151;">${u.pass || 'N/A'}</code></td>
                         <td><span style="font-size:9px; background:#1f2937; color:#d1d5db; padding:2px 6px; border-radius:4px; font-weight:600; border: 1px solid #374151;">${u.dbName}</span></td>
                         <td>${u.expires}</td>
                         <td>${statusBadge}</td>
