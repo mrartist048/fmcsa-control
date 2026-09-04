@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dispatch Link | Admin & Client Management Suite</title>
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -12,6 +13,7 @@
             --accent: #0284c7;
             --accent-hover: #0369a1;
             --success: #16a34a;
+            --warning: #d97706;
             --danger: #dc3545;
             --bg-body: #f8fafc;
             --card-bg: #ffffff;
@@ -29,7 +31,7 @@
             align-items: flex-start;
             min-height: 100vh;
             margin: 0;
-            padding: 30px 15px;
+            padding: 20px 10px 50px 10px;
             box-sizing: border-box;
         }
 
@@ -40,7 +42,7 @@
 
         .admin-card {
             background: var(--card-bg);
-            padding: 35px 30px;
+            padding: 25px 20px;
             border-radius: 16px;
             box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(15, 23, 42, 0.04);
             border: 1px solid var(--border-color);
@@ -51,15 +53,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 16px;
+            padding-bottom: 14px;
         }
 
         .panel-title-area h2 {
             color: var(--primary);
             margin: 0 0 4px 0;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             letter-spacing: -0.02em;
         }
@@ -67,7 +69,7 @@
         .panel-title-area p {
             color: var(--text-muted);
             margin: 0;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .tab-buttons {
@@ -76,13 +78,13 @@
             background: #f1f5f9;
             padding: 4px;
             border-radius: 10px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .tab-btn {
             background: transparent;
             border: none;
-            padding: 10px 16px;
+            padding: 8px 12px;
             font-size: 12px;
             font-weight: 600;
             border-radius: 8px;
@@ -102,11 +104,11 @@
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            gap: 12px;
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 14px;
             text-align: left;
         }
 
@@ -116,18 +118,18 @@
 
         label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #334155;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         input, select {
             width: 100%;
-            padding: 11px 14px;
-            font-size: 13px;
+            padding: 10px 12px;
+            font-size: 12px;
             border: 1px solid #cbd5e1;
-            border-radius: 10px;
+            border-radius: 8px;
             outline: none;
             box-sizing: border-box;
             background: #fff;
@@ -137,7 +139,7 @@
 
         input:focus, select:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.12);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
         }
 
         .search-box {
@@ -149,10 +151,10 @@
             background: var(--accent);
             color: white;
             border: none;
-            padding: 0 18px;
-            font-size: 13px;
+            padding: 0 14px;
+            font-size: 12px;
             font-weight: 600;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             white-space: nowrap;
             transition: background 0.2s;
@@ -167,13 +169,13 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 13px;
-            font-size: 14px;
+            padding: 12px;
+            font-size: 13px;
             font-weight: 600;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             transition: background 0.2s;
-            margin-top: 6px;
+            margin-top: 4px;
             box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
         }
 
@@ -188,24 +190,25 @@
             border-radius: 8px;
             font-size: 12px;
             font-weight: 600;
-            margin-top: 14px;
+            margin-top: 12px;
             text-align: center;
             display: none;
             border: 1px solid #bbf7d0;
         }
 
+        /* Compact Stats Row for Mobile & Desktop */
         .stats-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 14px;
         }
 
         .stat-card {
             background: #f8fafc;
             border: 1px solid var(--border-color);
-            padding: 14px 10px;
-            border-radius: 12px;
+            padding: 8px 4px;
+            border-radius: 8px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -216,52 +219,57 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 4px;
+            width: 3px;
             height: 100%;
         }
 
         .stat-card.total-box::before { background: var(--accent); }
         .stat-card.active-box::before { background: var(--success); }
+        .stat-card.near-box::before { background: var(--warning); }
         .stat-card.expired-box::before { background: var(--danger); }
 
         .stat-val {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--primary);
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .stat-lbl {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.03em;
         }
 
         .filter-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            gap: 10px;
-            flex-wrap: wrap;
+            margin-bottom: 12px;
+            gap: 6px;
         }
 
+        /* Compact Scrollable Filter Pills for Mobile */
         .filter-pills {
             display: flex;
-            gap: 6px;
+            gap: 4px;
+            overflow-x: auto;
+            width: 100%;
+            padding-bottom: 4px;
         }
 
         .pill-btn {
             background: #f1f5f9;
             border: 1px solid #cbd5e1;
-            padding: 6px 12px;
-            font-size: 11px;
+            padding: 5px 10px;
+            font-size: 10px;
             font-weight: 600;
-            border-radius: 20px;
+            border-radius: 16px;
             cursor: pointer;
             color: var(--text-muted);
+            white-space: nowrap;
             transition: all 0.2s;
         }
 
@@ -274,21 +282,22 @@
         .table-container {
             width: 100%;
             overflow-x: auto;
-            max-height: 280px;
+            max-height: 320px;
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 10px;
             background: white;
+            margin-bottom: 20px; /* Extra bottom margin to fix clipping on mobile */
         }
 
         .user-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
-            min-width: 480px;
+            font-size: 11px;
+            min-width: 450px;
         }
 
         .user-table th, .user-table td {
-            padding: 10px 14px;
+            padding: 8px 10px;
             border-bottom: 1px solid var(--border-color);
             text-align: left;
             white-space: nowrap;
@@ -309,7 +318,7 @@
 
         .action-btn-group {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             align-items: center;
         }
 
@@ -317,37 +326,32 @@
             background: #e0f2fe;
             color: #0369a1;
             border: none;
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            transition: background 0.2s;
         }
-        .action-edit-btn:hover { background: #bae6fd; }
 
         .action-del-btn {
             background: #fee2e2;
             color: #991b1b;
             border: none;
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            transition: background 0.2s;
         }
-        .action-del-btn:hover { background: #fecaca; }
         
-        .badge-active { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
-        .badge-expired { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: inline-block; }
+        .badge-active { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; display: inline-block; }
+        .badge-near { background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; display: inline-block; }
+        .badge-expired { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; display: inline-block; }
 
         @media(max-width: 600px) {
-            body { padding: 10px; }
-            .admin-card { padding: 20px 16px; border-radius: 12px; }
+            body { padding: 8px 4px 40px 4px; }
+            .admin-card { padding: 16px 12px; border-radius: 10px; }
             .form-grid { display: flex; flex-direction: column; gap: 0; }
-            .stats-row { grid-template-columns: 1fr; gap: 8px; }
-            .stat-val { font-size: 15px; }
         }
     </style>
 </head>
@@ -359,23 +363,23 @@
             <div class="panel-header">
                 <div class="panel-title-area">
                     <h2>Dispatch Link Control Center</h2>
-                    <p>Manage enterprise clients, licenses, and tracking databases.</p>
+                    <p>Manage enterprise clients and licenses.</p>
                 </div>
             </div>
 
             <div class="tab-buttons">
-                <button class="tab-btn active" id="tabAddBtn" onclick="switchTab('add')">🛠️ Add / Edit User</button>
-                <button class="tab-btn" id="tabListBtn" onclick="switchTab('list')">👥 All Users Directory</button>
+                <button class="tab-btn active" id="tabAddBtn" onclick="switchTab('add')">🛠️ Add / Edit</button>
+                <button class="tab-btn" id="tabListBtn" onclick="switchTab('list')">👥 Directory</button>
             </div>
 
             <!-- TAB 1: ADD / UPDATE USER -->
             <div id="sectionAddUser">
                 <div class="form-group full-width">
-                    <label>Select Target Firebase Database:</label>
+                    <label>Target Firebase Database:</label>
                     <select id="dbUrlSelect">
-                        <option value="https://data-scrapper-eddcf-default-rtdb.firebaseio.com/">Database 1 (Default Cluster)</option>
-                        <option value="https://data-scraper-2-default-rtdb.firebaseio.com/">Database 2 (Secondary Cluster)</option>
-                        <option value="https://data-scraper-3-default-rtdb.firebaseio.com/">Database 3 (Enterprise Cluster)</option>
+                        <option value="https://data-scrapper-eddcf-default-rtdb.firebaseio.com/">Database 1 (Default)</option>
+                        <option value="https://data-scraper-2-default-rtdb.firebaseio.com/">Database 2 (Secondary)</option>
+                        <option value="https://data-scraper-3-default-rtdb.firebaseio.com/">Database 3 (Enterprise)</option>
                     </select>
                 </div>
 
@@ -390,11 +394,11 @@
 
                     <div class="form-group">
                         <label>Secure Password:</label>
-                        <input type="text" id="newPassword" placeholder="Enter password">
+                        <input type="text" id="newPassword" placeholder="Password">
                     </div>
 
                     <div class="form-group">
-                        <label>Max Allowed Active Tabs:</label>
+                        <label>Max Active Tabs:</label>
                         <input type="number" id="newMaxLaptops" value="2" min="1">
                     </div>
 
@@ -405,35 +409,38 @@
                 </div>
 
                 <button onclick="saveOrUpdateUserToFirebase()" class="submit-btn">Save / Update License Record</button>
-                <div id="successMsg" class="success-msg">✨ User credentials successfully committed to Firebase!</div>
+                <div id="successMsg" class="success-msg">✨ User credentials saved successfully!</div>
             </div>
 
-            <!-- TAB 2: ALL USERS LIST ACROSS ALL DATABASES -->
+            <!-- TAB 2: ALL USERS LIST -->
             <div id="sectionAllUsers" style="display: none;">
                 
-                <!-- Database Selection Dropdown & Refresh Button at Top -->
-                <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px;">
+                <div style="display: flex; gap: 6px; align-items: flex-end; margin-bottom: 12px;">
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                        <label>Select Database to View Record:</label>
+                        <label>Select Database Node:</label>
                         <select id="viewDbDropdown" onchange="applyTableFilters()">
-                            <option value="All">🌐 All Databases (Combined)</option>
-                            <option value="Database 1">Database 1 (Default Cluster)</option>
-                            <option value="Database 2">Database 2 (Secondary Cluster)</option>
-                            <option value="Database 3">Database 3 (Enterprise Cluster)</option>
+                            <option value="All">🌐 All Databases</option>
+                            <option value="Database 1">Database 1</option>
+                            <option value="Database 2">Database 2</option>
+                            <option value="Database 3">Database 3</option>
                         </select>
                     </div>
-                    <button onclick="fetchAllUsersFromAllDBs()" class="search-btn" style="height: 41px; margin-bottom: 0;" title="Sync Data">🔄 Sync</button>
+                    <button onclick="fetchAllUsersFromAllDBs()" class="search-btn" style="height: 38px; margin-bottom: 0;" title="Sync Data">🔄 Sync</button>
                 </div>
 
-                <!-- Stats Dashboard Row -->
+                <!-- Compact Stats Row (4 Columns in 1 Row) -->
                 <div class="stats-row">
                     <div class="stat-card total-box">
-                        <div class="stat-lbl">Total Clients</div>
+                        <div class="stat-lbl">Total</div>
                         <div class="stat-val" id="statTotal">0</div>
                     </div>
                     <div class="stat-card active-box">
-                        <div class="stat-lbl">Active Lic</div>
+                        <div class="stat-lbl">Active</div>
                         <div class="stat-val" id="statActive" style="color: var(--success);">0</div>
+                    </div>
+                    <div class="stat-card near-box">
+                        <div class="stat-lbl">Near Exp</div>
+                        <div class="stat-val" id="statNear" style="color: var(--warning);">0</div>
                     </div>
                     <div class="stat-card expired-box">
                         <div class="stat-lbl">Expired</div>
@@ -441,15 +448,17 @@
                     </div>
                 </div>
 
+                <!-- Filter Pills -->
                 <div class="filter-container">
                     <div class="filter-pills">
                         <button class="pill-btn active" id="pillAll" onclick="setFilter('all')">All</button>
                         <button class="pill-btn" id="pillActive" onclick="setFilter('active')">Active</button>
+                        <button class="pill-btn" id="pillNear" onclick="setFilter('near')">⚠️ Near Exp</button>
                         <button class="pill-btn" id="pillExpired" onclick="setFilter('expired')">Expired</button>
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 12px;">
+                <div class="form-group" style="margin-bottom: 10px;">
                     <input type="text" id="tableSearchInput" placeholder="🔍 Quick search username..." oninput="applyTableFilters()">
                 </div>
 
@@ -457,15 +466,15 @@
                     <table class="user-table">
                         <thead>
                             <tr>
-                                <th>Username & Limits</th>
-                                <th>Cluster Node</th>
-                                <th>Expiry Date</th>
+                                <th>User & Limits</th>
+                                <th>Node</th>
+                                <th>Expiry</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="allUsersTableBody">
-                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Fetching node data...</td></tr>
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 15px;">Fetching data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -568,10 +577,12 @@
 
         async function fetchAllUsersFromAllDBs() {
             let tbody = document.getElementById('allUsersTableBody');
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Synchronizing clusters...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 15px;">Synchronizing clusters...</td></tr>`;
 
             globalUsersCache = [];
-            let todayStr = new Date().toISOString().split('T')[0];
+            
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
 
             for (let dbObj of DB_CONFIGS) {
                 try {
@@ -586,8 +597,23 @@
 
                     for (let username in usersData) {
                         let u = usersData[username];
-                        let expDate = u.expires || '';
-                        let isExpired = expDate !== '' && expDate < todayStr;
+                        let expDateStr = u.expires || '';
+                        let isExpired = false;
+                        let isNearExpire = false;
+
+                        if (expDateStr !== '') {
+                            let expDateObj = new Date(expDateStr);
+                            expDateObj.setHours(0, 0, 0, 0);
+
+                            let diffTime = expDateObj - today;
+                            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                            if (diffDays < 0) {
+                                isExpired = true;
+                            } else if (diffDays <= 2) {
+                                isNearExpire = true; // 2 ya kam dino me expire hone wale
+                            }
+                        }
 
                         globalUsersCache.push({
                             username: username,
@@ -595,8 +621,9 @@
                             dbUrl: dbObj.url,
                             pass: u.pass || '',
                             maxLaptops: u.maxLaptops || 1,
-                            expires: expDate || 'N/A',
-                            isExpired: isExpired
+                            expires: expDateStr || 'N/A',
+                            isExpired: isExpired,
+                            isNearExpire: isNearExpire
                         });
                     }
                 } catch (e) {
@@ -610,10 +637,12 @@
         function updateDashboardStats(filteredUsers) {
             let total = filteredUsers.length;
             let expired = filteredUsers.filter(u => u.isExpired).length;
-            let active = total - expired;
+            let near = filteredUsers.filter(u => u.isNearExpire).length;
+            let active = total - expired - near; // jo active aur safe hain
 
             document.getElementById('statTotal').innerText = total;
             document.getElementById('statActive').innerText = active;
+            document.getElementById('statNear').innerText = near;
             document.getElementById('statExpired').innerText = expired;
         }
 
@@ -635,7 +664,8 @@
             let finalFiltered = dbFiltered.filter(u => {
                 let matchesSearch = u.username.toLowerCase().includes(query);
                 let matchesStatus = true;
-                if (currentStatusFilter === 'active') matchesStatus = !u.isExpired;
+                if (currentStatusFilter === 'active') matchesStatus = (!u.isExpired && !u.isNearExpire);
+                if (currentStatusFilter === 'near') matchesStatus = u.isNearExpire;
                 if (currentStatusFilter === 'expired') matchesStatus = u.isExpired;
                 return matchesSearch && matchesStatus;
             });
@@ -649,7 +679,7 @@
             let displayName = (dbName === 'All') ? 'All Databases' : dbName;
             
             if (users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 20px;">No records found in ${displayName}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 15px;">No records found in ${displayName}.</td></tr>`;
                 return;
             }
 
@@ -660,20 +690,23 @@
                 let safePass = encodeURIComponent(u.pass);
                 let safeExpiry = encodeURIComponent(u.expires);
 
-                let statusBadge = u.isExpired 
-                    ? `<span class="badge-expired">Expired</span>` 
-                    : `<span class="badge-active">Active</span>`;
+                let statusBadge = `<span class="badge-active">Active</span>`;
+                if (u.isExpired) {
+                    statusBadge = `<span class="badge-expired">Expired</span>`;
+                } else if (u.isNearExpire) {
+                    statusBadge = `<span class="badge-near">Near Exp</span>`;
+                }
 
                 allRows += `
                     <tr>
-                        <td><b>${u.username}</b><br><span style="font-size:10px; color:var(--text-muted);">Max Tabs: ${u.maxLaptops}</span></td>
-                        <td><span style="font-size:10px; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-weight:600;">${u.dbName}</span></td>
+                        <td><b>${u.username}</b><br><span style="font-size:9px; color:var(--text-muted);">Tabs: ${u.maxLaptops}</span></td>
+                        <td><span style="font-size:9px; background:#e2e8f0; color:#334155; padding:2px 4px; border-radius:4px; font-weight:600;">${u.dbName}</span></td>
                         <td>${u.expires}</td>
                         <td>${statusBadge}</td>
                         <td>
                             <div class="action-btn-group">
-                                <button onclick="editUserFromList('${safeUser}', '${safeUrl}', '${safePass}', '${u.maxLaptops}', '${safeExpiry}')" class="action-edit-btn" title="Edit Record">✏️ Edit</button>
-                                <button onclick="deleteUser('${u.dbUrl}', '${u.username}')" class="action-del-btn" title="Delete Record">🗑️</button>
+                                <button onclick="editUserFromList('${safeUser}', '${safeUrl}', '${safePass}', '${u.maxLaptops}', '${safeExpiry}')" class="action-edit-btn">✏️</button>
+                                <button onclick="deleteUser('${u.dbUrl}', '${u.username}')" class="action-del-btn">🗑️</button>
                             </div>
                         </td>
                     </tr>
