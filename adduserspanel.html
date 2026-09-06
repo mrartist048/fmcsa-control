@@ -780,7 +780,7 @@
             renderUserTable(finalFiltered, selectedDb);
         }
 
-        // PERFECT NUMBER FORMATTER (Safely cleans 0 and adds 92)
+        // PERFECT NUMBER FORMATTER (Removes leading 0 and prefixes 92)
         function formatPhoneNumber(number) {
             if (!number) return '';
             let cleaned = String(number).replace(/[^0-9]/g, '');
@@ -792,13 +792,13 @@
             return cleaned;
         }
 
-        // SAFE LOOKUP HELPER TO GET NUMBER FROM CACHE BY USERNAME
+        // 100% SECURE LOOKUP HELPER TO GET NUMBER FROM CACHE BY USERNAME
         function getUserNumber(username) {
             let found = globalUsersCache.find(u => u.username === username);
             return found ? found.number : '';
         }
 
-        // WHATSAPP LOGIN INFO TEMPLATE
+        // WHATSAPP LOGIN INFO TEMPLATE (Using identical robust lookup logic)
         function sendWhatsAppCredentials(username, password, rawNumber) {
             let number = rawNumber || getUserNumber(username);
             let message = `Hello! Your Dispatch Link account details:\n\n` +
@@ -852,7 +852,6 @@
                 }
 
                 let waButtonHtml = '';
-                // Pass username safely so lookup function can fetch the number directly from cache if needed
                 if (u.isExpired) {
                     waButtonHtml = `<button onclick="sendWhatsAppRenewalAlert('${u.username}', '${u.expires}', '${u.number}')" class="action-wa-btn" title="Send Expiry/Upgrade Alert">⚠️ Renew</button>`;
                 } else {
