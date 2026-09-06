@@ -780,7 +780,7 @@
             renderUserTable(finalFiltered, selectedDb);
         }
 
-        // WHATSAPP LOGIN INFO TEMPLATE WITH EXACT NUMBER FORMATTING
+        // WHATSAPP LOGIN INFO TEMPLATE
         function sendWhatsAppCredentials(username, password, number) {
             let message = `Hello! Your Dispatch Link account details:\n\n` +
                           `👤 Username: *${username}*\n` +
@@ -795,14 +795,14 @@
             let phoneParam = number ? String(number).replace(/[^0-9]/g, '') : '';
             
             if (phoneParam.length === 10) {
-                phoneParam = '92' + phoneParam; // Default country code adjustment if missing
+                phoneParam = '92' + phoneParam;
             }
 
             let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
             window.open(whatsappUrl, '_blank');
         }
 
-        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT WITH EXACT NUMBER FORMATTING
+        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT (FIXED WITH NUMBER)
         function sendWhatsAppRenewalAlert(username, expiryDate, number) {
             let message = `Hello *${username}*, your Dispatch Link package has expired on *${expiryDate}*. Please contact support to upgrade your package and keep your shift active.`;
             let encodedMessage = encodeURIComponent(message);
@@ -841,7 +841,6 @@
                 }
 
                 let waButtonHtml = '';
-                // Pass exact number from database record into the function parameters safely
                 if (u.isExpired) {
                     waButtonHtml = `<button onclick="sendWhatsAppRenewalAlert('${u.username}', '${u.expires}', '${u.number}')" class="action-wa-btn" title="Send Expiry/Upgrade Alert">⚠️ Renew</button>`;
                 } else {
