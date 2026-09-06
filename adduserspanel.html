@@ -798,7 +798,7 @@
             return found ? found.number : '';
         }
 
-        // WHATSAPP LOGIN INFO TEMPLATE (Using identical robust lookup logic)
+        // WHATSAPP LOGIN INFO TEMPLATE (Using robust cache lookup logic)
         function sendWhatsAppCredentials(username, password, rawNumber) {
             let number = rawNumber || getUserNumber(username);
             let message = `Hello! Your Dispatch Link account details:\n\n` +
