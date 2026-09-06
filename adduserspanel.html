@@ -780,22 +780,27 @@
             renderUserTable(finalFiltered, selectedDb);
         }
 
-        // PERFECT NUMBER FORMATTER (Removes leading 0 and prefixes 92)
+        // PERFECT NUMBER FORMATTER (Safely cleans 0 and adds 92)
         function formatPhoneNumber(number) {
             if (!number) return '';
             let cleaned = String(number).replace(/[^0-9]/g, '');
-            // Agar number 0 se start ho raha hai (e.g. 03700684849), toh 0 hata kar 92 laga do
             if (cleaned.startsWith('0')) {
                 cleaned = '92' + cleaned.substring(1);
             } else if (cleaned.length === 10) {
-                // Agar 10 digits ka hai bina 0 ke (e.g. 3700684849)
                 cleaned = '92' + cleaned;
             }
             return cleaned;
         }
 
+        // SAFE LOOKUP HELPER TO GET NUMBER FROM CACHE BY USERNAME
+        function getUserNumber(username) {
+            let found = globalUsersCache.find(u => u.username === username);
+            return found ? found.number : '';
+        }
+
         // WHATSAPP LOGIN INFO TEMPLATE
-        function sendWhatsAppCredentials(username, password, number) {
+        function sendWhatsAppCredentials(username, password, rawNumber) {
+            let number = rawNumber || getUserNumber(username);
             let message = `Hello! Your Dispatch Link account details:\n\n` +
                           `👤 Username: *${username}*\n` +
                           `🔑 Password: *${password}*\n\n` +
@@ -813,7 +818,8 @@
         }
 
         // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT
-        function sendWhatsAppRenewalAlert(username, expiryDate, number) {
+        function sendWhatsAppRenewalAlert(username, expiryDate, rawNumber) {
+            let number = rawNumber || getUserNumber(username);
             let message = `Hello *${username}*, your Dispatch Link package has expired on *${expiryDate}*. Please contact support to upgrade your package and keep your shift active.`;
             let encodedMessage = encodeURIComponent(message);
             let phoneParam = formatPhoneNumber(number);
@@ -837,7 +843,6 @@
                 let safeUrl = encodeURIComponent(u.dbUrl);
                 let safePass = encodeURIComponent(u.pass);
                 let safeExpiry = encodeURIComponent(u.expires);
-                let safeNumber = encodeURIComponent(u.number || '');
 
                 let statusBadge = `<span class="badge-active">Active</span>`;
                 if (u.isExpired) {
@@ -847,6 +852,7 @@
                 }
 
                 let waButtonHtml = '';
+                // Pass username safely so lookup function can fetch the number directly from cache if needed
                 if (u.isExpired) {
                     waButtonHtml = `<button onclick="sendWhatsAppRenewalAlert('${u.username}', '${u.expires}', '${u.number}')" class="action-wa-btn" title="Send Expiry/Upgrade Alert">⚠️ Renew</button>`;
                 } else {
