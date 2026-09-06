@@ -18,6 +18,7 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            --whatsapp: #25d366;
         }
 
         body {
@@ -293,7 +294,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 11px;
-            min-width: 500px;
+            min-width: 550px;
         }
 
         .user-table th, .user-table td {
@@ -335,6 +336,23 @@
         }
         .action-edit-btn:hover { background: rgba(234, 88, 12, 0.3); }
 
+        .action-wa-btn {
+            background: rgba(37, 211, 102, 0.15);
+            color: #25d366;
+            border: 1px solid rgba(37, 211, 102, 0.3);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .action-wa-btn:hover { background: rgba(37, 211, 102, 0.3); }
+
         .action-del-btn {
             background: rgba(239, 68, 68, 0.15);
             color: #f87171;
@@ -367,7 +385,7 @@
             <div class="panel-header">
                 <div class="panel-title-area">
                     <h2>🔥 Dispatch Link Control Center</h2>
-                    <p>Manage enterprise clients and licenses securely.</p>
+                    <p>Manage enterprise clients, licenses and WhatsApp templates securely.</p>
                 </div>
             </div>
 
@@ -561,6 +579,10 @@
                     document.getElementById('newPassword').value = userData.pass || '';
                     document.getElementById('newMaxLaptops').value = userData.maxLaptops || 1;
                     document.getElementById('newExpiresDate').value = userData.expires || '';
+                    document.getElementById('newNumber').value = userData.number || '';
+                    document.getElementById('newCompanyName').value = userData.companyName || '';
+                    document.getElementById('newOwnerName').value = userData.ownerName || '';
+                    document.getElementById('newEmail').value = userData.email || '';
                     alert("User record located successfully in Firebase!");
                 } else {
                     alert("User not found in this cluster node.");
@@ -599,11 +621,12 @@
                     pass: password,
                     maxLaptops: maxLaptops,
                     expires: expires,
-                    dbUrl: dbUrl
+                    dbUrl: dbUrl,
+                    companyName: companyName,
+                    ownerName: ownerName,
+                    number: number,
+                    email: email
                 };
-
-                let dbObj = DB_CONFIGS.find(d => d.url === dbUrl);
-                let dbName = dbObj ? dbObj.name : "Database 1";
 
                 let sheetData = {
                     username: username,
@@ -646,6 +669,11 @@
 
                 msgBox.style.display = 'block';
                 setTimeout(() => { msgBox.style.display = 'none'; }, 5000);
+
+                // Ask to send WhatsApp credentials directly to the user's saved number
+                if (number && confirm(`Do you want to send WhatsApp credentials message to ${number}?`)) {
+                    sendWhatsAppCredentials(username, password, number);
+                }
 
             } catch (error) {
                 console.error("Network/CORS error:", error);
@@ -700,6 +728,7 @@
                             pass: u.pass || '',
                             maxLaptops: u.maxLaptops || 1,
                             expires: expDateStr || 'N/A',
+                            number: u.number || '',
                             isExpired: isExpired,
                             isNearExpire: isNearExpire
                         });
@@ -752,6 +781,32 @@
             renderUserTable(finalFiltered, selectedDb);
         }
 
+        // WHATSAPP TEMPLATE MESSAGE WITH STEP-BY-STEP INSTRUCTIONS & DIRECT NUMBER
+        function sendWhatsAppCredentials(username, password, number) {
+            let message = `Hello! Your Dispatch Link account details:\n\n` +
+                          `👤 Username: *${username}*\n` +
+                          `🔑 Password: *${password}*\n\n` +
+                          `📌 Follow these steps to login:\n` +
+                          `1. First, download and install the *Allow CORS* extension.\n` +
+                          `2. Turn ON the Allow CORS extension.\n` +
+                          `3. Connect your *VPN* securely.\n` +
+                          `4. Finally, visit website: *dispatchlink.online* and login using your username & password.`;
+
+            let encodedMessage = encodeURIComponent(message);
+            let phoneParam = number ? number.replace(/[^0-9]/g, '') : '';
+            let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT WITH DIRECT NUMBER
+        function sendWhatsAppRenewalAlert(username, expiryDate, number) {
+            let message = `Hello *${username}*, your Dispatch Link package has expired on *${expiryDate}*. Please contact support to upgrade your package and keep your shift active.`;
+            let encodedMessage = encodeURIComponent(message);
+            let phoneParam = number ? number.replace(/[^0-9]/g, '') : '';
+            let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
         function renderUserTable(users, dbName) {
             let tbody = document.getElementById('allUsersTableBody');
             let displayName = (dbName === 'All') ? 'All Databases' : dbName;
@@ -767,12 +822,20 @@
                 let safeUrl = encodeURIComponent(u.dbUrl);
                 let safePass = encodeURIComponent(u.pass);
                 let safeExpiry = encodeURIComponent(u.expires);
+                let safeNumber = encodeURIComponent(u.number || '');
 
                 let statusBadge = `<span class="badge-active">Active</span>`;
                 if (u.isExpired) {
                     statusBadge = `<span class="badge-expired">Expired</span>`;
                 } else if (u.isNearExpire) {
                     statusBadge = `<span class="badge-near">Near Exp</span>`;
+                }
+
+                let waButtonHtml = '';
+                if (u.isExpired) {
+                    waButtonHtml = `<button onclick="sendWhatsAppRenewalAlert('${u.username}', '${u.expires}', '${u.number}')" class="action-wa-btn" title="Send Expiry/Upgrade Alert">⚠️ Renew</button>`;
+                } else {
+                    waButtonHtml = `<button onclick="sendWhatsAppCredentials('${u.username}', '${u.pass}', '${u.number}')" class="action-wa-btn" title="Send Login Details">💬 Info</button>`;
                 }
 
                 allRows += `
@@ -784,6 +847,7 @@
                         <td>${statusBadge}</td>
                         <td>
                             <div class="action-btn-group">
+                                ${waButtonHtml}
                                 <button onclick="editUserFromList('${safeUser}', '${safeUrl}', '${safePass}', '${u.maxLaptops}', '${safeExpiry}')" class="action-edit-btn">✏️ Edit</button>
                                 <button onclick="deleteUser('${u.dbUrl}', '${u.username}')" class="action-del-btn">🗑️</button>
                             </div>
