@@ -780,6 +780,20 @@
             renderUserTable(finalFiltered, selectedDb);
         }
 
+        // PERFECT NUMBER FORMATTER (Removes leading 0 and prefixes 92)
+        function formatPhoneNumber(number) {
+            if (!number) return '';
+            let cleaned = String(number).replace(/[^0-9]/g, '');
+            // Agar number 0 se start ho raha hai (e.g. 03700684849), toh 0 hata kar 92 laga do
+            if (cleaned.startsWith('0')) {
+                cleaned = '92' + cleaned.substring(1);
+            } else if (cleaned.length === 10) {
+                // Agar 10 digits ka hai bina 0 ke (e.g. 3700684849)
+                cleaned = '92' + cleaned;
+            }
+            return cleaned;
+        }
+
         // WHATSAPP LOGIN INFO TEMPLATE
         function sendWhatsAppCredentials(username, password, number) {
             let message = `Hello! Your Dispatch Link account details:\n\n` +
@@ -792,25 +806,17 @@
                           `4. Finally, visit website: *dispatchlink.online* and login using your username & password.`;
 
             let encodedMessage = encodeURIComponent(message);
-            let phoneParam = number ? String(number).replace(/[^0-9]/g, '') : '';
-            
-            if (phoneParam.length === 10) {
-                phoneParam = '92' + phoneParam;
-            }
+            let phoneParam = formatPhoneNumber(number);
 
             let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
             window.open(whatsappUrl, '_blank');
         }
 
-        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT (FIXED WITH NUMBER)
+        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT
         function sendWhatsAppRenewalAlert(username, expiryDate, number) {
             let message = `Hello *${username}*, your Dispatch Link package has expired on *${expiryDate}*. Please contact support to upgrade your package and keep your shift active.`;
             let encodedMessage = encodeURIComponent(message);
-            let phoneParam = number ? String(number).replace(/[^0-9]/g, '') : '';
-            
-            if (phoneParam.length === 10) {
-                phoneParam = '92' + phoneParam;
-            }
+            let phoneParam = formatPhoneNumber(number);
 
             let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
             window.open(whatsappUrl, '_blank');
