@@ -670,7 +670,6 @@
                 msgBox.style.display = 'block';
                 setTimeout(() => { msgBox.style.display = 'none'; }, 5000);
 
-                // Ask to send WhatsApp credentials directly to the user's saved number
                 if (number && confirm(`Do you want to send WhatsApp credentials message to ${number}?`)) {
                     sendWhatsAppCredentials(username, password, number);
                 }
@@ -683,7 +682,7 @@
 
         async function fetchAllUsersFromAllDBs() {
             let tbody = document.getElementById('allUsersTableBody');
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 15px;">Synchronizing clusters...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 15px;">Synchronizing clusters and pulling numbers...</td></tr>`;
 
             globalUsersCache = [];
             
@@ -781,7 +780,7 @@
             renderUserTable(finalFiltered, selectedDb);
         }
 
-        // WHATSAPP TEMPLATE MESSAGE WITH STEP-BY-STEP INSTRUCTIONS & DIRECT NUMBER
+        // WHATSAPP LOGIN INFO TEMPLATE WITH EXACT NUMBER FORMATTING
         function sendWhatsAppCredentials(username, password, number) {
             let message = `Hello! Your Dispatch Link account details:\n\n` +
                           `👤 Username: *${username}*\n` +
@@ -793,16 +792,26 @@
                           `4. Finally, visit website: *dispatchlink.online* and login using your username & password.`;
 
             let encodedMessage = encodeURIComponent(message);
-            let phoneParam = number ? number.replace(/[^0-9]/g, '') : '';
+            let phoneParam = number ? String(number).replace(/[^0-9]/g, '') : '';
+            
+            if (phoneParam.length === 10) {
+                phoneParam = '92' + phoneParam; // Default country code adjustment if missing
+            }
+
             let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
             window.open(whatsappUrl, '_blank');
         }
 
-        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT WITH DIRECT NUMBER
+        // WHATSAPP PACKAGE EXPIRY / RENEWAL ALERT WITH EXACT NUMBER FORMATTING
         function sendWhatsAppRenewalAlert(username, expiryDate, number) {
             let message = `Hello *${username}*, your Dispatch Link package has expired on *${expiryDate}*. Please contact support to upgrade your package and keep your shift active.`;
             let encodedMessage = encodeURIComponent(message);
-            let phoneParam = number ? number.replace(/[^0-9]/g, '') : '';
+            let phoneParam = number ? String(number).replace(/[^0-9]/g, '') : '';
+            
+            if (phoneParam.length === 10) {
+                phoneParam = '92' + phoneParam;
+            }
+
             let whatsappUrl = `https://wa.me/${phoneParam}?text=${encodedMessage}`;
             window.open(whatsappUrl, '_blank');
         }
@@ -832,6 +841,7 @@
                 }
 
                 let waButtonHtml = '';
+                // Pass exact number from database record into the function parameters safely
                 if (u.isExpired) {
                     waButtonHtml = `<button onclick="sendWhatsAppRenewalAlert('${u.username}', '${u.expires}', '${u.number}')" class="action-wa-btn" title="Send Expiry/Upgrade Alert">⚠️ Renew</button>`;
                 } else {
@@ -840,7 +850,7 @@
 
                 allRows += `
                     <tr>
-                        <td><b>${u.username}</b><br><span style="font-size:9px; color:var(--text-muted);">Tabs: ${u.maxLaptops}</span></td>
+                        <td><b>${u.username}</b><br><span style="font-size:9px; color:var(--text-muted);">Tabs: ${u.maxLaptops} | Ph: ${u.number || 'No Phone'}</span></td>
                         <td><code style="background:#1f2937; padding:2px 6px; border-radius:4px; color:#fb923c; font-family:monospace; border:1px solid #374151;">${u.pass || 'N/A'}</code></td>
                         <td><span style="font-size:9px; background:#1f2937; color:#d1d5db; padding:2px 6px; border-radius:4px; font-weight:600; border: 1px solid #374151;">${u.dbName}</span></td>
                         <td>${u.expires}</td>
