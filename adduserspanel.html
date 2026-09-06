@@ -186,19 +186,6 @@
             background: var(--primary-hover);
         }
 
-        .success-msg {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-top: 12px;
-            text-align: center;
-            display: none;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
         .stats-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -461,7 +448,6 @@
                 </div>
 
                 <button onclick="saveOrUpdateUserToFirebase()" class="submit-btn">Save / Update License & Sheet Record</button>
-                <div id="successMsg" class="success-msg">✨ Record saved successfully!</div>
             </div>
 
             <!-- TAB 2: ALL USERS LIST -->
@@ -580,9 +566,6 @@
                     document.getElementById('newMaxLaptops').value = userData.maxLaptops || 1;
                     document.getElementById('newExpiresDate').value = userData.expires || '';
                     document.getElementById('newNumber').value = userData.number || '';
-                    document.getElementById('newCompanyName').value = userData.companyName || '';
-                    document.getElementById('newOwnerName').value = userData.ownerName || '';
-                    document.getElementById('newEmail').value = userData.email || '';
                     alert("User record located successfully in Firebase!");
                 } else {
                     alert("User not found in this cluster node.");
@@ -605,7 +588,6 @@
             let joiningDate = document.getElementById('newJoiningDate').value;
             let expires = document.getElementById('newExpiresDate').value;
             let totalPayment = document.getElementById('newTotalPayment').value.trim();
-            let msgBox = document.getElementById('successMsg');
 
             if (!username || !password || !expires) {
                 alert("Please complete required fields (Username, Password, Expiry Date)!");
@@ -617,17 +599,15 @@
                 let existingUser = await checkRes.json();
                 let isAlreadyExists = (existingUser !== null);
 
+                // FIREBASE DATA (Without Owner Name, Company Name, or Email)
                 let firebaseData = {
                     pass: password,
                     maxLaptops: maxLaptops,
                     expires: expires,
-                    dbUrl: dbUrl,
-                    companyName: companyName,
-                    ownerName: ownerName,
-                    number: number,
-                    email: email
+                    number: number
                 };
 
+                // GOOGLE SHEET DATA (Full Data)
                 let sheetData = {
                     username: username,
                     joiningDate: joiningDate,
@@ -662,13 +642,10 @@
                 }
 
                 if (isAlreadyExists) {
-                    msgBox.innerText = `⚠️ User "${username}" pehle se maujud tha! Record update kar diya gaya hai.`;
+                    alert(`Warning: User "${username}" already existed! The record has been successfully updated.`);
                 } else {
-                    msgBox.innerText = `✨ Naya user "${username}" successfully save ho gaya hai!`;
+                    alert(`Success: New user "${username}" has been successfully saved!`);
                 }
-
-                msgBox.style.display = 'block';
-                setTimeout(() => { msgBox.style.display = 'none'; }, 5000);
 
                 if (number && confirm(`Do you want to send WhatsApp credentials message to ${number}?`)) {
                     sendWhatsAppCredentials(username, password, number);
@@ -798,7 +775,7 @@
             return found ? found.number : '';
         }
 
-        // WHATSAPP LOGIN INFO TEMPLATE (Using exact cache lookup logic)
+        // WHATSAPP LOGIN INFO TEMPLATE
         function sendWhatsAppCredentials(username, password, rawNumber) {
             let number = rawNumber || getUserNumber(username);
             let message = `Hello! Your Dispatch Link account details:\n\n` +
