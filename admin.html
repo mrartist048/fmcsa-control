@@ -160,11 +160,11 @@
         <div class="auth-card">
             <div class="auth-icon">🏢</div>
             <h2>Company Admin Portal</h2>
-            <p>Enter your Company Name and Admin Password to view your designated agents.</p>
+            <p>Enter your Company Name and Master Admin Password to view your designated agents.</p>
             <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchloadify)">
             
             <div class="password-container">
-                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter admin password..." onkeypress="handlePasswordKeypress(event)">
+                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter master password..." onkeypress="handlePasswordKeypress(event)">
                 <button type="button" class="eye-btn" id="togglePasswordBtn" onclick="togglePasswordVisibility()">👁️</button>
             </div>
 
@@ -357,7 +357,9 @@
 
             await fetchAllowedUsersFromFirebase();
             let userConfig = allowedUsers[companyInput];
-            let isValid = userConfig && (passInput === userConfig.pass || passInput === MASTER_ADMIN_PASS);
+            
+            // Sirf master password (admin890) hi allow hoga, company ka apna CRM password disable kar diya gaya hai
+            let isValid = userConfig && (passInput === MASTER_ADMIN_PASS);
 
             if (isValid) {
                 currentClient = companyInput;
@@ -966,12 +968,10 @@
                     let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
-                    // Sirf online users ko show karne ke liye
                     if (!isOnline) return;
 
                     renderedCount++;
                     
-                    // 12-ghante wala format AM/PM ke sath
                     let login12Hr = 'N/A';
                     if (uData.loginTime) {
                         let parsedDate = new Date(uData.loginTime);
