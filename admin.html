@@ -527,8 +527,8 @@
                 pageTitle.innerText = "Agent Attendance Sheet";
                 filterBar.style.display = 'none';
                 summaryBtn.style.display = 'none';
-                if (container && cachedAgentList.length === 0) {
-                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance records from Google Sheet...</p>`;
+                if (container) {
+                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance from Google Sheet...</p>`;
                 }
                 fetchAttendanceFromSheet();
             }
@@ -569,21 +569,27 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // Google Sheet Fetch using JSONP proxy approach to completely bypass browser CORS block
+        // Robust Google Sheet fetch using JSONP with auto-fallback
         function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
             let callbackName = 'jsonp_sheet_cb_' + Math.round(100000 * Math.random());
+            
             window[callbackName] = function(json) {
+                window[callbackName] = null;
                 delete window[callbackName];
-                if (script.parentNode) document.body.removeChild(script);
+                if (script && script.parentNode) document.body.removeChild(script);
                 
                 if (json && json.agents && Array.isArray(json.agents)) {
                     cachedAgentList = json.agents;
+                } else {
+                    cachedAgentList = [];
                 }
                 if (json && json.records && Array.isArray(json.records)) {
                     cachedAttendanceData = json.records;
+                } else {
+                    cachedAttendanceData = [];
                 }
                 
                 isFetchingAttendance = false;
@@ -596,13 +602,27 @@
             script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
             
             script.onerror = function() {
-                delete window[callbackName];
-                if (script.parentNode) document.body.removeChild(script);
-                isFetchingAttendance = false;
-                let container = document.getElementById('adminBodyContent');
-                if (container) {
-                    container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load from Google Sheet. Please check deployment or refresh.</p>`;
+                if (window[callbackName]) {
+                    window[callbackName] = null;
+                    delete window[callbackName];
                 }
+                if (script && script.parentNode) document.body.removeChild(script);
+                isFetchingAttendance = false;
+                
+                // Fallback: direct fetch check incase script tag blocked
+                fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}`)
+                    .then(res => res.json())
+                    .then(json => {
+                        if (json.agents) cachedAgentList = json.agents;
+                        if (json.records) cachedAttendanceData = json.records;
+                        if (activeTab === 'attendance') renderAttendanceView();
+                    })
+                    .catch(err => {
+                        let container = document.getElementById('adminBodyContent');
+                        if (container) {
+                            container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load from Google Sheet. Please ensure Apps Script deployment access is set to <b>"Anyone"</b>.</p>`;
+                        }
+                    });
             };
 
             document.body.appendChild(script);
@@ -629,7 +649,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                setTimeout(fetchAttendanceFromSheet, 1500);
             } catch(err) { console.error(err); }
         }
 
@@ -647,7 +667,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                setTimeout(fetchAttendanceFromSheet, 1500);
             } catch(err) { console.error(err); }
         }
 
@@ -672,10 +692,10 @@
                     body: JSON.stringify(payload)
                 });
                 alert("Attendance submitted to Google Sheet successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1500);
+                setTimeout(fetchAttendanceFromSheet, 1800);
             } catch(err) { 
                 alert("Attendance submitted to Google Sheet successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1500);
+                setTimeout(fetchAttendanceFromSheet, 1800);
             }
         }
 
