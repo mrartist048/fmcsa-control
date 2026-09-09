@@ -274,7 +274,6 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        // Updated Apps Script URL
         const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxWh78ovnePeaTmfMa1RrA-OEBZs4599m7mqI5WAb4UKCVmhfNzy5friOsylAnwwzJp8A/exec";
 
         let allowedUsers = {};
@@ -567,23 +566,31 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        async function fetchAttendanceFromSheet() {
-            try {
-                let cacheBuster = `&_t=${new Date().getTime()}`;
-                let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}${cacheBuster}`, {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                let json = await res.json();
+        // JSONP Bypassing CORS completely for normal browser
+        function fetchAttendanceFromSheet() {
+            let callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+            let scriptTag = document.createElement('script');
+            
+            window[callbackName] = function(json) {
+                delete window[callbackName];
+                document.body.removeChild(scriptTag);
+                
                 cachedAttendanceData = Array.isArray(json.records) ? json.records : (Array.isArray(json) ? json : []);
                 cachedAgentList = Array.isArray(json.agents) ? json.agents : [];
                 if (activeTab === 'attendance') renderAttendanceView();
-            } catch(e) { 
-                console.error("Attendance fetch error:", e);
+            };
+
+            scriptTag.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
+            scriptTag.onerror = function() {
+                delete window[callbackName];
+                if (scriptTag.parentNode) document.body.removeChild(scriptTag);
+                console.error("JSONP fetch error");
                 cachedAttendanceData = [];
                 cachedAgentList = [];
                 if (activeTab === 'attendance') renderAttendanceView();
-            }
+            };
+
+            document.body.appendChild(scriptTag);
         }
 
         async function handleAddAgentForm(event) {
@@ -608,20 +615,11 @@
 
             try {
                 await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 setTimeout(fetchAttendanceFromSheet, 1000);
-            } catch (e) {
-                try {
-                    await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    setTimeout(fetchAttendanceFromSheet, 1000);
-                } catch(err) { console.error(err); }
-            }
+            } catch(err) { console.error(err); }
         }
 
         async function removeAgentFromAttendance(agentName) {
@@ -638,20 +636,11 @@
 
             try {
                 await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 setTimeout(fetchAttendanceFromSheet, 1000);
-            } catch (e) {
-                try {
-                    await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    setTimeout(fetchAttendanceFromSheet, 1000);
-                } catch(err) { console.error(err); }
-            }
+            } catch(err) { console.error(err); }
         }
 
         async function submitAttendance() {
@@ -673,23 +662,13 @@
             };
 
             try {
-                let res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 alert("Attendance submitted successfully!");
                 setTimeout(fetchAttendanceFromSheet, 1200);
-            } catch (e) {
-                try {
-                    await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    alert("Attendance submitted successfully!");
-                    setTimeout(fetchAttendanceFromSheet, 1200);
-                } catch(err) { alert("Failed to submit attendance."); }
-            }
+            } catch(err) { alert("Failed to submit attendance."); }
         }
 
         function downloadAttendanceCSV() {
