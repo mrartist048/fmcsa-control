@@ -274,7 +274,7 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        // Updated Apps Script URL provided by user
+        // Latest Apps Script URL provided by user
         const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxv2hy5NRnOaNSNDnAXWzEp_Rc5Ia1asS4sCUQlNUuH8eAsYKkF_eGdk3nLP4J0JNeCxA/exec";
 
         let allowedUsers = {};
@@ -570,12 +570,14 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        async function fetchAttendanceFromSheet() {
+        function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
-            try {
-                let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
-                let json = await res.json();
+
+            let callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+            window[callbackName] = function(json) {
+                delete window[callbackName];
+                if (script.parentNode) document.body.removeChild(script);
                 
                 if (json.agents && Array.isArray(json.agents)) {
                     cachedAgentList = json.agents;
@@ -584,18 +586,24 @@
                     cachedAttendanceData = json.records;
                 }
                 
+                isFetchingAttendance = false;
                 if (activeTab === 'attendance') {
                     renderAttendanceView();
                 }
-            } catch(e) {
-                console.error("Google Sheet fetch error:", e);
+            };
+
+            let script = document.createElement('script');
+            script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
+            script.onerror = function() {
+                delete window[callbackName];
+                if (script.parentNode) document.body.removeChild(script);
+                isFetchingAttendance = false;
                 let container = document.getElementById('adminBodyContent');
                 if (container && cachedAgentList.length === 0) {
                     container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load attendance records. Please refresh.</p>`;
                 }
-            } finally {
-                isFetchingAttendance = false;
-            }
+            };
+            document.body.appendChild(script);
         }
 
         async function handleAddAgentForm(event) {
