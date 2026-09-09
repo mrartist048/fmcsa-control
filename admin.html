@@ -274,7 +274,6 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        // Latest Apps Script URL provided by user
         const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxv2hy5NRnOaNSNDnAXWzEp_Rc5Ia1asS4sCUQlNUuH8eAsYKkF_eGdk3nLP4J0JNeCxA/exec";
 
         let allowedUsers = {};
@@ -529,7 +528,7 @@
                 filterBar.style.display = 'none';
                 summaryBtn.style.display = 'none';
                 if (container && cachedAgentList.length === 0) {
-                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance records...</p>`;
+                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance records from Google Sheet...</p>`;
                 }
                 fetchAttendanceFromSheet();
             }
@@ -570,19 +569,20 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
+        // Google Sheet Fetch using JSONP proxy approach to completely bypass browser CORS block
         function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
-            let callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+            let callbackName = 'jsonp_sheet_cb_' + Math.round(100000 * Math.random());
             window[callbackName] = function(json) {
                 delete window[callbackName];
                 if (script.parentNode) document.body.removeChild(script);
                 
-                if (json.agents && Array.isArray(json.agents)) {
+                if (json && json.agents && Array.isArray(json.agents)) {
                     cachedAgentList = json.agents;
                 }
-                if (json.records && Array.isArray(json.records)) {
+                if (json && json.records && Array.isArray(json.records)) {
                     cachedAttendanceData = json.records;
                 }
                 
@@ -594,15 +594,17 @@
 
             let script = document.createElement('script');
             script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
+            
             script.onerror = function() {
                 delete window[callbackName];
                 if (script.parentNode) document.body.removeChild(script);
                 isFetchingAttendance = false;
                 let container = document.getElementById('adminBodyContent');
-                if (container && cachedAgentList.length === 0) {
-                    container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load attendance records. Please refresh.</p>`;
+                if (container) {
+                    container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load from Google Sheet. Please check deployment or refresh.</p>`;
                 }
             };
+
             document.body.appendChild(script);
         }
 
@@ -627,12 +629,12 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1000);
+                setTimeout(fetchAttendanceFromSheet, 1200);
             } catch(err) { console.error(err); }
         }
 
         async function removeAgentFromAttendance(agentName) {
-            if (!confirm(`Are you sure you want to remove "${agentName}"?`)) return;
+            if (!confirm(`Are you sure you want to remove "${agentName}" from Google Sheet?`)) return;
 
             cachedAgentList = cachedAgentList.filter(a => a !== agentName);
             updateAttendanceTablesOnly();
@@ -645,7 +647,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1000);
+                setTimeout(fetchAttendanceFromSheet, 1200);
             } catch(err) { console.error(err); }
         }
 
@@ -669,11 +671,11 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                alert("Attendance submitted to Google Sheet successfully!");
+                setTimeout(fetchAttendanceFromSheet, 1500);
             } catch(err) { 
-                alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                alert("Attendance submitted to Google Sheet successfully!");
+                setTimeout(fetchAttendanceFromSheet, 1500);
             }
         }
 
@@ -703,8 +705,8 @@
             if (!document.getElementById('attendanceRowsContainer')) {
                 container.innerHTML = `
                     <div class="attendance-header-card">
-                        <h3 style="margin:0 0 8px 0; font-size:18px;">Daily Attendance</h3>
-                        <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance</p>
+                        <h3 style="margin:0 0 8px 0; font-size:18px;">Google Sheet Daily Attendance</h3>
+                        <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance directly synced with Google Sheet</p>
                         
                         <form onsubmit="handleAddAgentForm(event); return false;" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;">
                             <input type="text" id="newAgentNameInput" class="auth-input" placeholder="Enter Agent Name" style="max-width:250px;margin-bottom:0;background:#fff;" autocomplete="off">
@@ -781,7 +783,7 @@
 
             let rowsHtml = "";
             if (sheetAgents.length === 0) {
-                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found. Add an agent above.</td></tr>`;
+                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found in Google Sheet. Add an agent above.</td></tr>`;
             } else {
                 sheetAgents.forEach(agent => {
                     rowsHtml += `
@@ -858,7 +860,7 @@
 
             let summaryRowsHtml = "";
             if (filteredRows.length === 0) {
-                summaryRowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No attendance records found for this date/range.</td></tr>`;
+                summaryRowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No attendance records found in Google Sheet for this date/range.</td></tr>`;
             } else {
                 filteredRows.forEach(row => {
                     let st = String(row.status).toLowerCase();
