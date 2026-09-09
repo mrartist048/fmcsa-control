@@ -631,7 +631,7 @@
         }
 
         async function removeAgentFromAttendance(agentName) {
-            if (!confirm(`Are you sure you want to remove "${agentName}" from Column D? Their past attendance records in Columns A, B, C will remain safe.`)) return;
+            if (!confirm(`Are you sure you want to remove "${agentName}" `)) return;
 
             cachedAgentList = cachedAgentList.filter(a => a !== agentName);
             updateAttendanceTablesOnly();
