@@ -569,16 +569,10 @@
 
         async function fetchAttendanceFromSheet() {
             try {
-                // Anti-caching parameters to bypass normal browser cache permanently
-                let cacheBuster = `&_t=${new Date().getTime()}&nocache=true`;
+                let cacheBuster = `&_t=${new Date().getTime()}`;
                 let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}${cacheBuster}`, {
                     method: 'GET',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    },
-                    cache: 'reload'
+                    cache: 'no-store'
                 });
                 let json = await res.json();
                 cachedAttendanceData = Array.isArray(json.records) ? json.records : (Array.isArray(json) ? json : []);
@@ -631,7 +625,7 @@
         }
 
         async function removeAgentFromAttendance(agentName) {
-            if (!confirm(`Are you sure you want to remove "${agentName}" `)) return;
+            if (!confirm(`Are you sure you want to remove "${agentName}" from Column D? Their past attendance records in Columns A, B, C will remain safe.`)) return;
 
             cachedAgentList = cachedAgentList.filter(a => a !== agentName);
             updateAttendanceTablesOnly();
