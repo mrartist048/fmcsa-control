@@ -566,31 +566,27 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // JSONP Bypassing CORS completely for normal browser
-        function fetchAttendanceFromSheet() {
-            let callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-            let scriptTag = document.createElement('script');
-            
-            window[callbackName] = function(json) {
-                delete window[callbackName];
-                document.body.removeChild(scriptTag);
+        // Robust Fetch using Firebase Database as primary/fallback storage for Attendance
+        async function fetchAttendanceFromSheet() {
+            try {
+                let db = activeDatabases[0] || firebase.database();
+                let snapshot = await db.ref(`attendance/${currentClient}`).once('value');
+                let val = snapshot.val();
                 
-                cachedAttendanceData = Array.isArray(json.records) ? json.records : (Array.isArray(json) ? json : []);
-                cachedAgentList = Array.isArray(json.agents) ? json.agents : [];
+                if (val) {
+                    cachedAttendanceData = Array.isArray(val.records) ? val.records : [];
+                    cachedAgentList = Array.isArray(val.agents) ? val.agents : [];
+                } else {
+                    cachedAttendanceData = [];
+                    cachedAgentList = [];
+                }
                 if (activeTab === 'attendance') renderAttendanceView();
-            };
-
-            scriptTag.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
-            scriptTag.onerror = function() {
-                delete window[callbackName];
-                if (scriptTag.parentNode) document.body.removeChild(scriptTag);
-                console.error("JSONP fetch error");
+            } catch(e) {
+                console.error("Firebase attendance fetch error:", e);
                 cachedAttendanceData = [];
                 cachedAgentList = [];
                 if (activeTab === 'attendance') renderAttendanceView();
-            };
-
-            document.body.appendChild(scriptTag);
+            }
         }
 
         async function handleAddAgentForm(event) {
@@ -604,42 +600,25 @@
                 cachedAgentList.push(agentName);
                 updateAttendanceTablesOnly();
             }
-
-            let payload = {
-                company: currentClient,
-                action: "addAgent",
-                agentName: agentName
-            };
-
             nameInput.value = "";
 
             try {
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                setTimeout(fetchAttendanceFromSheet, 1000);
+                let db = activeDatabases[0] || firebase.database();
+                await db.ref(`attendance/${currentClient}/agents`).set(cachedAgentList);
+                setTimeout(fetchAttendanceFromSheet, 500);
             } catch(err) { console.error(err); }
         }
 
         async function removeAgentFromAttendance(agentName) {
-            if (!confirm(`Are you sure you want to remove "${agentName}" from Column D? Their past attendance records in Columns A, B, C will remain safe.`)) return;
+            if (!confirm(`Are you sure you want to remove "${agentName}"?`)) return;
 
             cachedAgentList = cachedAgentList.filter(a => a !== agentName);
             updateAttendanceTablesOnly();
 
-            let payload = {
-                company: currentClient,
-                action: "removeAgent",
-                agentName: agentName
-            };
-
             try {
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                setTimeout(fetchAttendanceFromSheet, 1000);
+                let db = activeDatabases[0] || firebase.database();
+                await db.ref(`attendance/${currentClient}/agents`).set(cachedAgentList);
+                setTimeout(fetchAttendanceFromSheet, 500);
             } catch(err) { console.error(err); }
         }
 
@@ -647,27 +626,23 @@
             let rows = document.querySelectorAll('.agent-attendance-row');
             if (rows.length === 0) { alert("No agents available!"); return; }
             let dateVal = document.getElementById('attDateInput').value;
-            let records = [];
+            let newRecords = [];
             
             rows.forEach(r => {
                 let agentName = r.getAttribute('data-agent');
                 let status = r.querySelector('.attendance-status-select').value;
-                records.push({ date: dateVal, agentName: agentName, status: status });
+                newRecords.push({ date: dateVal, agentName: agentName, status: status });
             });
 
-            let payload = {
-                company: currentClient,
-                action: "saveAttendance",
-                records: records
-            };
-
             try {
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                let db = activeDatabases[0] || firebase.database();
+                // Filter out records for the same date and push new ones
+                let filtered = cachedAttendanceData.filter(item => item.date !== dateVal);
+                cachedAttendanceData = filtered.concat(newRecords);
+
+                await db.ref(`attendance/${currentClient}/records`).set(cachedAttendanceData);
                 alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                setTimeout(fetchAttendanceFromSheet, 500);
             } catch(err) { alert("Failed to submit attendance."); }
         }
 
@@ -773,7 +748,7 @@
 
             let rowsHtml = "";
             if (sheetAgents.length === 0) {
-                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found in Column D. Add an agent above.</td></tr>`;
+                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found. Add an agent above.</td></tr>`;
             } else {
                 sheetAgents.forEach(agent => {
                     rowsHtml += `
