@@ -566,23 +566,16 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // Robust Fetch using Firebase Database as primary/fallback storage for Attendance
+        // Fetch directly from Google Apps Script / Google Sheet
         async function fetchAttendanceFromSheet() {
             try {
-                let db = activeDatabases[0] || firebase.database();
-                let snapshot = await db.ref(`attendance/${currentClient}`).once('value');
-                let val = snapshot.val();
-                
-                if (val) {
-                    cachedAttendanceData = Array.isArray(val.records) ? val.records : [];
-                    cachedAgentList = Array.isArray(val.agents) ? val.agents : [];
-                } else {
-                    cachedAttendanceData = [];
-                    cachedAgentList = [];
-                }
+                let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
+                let json = await res.json();
+                cachedAttendanceData = Array.isArray(json.records) ? json.records : [];
+                cachedAgentList = Array.isArray(json.agents) ? json.agents : [];
                 if (activeTab === 'attendance') renderAttendanceView();
             } catch(e) {
-                console.error("Firebase attendance fetch error:", e);
+                console.error("Google Sheet fetch error:", e);
                 cachedAttendanceData = [];
                 cachedAgentList = [];
                 if (activeTab === 'attendance') renderAttendanceView();
@@ -602,10 +595,14 @@
             }
             nameInput.value = "";
 
+            let payload = { company: currentClient, action: "addAgent", agentName: agentName };
             try {
-                let db = activeDatabases[0] || firebase.database();
-                await db.ref(`attendance/${currentClient}/agents`).set(cachedAgentList);
-                setTimeout(fetchAttendanceFromSheet, 500);
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                setTimeout(fetchAttendanceFromSheet, 1000);
             } catch(err) { console.error(err); }
         }
 
@@ -615,10 +612,14 @@
             cachedAgentList = cachedAgentList.filter(a => a !== agentName);
             updateAttendanceTablesOnly();
 
+            let payload = { company: currentClient, action: "removeAgent", agentName: agentName };
             try {
-                let db = activeDatabases[0] || firebase.database();
-                await db.ref(`attendance/${currentClient}/agents`).set(cachedAgentList);
-                setTimeout(fetchAttendanceFromSheet, 500);
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                setTimeout(fetchAttendanceFromSheet, 1000);
             } catch(err) { console.error(err); }
         }
 
@@ -626,23 +627,23 @@
             let rows = document.querySelectorAll('.agent-attendance-row');
             if (rows.length === 0) { alert("No agents available!"); return; }
             let dateVal = document.getElementById('attDateInput').value;
-            let newRecords = [];
+            let records = [];
             
             rows.forEach(r => {
                 let agentName = r.getAttribute('data-agent');
                 let status = r.querySelector('.attendance-status-select').value;
-                newRecords.push({ date: dateVal, agentName: agentName, status: status });
+                records.push({ date: dateVal, agentName: agentName, status: status });
             });
 
+            let payload = { company: currentClient, action: "saveAttendance", records: records };
             try {
-                let db = activeDatabases[0] || firebase.database();
-                // Filter out records for the same date and push new ones
-                let filtered = cachedAttendanceData.filter(item => item.date !== dateVal);
-                cachedAttendanceData = filtered.concat(newRecords);
-
-                await db.ref(`attendance/${currentClient}/records`).set(cachedAttendanceData);
-                alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 500);
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                alert("Attendance submitted successfully to Google Sheet!");
+                setTimeout(fetchAttendanceFromSheet, 1200);
             } catch(err) { alert("Failed to submit attendance."); }
         }
 
