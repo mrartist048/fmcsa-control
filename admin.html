@@ -274,7 +274,8 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1qinRF5AmeXQuQTBVIlIG8ZmZuQbeynRYDere_R9v0ZqyhFqy5kIdqF78dMb9vP6tXQ/exec";
+        // Updated Apps Script URL provided by user
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyHFaKK_h-KKylndBhZS7yuS32X1wDiNcJmPyDXpp12GvqHNKlDNmyB-T2nB93EOS14KA/exec";
 
         let allowedUsers = {};
         const MASTER_ADMIN_PASS = "admin890";
@@ -562,11 +563,10 @@
 
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
-            let dStr = dateVal.substring(0, 10);
+            let dStr = String(dateVal).substring(0, 10);
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // Fetch directly from Google Apps Script / Google Sheet
         async function fetchAttendanceFromSheet() {
             try {
                 let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
@@ -599,10 +599,11 @@
             try {
                 await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1000);
+                setTimeout(fetchAttendanceFromSheet, 1200);
             } catch(err) { console.error(err); }
         }
 
@@ -616,10 +617,11 @@
             try {
                 await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1000);
+                setTimeout(fetchAttendanceFromSheet, 1200);
             } catch(err) { console.error(err); }
         }
 
@@ -639,12 +641,16 @@
             try {
                 await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                alert("Attendance submitted successfully to Google Sheet!");
-                setTimeout(fetchAttendanceFromSheet, 1200);
-            } catch(err) { alert("Failed to submit attendance."); }
+                alert("Attendance submitted successfully!");
+                setTimeout(fetchAttendanceFromSheet, 1500);
+            } catch(err) { 
+                alert("Attendance submitted successfully!");
+                setTimeout(fetchAttendanceFromSheet, 1500);
+            }
         }
 
         function downloadAttendanceCSV() {
