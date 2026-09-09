@@ -99,12 +99,10 @@ function checkAndClearLocalStorageOnShiftChange() {
     let lastShiftKey = localStorage.getItem(`dl_shift_date_tracker_${currentClient}`);
 
     if (lastShiftKey && lastShiftKey !== currentShiftKey) {
-        // Shift changed (3 AM crossed), clear temporary local storage data
         console.log("New USA Shift detected! Clearing temporary local storage data...");
         let keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             let key = localStorage.key(i);
-            // Temp keys ko target karo, login/client ko chhor kar
             if (key && (key.includes('dl_call_logs_') || key.includes('dl_subj_') || key.includes('dl_body_'))) {
                 keysToRemove.push(key);
             }
@@ -112,6 +110,41 @@ function checkAndClearLocalStorageOnShiftChange() {
         keysToRemove.forEach(k => localStorage.removeItem(k));
     }
     localStorage.setItem(`dl_shift_date_tracker_${currentClient}`, currentShiftKey);
+}
+
+// ====== FIREBASE 7-DAYS CLEANUP (ALLOWED USERS SAFE) ======
+async function cleanupOldFirebaseData() {
+    if (!currentClient || !dispatcherNickname) return;
+    
+    try {
+        let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
+        let callLogUrl = `${FIREBASE_DB_URL}call_logs/${currentClient}/${safeUserKey}.json`;
+        
+        let res = await fetch(callLogUrl);
+        let remoteLogs = await res.json();
+        
+        if (Array.isArray(remoteLogs)) {
+            let sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            // Sirf pichle 7 din ke andarkay logs ko filter kar ke rakhein
+            let filteredLogs = remoteLogs.filter(log => {
+                if (!log.shiftDate) return false;
+                let logDate = new Date(log.shiftDate);
+                return logDate >= sevenDaysAgo;
+            });
+            
+            if (filteredLogs.length !== remoteLogs.length) {
+                await fetch(callLogUrl, {
+                    method: 'PUT',
+                    body: JSON.stringify(filteredLogs)
+                });
+                console.log("Cleaned up Firebase call logs older than 7 days (allowedUsers untouched).");
+            }
+        }
+    } catch (e) {
+        console.error("Failed to cleanup old Firebase data:", e);
+    }
 }
 
 async function performAutomaticDataCleanup() {
@@ -256,7 +289,6 @@ window.processLogin = async function() {
     localStorage.setItem("dl_logged_client", uInput);
     currentClient = uInput;
 
-    // Save Login data in IndexedDB
     saveAppDataToIndexedDB("settings", { key: "client_login", value: uInput });
     
     let overlay = document.getElementById('dlLoginOverlay');
@@ -266,7 +298,6 @@ window.processLogin = async function() {
 };
 
 function setupDispatcherIdentity() {
-    // Check IndexedDB for Agent Name first
     getAppDataFromIndexedDB("settings", "agent_nickname", function(savedNick) {
         dispatcherNickname = savedNick || "";
         if (!dispatcherNickname) {
@@ -318,7 +349,6 @@ function injectNicknameProfileUI() {
     `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
     
-    // Update UI elements with dispatcherNickname once loaded
     setTimeout(() => {
         let nameSpan = document.getElementById('dlDispCurrentName');
         let avatarDiv = document.getElementById('dlDispAvatarLetter');
@@ -386,6 +416,9 @@ async function initializeAccessControl() {
     showPremiumNotification(`License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     performAutomaticDataCleanup();
+    
+    // Firebase 7-days cleanup (allowedUsers safe rahega, IndexedDB untouched)
+    cleanupOldFirebaseData();
 
     await checkGlobalSessions();
     setInterval(checkGlobalSessions, 5000);
