@@ -4,134 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dispatch Link | Admin Dashboard</title>
-    <!-- Favicon Integration -->
     <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Flatpickr CSS for Modern Single Calendar Range Picker -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
         
-        /* AUTHENTICATION OVERLAY MODAL DESIGN */
         #authOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
         }
         .auth-card {
-            background: #ffffff;
-            padding: 36px 32px;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 400px;
+            background: #ffffff; padding: 36px 32px; border-radius: 16px; width: 100%; max-width: 400px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            text-align: center;
-            border: 1px solid #e2e8f0;
+            text-align: center; border: 1px solid #e2e8f0;
         }
         .auth-icon {
-            font-size: 38px;
-            margin-bottom: 16px;
-            background: #f0fdf4;
-            width: 70px;
-            height: 70px;
-            line-height: 70px;
-            border-radius: 50%;
-            display: inline-block;
-            border: 1px solid #dcfce7;
+            font-size: 38px; margin-bottom: 16px; background: #f0fdf4; width: 70px; height: 70px;
+            line-height: 70px; border-radius: 50%; display: inline-block; border: 1px solid #dcfce7;
         }
-        .auth-card h2 {
-            margin: 0 0 8px 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .auth-card p {
-            margin: 0 0 24px 0;
-            font-size: 13.5px;
-            color: #64748b;
-            line-height: 1.5;
-        }
+        .auth-card h2 { margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #0f172a; }
+        .auth-card p { margin: 0 0 24px 0; font-size: 13.5px; color: #64748b; line-height: 1.5; }
         .auth-input {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 10px;
-            outline: none;
-            transition: all 0.2s ease;
-            font-weight: 500;
-            box-sizing: border-box;
-            margin-bottom: 12px;
+            width: 100%; padding: 12px 16px; font-size: 14px; border: 1px solid #cbd5e1;
+            border-radius: 10px; outline: none; transition: all 0.2s ease; font-weight: 500;
+            box-sizing: border-box; margin-bottom: 12px;
         }
-        .auth-input:focus {
-            border-color: #0284c7;
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-        }
+        .auth-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
         
-        /* PASSWORD FIELD WRAPPER WITH EYE ICON */
-        .password-container {
-            position: relative;
-            width: 100%;
-            margin-bottom: 12px;
-        }
-        .password-container .auth-input {
-            margin-bottom: 0;
-            padding-right: 45px;
-        }
+        .password-container { position: relative; width: 100%; margin-bottom: 12px; }
+        .password-container .auth-input { margin-bottom: 0; padding-right: 45px; }
         .eye-btn {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 18px;
-            color: #64748b;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer; font-size: 18px; color: #64748b; padding: 0;
+            display: flex; align-items: center; justify-content: center;
         }
-        .eye-btn:hover {
-            color: #0f172a;
-        }
+        .eye-btn:hover { color: #0f172a; }
 
         .auth-btn {
-            width: 100%;
-            background: #0f172a;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s ease;
+            width: 100%; background: #0f172a; color: white; border: none; padding: 12px;
+            font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: background 0.2s ease;
         }
-        .auth-btn:hover {
-            background: #1e293b;
-        }
-        .auth-error {
-            color: #dc2626;
-            font-size: 12px;
-            margin-top: 10px;
-            font-weight: 600;
-            display: none;
-        }
+        .auth-btn:hover { background: #1e293b; }
+        .auth-error { color: #dc2626; font-size: 12px; margin-top: 10px; font-weight: 600; display: none; }
 
         .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
         
-        /* SIDEBAR NAVIGATION */
         .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 100; transition: transform 0.3s ease; }
         .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
         .sidebar-brand h2 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
@@ -144,40 +64,19 @@
         .nav-btn:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
         .nav-btn.active { background: #0284c7; color: white; box-shadow: 0 4px 12px rgba(2,132,199,0.35); }
 
-        /* PROFESSIONAL LICENSE USAGE WIDGET IN SIDEBAR */
         .sidebar-license-widget {
-            margin: 12px 16px;
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 10px;
-            padding: 12px 14px;
+            margin: 12px 16px; background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px 14px;
         }
         .sidebar-license-title {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #38bdf8;
-            font-weight: 700;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #38bdf8; font-weight: 700; margin-bottom: 6px;
+            display: flex; align-items: center; justify-content: space-between;
         }
-        .sidebar-license-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #cbd5e1;
-            margin-bottom: 4px;
-        }
-        .sidebar-license-row:last-child {
-            margin-bottom: 0;
-        }
+        .sidebar-license-row { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-bottom: 4px; }
+        .sidebar-license-row:last-child { margin-bottom: 0; }
 
-        /* MAIN CONTENT AREA */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
         
-        /* TOP BAR & FILTERS */
         .top-header { height: auto; min-height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; gap: 12px; flex-wrap: wrap; }
         .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
         .header-title { font-size: 18px; font-weight: 700; color: #0f172a; word-break: break-word; }
@@ -188,22 +87,21 @@
         .filter-bar { background: white; padding: 14px 24px; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.01); flex-shrink: 0; }
         .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         
-        /* Filter Button Styling with Active Color Transition */
         .filter-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
         .filter-btn:hover { background: #e2e8f0; color: #0f172a; }
         .filter-btn.active { background: #0284c7 !important; color: white !important; border-color: #0284c7 !important; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 
-        /* SINGLE MODERN CALENDAR INPUT STYLING */
         .single-range-input { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; width: 210px; text-align: center; }
-
+        .holiday-dropdown { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; }
+        
         .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
         
         .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease; }
         .card:hover { transform: translateY(-1px); }
         
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
         .badge-online { background: #dcfce7; color: #15803d; }
-        .badge-offline { background: #f1f5f9; color: #64748b; }
+        .online-dot { width: 8px; height: 8px; background-color: #22c55e; border-radius: 50%; display: inline-block; }
         
         .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
         .btn-success:hover { background: #15803d; }
@@ -218,6 +116,20 @@
         .btn-refresh-top:hover { background: #1e293b; }
 
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
+
+        .attendance-header-card {
+            background: linear-gradient(135deg, #0f172a, #1e293b); color: white; padding: 24px;
+            border-radius: 14px; margin-bottom: 20px; box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.2);
+        }
+        .attendance-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; margin-bottom: 24px; }
+        .attendance-table th, .attendance-table td { padding: 12px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+        .attendance-table th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px; }
+        .status-select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 12px; outline: none; background: #fff; cursor: pointer; }
+
+        .summary-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .summary-card h4 { margin: 0 0 12px 0; font-size: 15px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; font-weight: 600; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 24px 32px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -244,43 +156,39 @@
 </head>
 <body>
 
-    <!-- MULTI-CLIENT COMPANY ADMIN LOGIN OVERLAY -->
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-icon">🏢</div>
             <h2>Company Admin Portal</h2>
             <p>Enter your Company Name and Master Admin Password to view your designated agents.</p>
-            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchloadify, Gslogisticsdispatch)">
+            <input type="text" id="adminCompanyInput" class="auth-input" placeholder="Company Name (e.g. dispatchloadify)">
             
-            <!-- PASSWORD FIELD WITH SHOW/HIDE TOGGLE ICON -->
             <div class="password-container">
-                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter master admin password..." onkeypress="handlePasswordKeypress(event)">
+                <input type="password" id="adminPasswordInput" class="auth-input" placeholder="Enter master password..." onkeypress="handlePasswordKeypress(event)">
                 <button type="button" class="eye-btn" id="togglePasswordBtn" onclick="togglePasswordVisibility()">👁️</button>
             </div>
 
             <button onclick="verifyAdminPassword()" class="auth-btn">Access Dashboard</button>
-            <div id="authErrorMsg" class="auth-error">Invalid Company Name or Master Password!</div>
+            <div id="authErrorMsg" class="auth-error">Invalid Company Name or Password!</div>
         </div>
     </div>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <!-- SUMMARY REPORT MODAL -->
     <div class="modal-overlay" id="summaryModal">
         <div class="modal-content">
-            <h3 style="margin-top:0; color:#0f172a; font-size:18px;">📋 Shift Automated Summary Report</h3>
+            <h3 style="margin-top:0; color:#0f172a; font-size:18px;">Shift Automated Summary Report</h3>
             <div id="modalSummaryBody" style="font-size:13px; color:#334155; line-height:1.6; margin-bottom:20px;">
                 Loading summary...
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="copySummaryText()" class="btn-info">📋 Copy Summary</button>
+                <button onclick="copySummaryText()" class="btn-info">Copy Summary</button>
                 <button onclick="closeSummaryModal()" class="filter-btn">Close</button>
             </div>
         </div>
     </div>
 
     <div class="admin-layout">
-        <!-- SIDEBAR -->
         <div class="sidebar" id="appSidebar">
             <div class="sidebar-brand">
                 <div>
@@ -292,17 +200,19 @@
             <div class="sidebar-menu">
                 <div class="menu-label">Navigation Menu</div>
                 <button onclick="switchTab('online')" id="tabOnline" class="nav-btn active">
-                    <span>👥</span> Live & Offline Users
+                    Online Users
                 </button>
                 <button onclick="switchTab('leaderboard')" id="tabLeaderboard" class="nav-btn">
-                    <span>🏆</span> Top Calling Leaderboard
+                    Top Calling Leaderboard
                 </button>
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
-                    <span>📋</span> Shift Reports & Ratios
+                    Shift Reports & Ratios
+                </button>
+                <button onclick="switchTab('attendance')" id="tabAttendance" class="nav-btn">
+                    Attendance Sheet
                 </button>
             </div>
 
-            <!-- LICENSE USAGE STATS WIDGET PLACED PROFESSIONALLY IN SIDEBAR BOTTOM -->
             <div class="sidebar-license-widget">
                 <div class="sidebar-license-title">
                     <span>License Status</span>
@@ -319,58 +229,34 @@
             </div>
         </div>
 
-        <!-- MAIN VIEW PORT -->
         <div class="main-wrapper">
             <div class="top-header">
                 <div class="header-title-wrapper">
                     <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-                    <div class="header-title" id="pageTitle">Live & Offline Users</div>
+                    <div class="header-title" id="pageTitle">Online Users</div>
                 </div>
                 <div class="header-actions">
                     <button onclick="openSummaryModal()" class="btn-info" id="summaryBtn" style="display: flex;">
-                        📊 Shift Summary
+                        Shift Summary
                     </button>
                     <button onclick="fetchAdminData()" class="btn-refresh-top">
                         <span>🔄</span> Refresh
                     </button>
-                    <!-- DELETE SELECTED USERS BUTTON -->
-                    <button onclick="deleteSelectedUsers()" id="deleteSelectedBtn" class="btn-danger" style="display: none; background: #ea580c;">
-                        🗑️ Delete Selected (<span id="selectedCount">0</span>)
-                    </button>
                     <button onclick="exportCSV()" id="exportBtn" class="btn-success" style="display: none;">
-                        📥 Export CSV
+                        Export CSV
                     </button>
                 </div>
             </div>
 
-            <!-- FILTERS FOR REPORTS & LEADERBOARD (Only Today & Last 7 Days) -->
             <div id="filterBar" class="filter-bar" style="display: none;">
                 <div class="filter-group">
-                    <span style="font-size: 12px; font-weight: 700; color: #0f172a;">📅 USA Date Filter:</span>
+                    <span style="font-size: 12px; font-weight: 700; color: #0f172a;">USA Date Filter:</span>
                     <button onclick="setDateFilterPreset('today')" id="presetToday" class="filter-btn active">Today (USA)</button>
                     <button onclick="setDateFilterPreset('week')" id="presetWeek" class="filter-btn">Last 7 Days</button>
                 </div>
                 <div class="filter-group" style="font-size: 12px; color: #64748b; font-weight: 600;">
                     <span>Custom Range / Single Date:</span>
-                    <!-- SINGLE MODERN CALENDAR INPUT -->
                     <input type="text" id="unifiedDateRangePicker" class="single-range-input" placeholder="Select date or range...">
-                </div>
-            </div>
-
-            <!-- FILTERS SPECIFICALLY FOR LIVE & OFFLINE USERS -->
-            <div id="onlineFilterBar" class="filter-bar">
-                <div class="filter-group" style="width: 100%; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                        <span style="font-size: 12px; font-weight: 700; color: #0f172a; width: 100%;">👤 User Status Filter:</span>
-                        <button onclick="setOnlineFilter('all')" id="statusAll" class="filter-btn">All Users</button>
-                        <button onclick="setOnlineFilter('online')" id="statusOnline" class="filter-btn active">🟢 Online Users</button>
-                        <button onclick="setOnlineFilter('offline')" id="statusOffline" class="filter-btn">⚪ Offline Users</button>
-                    </div>
-                    <!-- SELECT ALL CHECKBOX FOR CURRENT VIEW -->
-                    <div id="selectAllContainer" style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #0f172a; cursor: pointer;">
-                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAllUsers(this)" style="width: 16px; height: 16px; cursor: pointer;">
-                        <label for="selectAllCheckbox" style="cursor: pointer;">Select All</label>
-                    </div>
                 </div>
             </div>
 
@@ -380,29 +266,29 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs for Realtime Event Listeners -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <!-- Flatpickr JS for Single Calendar Date & Range Picker -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         const FIREBASE_DB_URL_1 = "https://data-scrapper-eddcf-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
+        // Updated Apps Script URL
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxWh78ovnePeaTmfMa1RrA-OEBZs4599m7mqI5WAb4UKCVmhfNzy5friOsylAnwwzJp8A/exec";
+
         let allowedUsers = {};
         const MASTER_ADMIN_PASS = "admin890";
 
         let currentClient = "";
         let activeTab = 'online';
-        let onlineFilterMode = 'online'; // DEFAULT ONLINE ONLY
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
         let calendarPicker = null;
         
-        let deletedUsersBlacklist = new Set();
-        let selectedUserNames = new Set(); // MULTI-SELECT USERS STORAGE
+        let cachedAttendanceData = [];
+        let cachedAgentList = [];
+        let selectedSummaryAgent = "";
 
-        // Fetch allowedUsers dynamically from all Firebase endpoints
         async function fetchAllowedUsersFromFirebase() {
             try {
                 let urls = [
@@ -422,28 +308,6 @@
             }
         }
 
-        function loadBlacklist() {
-            if (!currentClient) return;
-            try {
-                let saved = localStorage.getItem(`dl_blacklist_${currentClient}`);
-                if (saved) {
-                    let arr = JSON.parse(saved);
-                    deletedUsersBlacklist = new Set(arr);
-                } else {
-                    deletedUsersBlacklist = new Set();
-                }
-            } catch(e) {
-                deletedUsersBlacklist = new Set();
-            }
-        }
-
-        function saveBlacklist() {
-            if (!currentClient) return;
-            try {
-                localStorage.setItem(`dl_blacklist_${currentClient}`, JSON.stringify(Array.from(deletedUsersBlacklist)));
-            } catch(e) {}
-        }
-
         window.onload = async function() {
             await fetchAllowedUsersFromFirebase();
             let authOverlay = document.getElementById('authOverlay');
@@ -456,28 +320,20 @@
                 dateFormat: "Y-m-d",
                 defaultDate: [getUSACurrentDate(), getUSACurrentDate()],
                 onChange: function(selectedDates, dateStr, instance) {
-                    if (selectedDates.length === 2) {
-                        filterMode = 'custom';
+                    if (selectedDates.length >= 1) {
                         startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                        endDateStr = instance.formatDate(selectedDates[1], "Y-m-d");
+                        endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
                         
                         ['presetToday', 'presetWeek'].forEach(id => {
                             let b = document.getElementById(id);
                             if (b) b.classList.remove('active');
                         });
                         
-                        renderContent();
-                    } else if (selectedDates.length === 1) {
-                        filterMode = 'custom';
-                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                        endDateStr = startDateStr;
-                        
-                        ['presetToday', 'presetWeek'].forEach(id => {
-                            let b = document.getElementById(id);
-                            if (b) b.classList.remove('active');
-                        });
-                        
-                        renderContent();
+                        if (activeTab === 'attendance') {
+                            updateAttendanceTablesOnly();
+                        } else {
+                            renderContent();
+                        }
                     }
                 }
             });
@@ -503,17 +359,14 @@
             await fetchAllowedUsersFromFirebase();
             let userConfig = allowedUsers[companyInput];
             
-            // Sirf master password (admin890) hi allow hoga, company ka apna pass reject ho jayega
             let isValid = userConfig && (passInput === MASTER_ADMIN_PASS);
 
             if (isValid) {
                 currentClient = companyInput;
                 document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('brandTitle').innerText = currentClient.toUpperCase();
-                
                 document.getElementById('sidebarMaxLimit').innerText = userConfig.maxLaptops || "Unlimited";
 
-                loadBlacklist();
                 setDateFilterPreset('today');
                 fetchAdminData();
             } else {
@@ -547,7 +400,6 @@
         }
 
         let todayStr = getUSACurrentDate();
-        let filterMode = 'today';
         let startDateStr = todayStr;
         let endDateStr = todayStr;
 
@@ -582,30 +434,14 @@
                     let db = secondaryApp.database();
                     activeDatabases.push(db);
 
-                    // Sessions Listener
                     db.ref(`sessions/${currentClient}`).on('value', (snapshot) => {
                         let val = snapshot.val() || {};
                         if (index === 0) globalSessions = {};
                         globalSessions = { ...globalSessions, ...val };
-
-                        Object.keys(globalSessions).forEach(k => {
-                            let sObj = globalSessions[k];
-                            let name = sObj?.nickname || sObj?.name || k;
-                            if (deletedUsersBlacklist.has(name) || deletedUsersBlacklist.has(k)) {
-                                let lastActive = sObj?.timestamp || 0;
-                                if (Date.now() - lastActive < 120000) {
-                                    deletedUsersBlacklist.delete(name);
-                                    deletedUsersBlacklist.delete(k);
-                                    saveBlacklist();
-                                }
-                            }
-                        });
-
                         renderContent();
                         updateLicenseStatsWidget();
                     });
 
-                    // Shift Reports Listener
                     db.ref(`shift_reports/${currentClient}`).on('value', (snapshot) => {
                         let val = snapshot.val() || {};
                         if (index === 0) globalReports = {};
@@ -613,7 +449,6 @@
                         renderContent();
                     });
 
-                    // Call Logs Listener
                     db.ref(`call_logs/${currentClient}`).on('value', (snapshot) => {
                         let val = snapshot.val() || {};
                         if (index === 0) globalCallLogs = {};
@@ -634,16 +469,13 @@
             let maxLimit = allowedUsers[currentClient].maxLaptops || 0;
             let now = Date.now();
             let activeCount = 0;
-            const offlineThreshold = 60000; // 60 seconds
+            const offlineThreshold = 120000;
 
             if (globalSessions) {
                 Object.keys(globalSessions).forEach(k => {
                     let session = globalSessions[k];
-                    let name = session?.nickname || session?.name || k;
-                    if (!deletedUsersBlacklist.has(name) && !deletedUsersBlacklist.has(k)) {
-                        if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
-                            activeCount++;
-                        }
+                    if (session && session.timestamp && (now - session.timestamp < offlineThreshold)) {
+                        activeCount++;
                     }
                 });
             }
@@ -659,138 +491,6 @@
             }
         }
 
-        async function deleteUserRecord(userName) {
-            if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
-
-            deletedUsersBlacklist.add(userName);
-            selectedUserNames.delete(userName);
-            saveBlacklist();
-
-            try {
-                let promises = [];
-                
-                activeDatabases.forEach(db => {
-                    promises.push(db.ref(`sessions/${currentClient}/${userName}`).remove());
-                    promises.push(db.ref(`call_logs/${currentClient}/${userName}`).remove());
-                    promises.push(db.ref(`shift_reports/${currentClient}/${userName}`).remove());
-                });
-
-                const clientDbUrl = (allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) ? allowedUsers[currentClient].dbUrl : FIREBASE_DB_URL_1;
-                const urls = [clientDbUrl, FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
-                [...new Set(urls)].forEach(url => {
-                    promises.push(fetch(`${url}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }));
-                    promises.push(fetch(`${url}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }));
-                    promises.push(fetch(`${url}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }));
-                });
-
-                await Promise.allSettled(promises);
-
-                if (globalSessions) {
-                    Object.keys(globalSessions).forEach(k => {
-                        let s = globalSessions[k];
-                        if (k === userName || s?.nickname === userName || s?.name === userName) {
-                            delete globalSessions[k];
-                        }
-                    });
-                }
-                delete globalCallLogs[userName];
-                delete globalReports[userName];
-                
-                renderContent();
-                updateLicenseStatsWidget();
-                alert(`User "${userName}" has been successfully deleted.`);
-            } catch (err) {
-                console.error("Delete error:", err);
-                alert("Failed to delete user completely.");
-            }
-        }
-
-        function toggleUserSelection(userName, checkboxElem) {
-            if (checkboxElem.checked) {
-                selectedUserNames.add(userName);
-            } else {
-                selectedUserNames.delete(userName);
-            }
-            updateDeleteSelectedButtonState();
-        }
-
-        function toggleSelectAllUsers(masterCheckbox) {
-            let userCheckboxes = document.querySelectorAll('.user-checkbox');
-            userCheckboxes.forEach(cb => {
-                cb.checked = masterCheckbox.checked;
-                let uName = cb.getAttribute('data-username');
-                if (masterCheckbox.checked) {
-                    selectedUserNames.add(uName);
-                } else {
-                    selectedUserNames.delete(uName);
-                }
-            });
-            updateDeleteSelectedButtonState();
-        }
-
-        function updateDeleteSelectedButtonState() {
-            let delBtn = document.getElementById('deleteSelectedBtn');
-            let countSpan = document.getElementById('selectedCount');
-            if (selectedUserNames.size > 0) {
-                delBtn.style.display = 'flex';
-                countSpan.innerText = selectedUserNames.size;
-            } else {
-                delBtn.style.display = 'none';
-            }
-        }
-
-        async function deleteSelectedUsers() {
-            if (selectedUserNames.size === 0) return;
-            if (!confirm(`Are you sure you want to delete the selected user(s)?`)) return;
-
-            let usersToRemove = Array.from(selectedUserNames);
-            usersToRemove.forEach(userName => deletedUsersBlacklist.add(userName));
-            saveBlacklist();
-
-            try {
-                let promises = [];
-                usersToRemove.forEach(userName => {
-                    activeDatabases.forEach(db => {
-                        promises.push(db.ref(`sessions/${currentClient}/${userName}`).remove());
-                        promises.push(db.ref(`call_logs/${currentClient}/${userName}`).remove());
-                        promises.push(db.ref(`shift_reports/${currentClient}/${userName}`).remove());
-                    });
-
-                    const clientDbUrl = (allowedUsers[currentClient] && allowedUsers[currentClient].dbUrl) ? allowedUsers[currentClient].dbUrl : FIREBASE_DB_URL_1;
-                    const urls = [clientDbUrl, FIREBASE_DB_URL_1, FIREBASE_DB_URL_2, FIREBASE_DB_URL_3];
-                    [...new Set(urls)].forEach(url => {
-                        promises.push(fetch(`${url}sessions/${currentClient}/${userName}.json`, { method: 'DELETE' }));
-                        promises.push(fetch(`${url}call_logs/${currentClient}/${userName}.json`, { method: 'DELETE' }));
-                        promises.push(fetch(`${url}shift_reports/${currentClient}/${userName}.json`, { method: 'DELETE' }));
-                    });
-
-                    if (globalSessions) {
-                        Object.keys(globalSessions).forEach(k => {
-                            let s = globalSessions[k];
-                            if (k === userName || s?.nickname === userName || s?.name === userName) {
-                                delete globalSessions[k];
-                            }
-                        });
-                    }
-                    delete globalCallLogs[userName];
-                    delete globalReports[userName];
-                });
-
-                await Promise.allSettled(promises);
-                selectedUserNames.clear();
-                document.getElementById('deleteSelectedBtn').style.display = 'none';
-                let selectAllCb = document.getElementById('selectAllCheckbox');
-                if(selectAllCb) selectAllCb.checked = false;
-
-                renderContent();
-                updateLicenseStatsWidget();
-                alert("Selected user(s) have been successfully deleted.");
-            } catch (err) {
-                console.error("Bulk delete error:", err);
-                alert("Failed to delete selected users completely.");
-            }
-        }
-
         function switchTab(tab) {
             activeTab = tab;
             document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
@@ -800,52 +500,39 @@
             if(window.innerWidth <= 900) toggleSidebar();
 
             let filterBar = document.getElementById('filterBar');
-            let onlineFilterBar = document.getElementById('onlineFilterBar');
             let exportBtn = document.getElementById('exportBtn');
-            let deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+            let summaryBtn = document.getElementById('summaryBtn');
             let pageTitle = document.getElementById('pageTitle');
+            let container = document.getElementById('adminBodyContent');
+
+            filterBar.style.display = 'none';
+            exportBtn.style.display = 'none';
+            summaryBtn.style.display = 'flex';
 
             if (tab === 'online') {
-                pageTitle.innerText = "Live & Offline Users";
-                filterBar.style.display = 'none';
-                onlineFilterBar.style.display = 'flex';
-                exportBtn.style.display = 'none';
-                if(selectedUserNames.size > 0 && deleteSelectedBtn) deleteSelectedBtn.style.display = 'flex';
+                pageTitle.innerText = "Online Users";
+                renderContent();
             } else if (tab === 'leaderboard') {
                 pageTitle.innerText = "Top Calling Leaderboard";
                 filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
-                exportBtn.style.display = 'none';
-                if(deleteSelectedBtn) deleteSelectedBtn.style.display = 'none';
+                renderContent();
             } else if (tab === 'reports') {
                 pageTitle.innerText = "Shift Reports & Ratios (USA Time)";
                 filterBar.style.display = 'flex';
-                onlineFilterBar.style.display = 'none';
                 exportBtn.style.display = 'block';
-                exportBtn.innerText = "📥 Export CSV";
+                exportBtn.innerText = "Export CSV";
                 exportBtn.onclick = exportCSV;
-                if(deleteSelectedBtn) deleteSelectedBtn.style.display = 'none';
+                renderContent();
+            } else if (tab === 'attendance') {
+                pageTitle.innerText = "Agent Attendance Sheet";
+                filterBar.style.display = 'none';
+                summaryBtn.style.display = 'none';
+                if (container) container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance records...</p>`;
+                fetchAttendanceFromSheet();
             }
-            renderContent();
-        }
-
-        function setOnlineFilter(mode) {
-            onlineFilterMode = mode;
-            ['statusAll', 'statusOnline', 'statusOffline'].forEach(id => {
-                let b = document.getElementById(id);
-                if (b) b.classList.remove('active');
-            });
-            let activeBtn = document.getElementById('status' + mode.charAt(0).toUpperCase() + mode.slice(1));
-            if (activeBtn) activeBtn.classList.add('active');
-            
-            let selectAllCb = document.getElementById('selectAllCheckbox');
-            if(selectAllCb) selectAllCb.checked = false;
-
-            renderContent();
         }
 
         function setDateFilterPreset(preset) {
-            filterMode = preset;
             let currentUSAToday = getUSACurrentDate();
 
             ['presetToday', 'presetWeek'].forEach(id => {
@@ -867,13 +554,345 @@
                 calendarPicker.setDate([startDateStr, endDateStr], true);
             }
 
-            renderContent();
+            if (activeTab === 'attendance') {
+                updateAttendanceTablesOnly();
+            } else {
+                renderContent();
+            }
         }
 
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
             let dStr = dateVal.substring(0, 10);
             return dStr >= startDateStr && dStr <= endDateStr;
+        }
+
+        async function fetchAttendanceFromSheet() {
+            try {
+                // Cache-busting timestamp add kiya gaya hai taake browser purana response cache na kare
+                let cacheBuster = `&_t=${new Date().getTime()}`;
+                let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}${cacheBuster}`, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                let json = await res.json();
+                cachedAttendanceData = Array.isArray(json.records) ? json.records : (Array.isArray(json) ? json : []);
+                cachedAgentList = Array.isArray(json.agents) ? json.agents : [];
+                if (activeTab === 'attendance') renderAttendanceView();
+            } catch(e) { 
+                console.error("Attendance fetch error:", e);
+                cachedAttendanceData = [];
+                cachedAgentList = [];
+                if (activeTab === 'attendance') renderAttendanceView();
+            }
+        }
+
+        async function handleAddAgentForm(event) {
+            if (event) event.preventDefault();
+            let nameInput = document.getElementById('newAgentNameInput');
+            if (!nameInput) return;
+            let agentName = nameInput.value.trim();
+            if (!agentName) { alert("Please enter agent name!"); return; }
+
+            if (!cachedAgentList.includes(agentName)) {
+                cachedAgentList.push(agentName);
+                updateAttendanceTablesOnly();
+            }
+
+            let payload = {
+                company: currentClient,
+                action: "addAgent",
+                agentName: agentName
+            };
+
+            nameInput.value = "";
+
+            try {
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                setTimeout(fetchAttendanceFromSheet, 1000);
+            } catch (e) {
+                try {
+                    await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    setTimeout(fetchAttendanceFromSheet, 1000);
+                } catch(err) { console.error(err); }
+            }
+        }
+
+        async function removeAgentFromAttendance(agentName) {
+            if (!confirm(`Are you sure you want to remove "${agentName}" from Column D? Their past attendance records in Columns A, B, C will remain safe.`)) return;
+
+            cachedAgentList = cachedAgentList.filter(a => a !== agentName);
+            updateAttendanceTablesOnly();
+
+            let payload = {
+                company: currentClient,
+                action: "removeAgent",
+                agentName: agentName
+            };
+
+            try {
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                setTimeout(fetchAttendanceFromSheet, 1000);
+            } catch (e) {
+                try {
+                    await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    setTimeout(fetchAttendanceFromSheet, 1000);
+                } catch(err) { console.error(err); }
+            }
+        }
+
+        async function submitAttendance() {
+            let rows = document.querySelectorAll('.agent-attendance-row');
+            if (rows.length === 0) { alert("No agents available!"); return; }
+            let dateVal = document.getElementById('attDateInput').value;
+            let records = [];
+            
+            rows.forEach(r => {
+                let agentName = r.getAttribute('data-agent');
+                let status = r.querySelector('.attendance-status-select').value;
+                records.push({ date: dateVal, agentName: agentName, status: status });
+            });
+
+            let payload = {
+                company: currentClient,
+                action: "saveAttendance",
+                records: records
+            };
+
+            try {
+                let res = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                alert("Attendance submitted successfully!");
+                setTimeout(fetchAttendanceFromSheet, 1200);
+            } catch (e) {
+                try {
+                    await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    alert("Attendance submitted successfully!");
+                    setTimeout(fetchAttendanceFromSheet, 1200);
+                } catch(err) { alert("Failed to submit attendance."); }
+            }
+        }
+
+        function downloadAttendanceCSV() {
+            if (!cachedAttendanceData || cachedAttendanceData.length === 0) {
+                alert("No attendance data available to download!");
+                return;
+            }
+            let csv = "Date,Agent Name,Status\n";
+            cachedAttendanceData.forEach(row => {
+                if (isDateInRange(row.date)) {
+                    csv += `"${row.date}","${row.agentName}","${row.status}"\n`;
+                }
+            });
+            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${currentClient}_Attendance_${startDateStr}_to_${endDateStr}.csv`;
+            link.click();
+        }
+
+        function renderAttendanceView() {
+            let container = document.getElementById('adminBodyContent');
+            if(!container) return;
+            let curDate = getUSACurrentDate();
+
+            container.innerHTML = `
+                <div class="attendance-header-card">
+                    <h3 style="margin:0 0 8px 0; font-size:18px;">Daily Attendance</h3>
+                    <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance</p>
+                    
+                    <form onsubmit="handleAddAgentForm(event); return false;" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;">
+                        <input type="text" id="newAgentNameInput" class="auth-input" placeholder="Enter Agent Name" style="max-width:250px;margin-bottom:0;background:#fff;" autocomplete="off">
+                        <button type="submit" class="btn-info" style="padding:10px 16px;">Add Agent</button>
+                    </form>
+
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                        <input type="date" id="attDateInput" class="single-range-input" value="${curDate}" style="width: 180px;">
+                        <button type="button" onclick="submitAttendance()" class="btn-success">Submit Attendance</button>
+                    </div>
+                </div>
+
+                <h4 style="margin:20px 0 10px 0; font-size:15px; color:#0f172a;">Mark Attendance List:</h4>
+                <table class="attendance-table" style="margin-bottom:30px;">
+                    <thead><tr><th>Agent Name</th><th>Attendance Status</th><th style="text-align: right;">Action</th></tr></thead>
+                    <tbody id="attendanceRowsContainer"></tbody>
+                </table>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px 0;flex-wrap:wrap;gap:12px;background:#ffffff;padding:14px 18px;border:1px solid #e2e8f0;border-radius:10px;">
+                    <h4 style="margin:0; font-size:15px; color:#0f172a;">Summary & Filter Controls:</h4>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <select id="summaryAgentDropdown" class="holiday-dropdown" onchange="onSummaryAgentChange(this)" style="min-width: 160px;">
+                            <option value="" selected>-- Select Agent --</option>
+                            <option value="all">All Agents</option>
+                        </select>
+                        <input type="text" id="attendanceDateFilter" class="single-range-input" placeholder="Filter Date Range..." style="width: 180px;">
+                        <button type="button" onclick="downloadAttendanceCSV()" class="btn-success" style="padding: 7px 14px; font-size: 12px;">Download Sheet</button>
+                    </div>
+                </div>
+                <div id="attendanceSummaryCards" class="summary-cards-grid" style="margin-top: 16px;"></div>
+
+                <h4 style="margin: 20px 0 10px 0; font-size: 15px; color:#0f172a;">Attendance Records List:</h4>
+                <table class="attendance-table">
+                    <thead><tr><th>Date</th><th>Agent Name</th><th>Status</th></tr></thead>
+                    <tbody id="attendanceSummaryContainer"></tbody>
+                </table>`;
+
+            flatpickr("#attendanceDateFilter", {
+                mode: "range", dateFormat: "Y-m-d", defaultDate: [startDateStr, endDateStr],
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length >= 1) {
+                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
+                        endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
+                        updateAttendanceTablesOnly();
+                    }
+                }
+            });
+
+            updateAttendanceTablesOnly();
+        }
+
+        function onSummaryAgentChange(selectElem) {
+            selectedSummaryAgent = selectElem.value;
+            updateAttendanceTablesOnly();
+        }
+
+        function updateAttendanceTablesOnly() {
+            let tbody = document.getElementById('attendanceRowsContainer');
+            let summaryTbody = document.getElementById('attendanceSummaryContainer');
+            let cardsContainer = document.getElementById('attendanceSummaryCards');
+            let dropdownElem = document.getElementById('summaryAgentDropdown');
+            if(!tbody || !summaryTbody || !cardsContainer || !dropdownElem) return;
+
+            let sheetAgents = cachedAgentList.filter(a => a && !a.startsWith('dl_inst_'));
+
+            let currentVal = selectedSummaryAgent;
+            let dropdownHtml = `<option value="">-- Select Agent --</option><option value="all">All Agents</option>`;
+            sheetAgents.forEach(agent => {
+                let sel = (agent === currentVal) ? 'selected' : '';
+                dropdownHtml += `<option value="${agent}" ${sel}>${agent}</option>`;
+            });
+            dropdownElem.innerHTML = dropdownHtml;
+
+            let rowsHtml = "";
+            if (sheetAgents.length === 0) {
+                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found in Column D. Add an agent above.</td></tr>`;
+            } else {
+                sheetAgents.forEach(agent => {
+                    rowsHtml += `
+                        <tr class="agent-attendance-row" data-agent="${agent}">
+                            <td style="font-weight: 600; color: #0f172a;">${agent}</td>
+                            <td>
+                                <select class="status-select attendance-status-select">
+                                    <option value="Present">Present</option>
+                                    <option value="Absent">Absent</option>
+                                    <option value="Half Day">Half Day</option>
+                                    <option value="Leave">Leave</option>
+                                    <option value="Weekend">Weekend</option>
+                                </select>
+                            </td>
+                            <td style="text-align: right;"><button type="button" onclick="removeAgentFromAttendance('${agent}')" class="btn-danger" style="padding:4px 8px; font-size:10px;">Remove</button></td>
+                        </tr>`;
+                });
+            }
+            tbody.innerHTML = rowsHtml;
+
+            let filteredRows = cachedAttendanceData.filter(row => {
+                if (!row.agentName || row.agentName.startsWith('dl_inst_')) return false;
+                if (!startDateStr || !endDateStr) return true;
+                let rDate = String(row.date).substring(0, 10);
+                return (rDate >= startDateStr && rDate <= endDateStr);
+            });
+
+            let agentTotals = {};
+            sheetAgents.forEach(agent => {
+                agentTotals[agent] = { present: 0, absent: 0, halfday: 0, leave: 0, weekend: 0 };
+            });
+
+            filteredRows.forEach(row => {
+                let agent = row.agentName;
+                if (!agentTotals[agent]) agentTotals[agent] = { present: 0, absent: 0, halfday: 0, leave: 0, weekend: 0 };
+                let st = String(row.status).toLowerCase();
+                if (st.includes('present')) agentTotals[agent].present++;
+                else if (st.includes('absent')) agentTotals[agent].absent++;
+                else if (st.includes('half')) agentTotals[agent].halfday++;
+                else if (st.includes('leave')) agentTotals[agent].leave++;
+                else if (st.includes('weekend')) agentTotals[agent].weekend++;
+            });
+
+            let cardsHtml = "";
+            if (selectedSummaryAgent === "") {
+                cardsHtml = `<p style="color:#64748b; grid-column: 1 / -1; padding: 10px 0;">Please select an agent or "All Agents" from the dropdown above to view summary totals.</p>`;
+            } else if (selectedSummaryAgent === "all") {
+                Object.keys(agentTotals).forEach(agent => {
+                    let t = agentTotals[agent];
+                    cardsHtml += `
+                        <div class="summary-card">
+                            <h4>${agent}</h4>
+                            <div class="summary-row"><span>Presents:</span> <b style="color:#15803d">${t.present}</b></div>
+                            <div class="summary-row"><span>Absents:</span> <b style="color:#991b1b">${t.absent}</b></div>
+                            <div class="summary-row"><span>Half Days:</span> <b style="color:#b45309">${t.halfday}</b></div>
+                            <div class="summary-row"><span>Leaves:</span> <b style="color:#0369a1">${t.leave}</b></div>
+                            <div class="summary-row"><span>Weekends:</span> <b style="color:#7c3aed">${t.weekend}</b></div>
+                        </div>`;
+                });
+            } else {
+                let agent = selectedSummaryAgent;
+                let t = agentTotals[agent] || { present: 0, absent: 0, halfday: 0, leave: 0, weekend: 0 };
+                cardsHtml += `
+                    <div class="summary-card" style="max-width: 320px;">
+                        <h4>${agent}</h4>
+                        <div class="summary-row"><span>Presents:</span> <b style="color:#15803d">${t.present}</b></div>
+                        <div class="summary-row"><span>Absents:</span> <b style="color:#991b1b">${t.absent}</b></div>
+                        <div class="summary-row"><span>Half Days:</span> <b style="color:#b45309">${t.halfday}</b></div>
+                        <div class="summary-row"><span>Leaves:</span> <b style="color:#0369a1">${t.leave}</b></div>
+                        <div class="summary-row"><span>Weekends:</span> <b style="color:#7c3aed">${t.weekend}</b></div>
+                    </div>`;
+            }
+            cardsContainer.innerHTML = cardsHtml;
+
+            let summaryRowsHtml = "";
+            if (filteredRows.length === 0) {
+                summaryRowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No attendance records found for this date/range.</td></tr>`;
+            } else {
+                filteredRows.forEach(row => {
+                    let st = String(row.status).toLowerCase();
+                    let badgeStyle = "background:#f1f5f9;color:#64748b;";
+                    if (st.includes('present')) badgeStyle = "background:#dcfce7;color:#15803d;";
+                    else if (st.includes('absent')) badgeStyle = "background:#fee2e2;color:#991b1b;";
+                    else if (st.includes('half')) badgeStyle = "background:#fef3c7;color:#b45309;";
+                    else if (st.includes('leave')) badgeStyle = "background:#e0f2fe;color:#0369a1;";
+                    else if (st.includes('weekend')) badgeStyle = "background:#ede9fe;color:#7c3aed;";
+
+                    let cleanDate = String(row.date).substring(0, 10) || row.date;
+                    summaryRowsHtml += `
+                        <tr>
+                            <td style="font-weight: 600;">${cleanDate}</td>
+                            <td style="font-weight: 600;">${row.agentName}</td>
+                            <td><span class="badge" style="${badgeStyle}">${row.status}</span></td>
+                        </tr>`;
+                });
+            }
+            summaryTbody.innerHTML = summaryRowsHtml;
         }
 
         function openSummaryModal() {
@@ -885,7 +904,6 @@
 
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
             allAgents.forEach(name => {
-                if (deletedUsersBlacklist.has(name)) return;
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -900,11 +918,11 @@
             let topAgent = sortedAgents.length > 0 ? sortedAgents[0] : 'None';
 
             body.innerHTML = `
-                <b>🏢 Company:</b> ${currentClient.toUpperCase()}<br>
-                <b>📅 USA Shift Range:</b> ${startDateStr} to ${endDateStr}<br>
-                <b>📞 Total Calls:</b> ${totalCallsAll}<br>
-                <b>💰 Total Sales:</b> ${totalSalesAll}<br>
-                <b>🏆 Top Performer:</b> ${topAgent} (${agentSummary[topAgent]?.calls || 0} calls)<br>
+                <b>Company:</b> ${currentClient.toUpperCase()}<br>
+                <b>USA Shift Range:</b> ${startDateStr} to ${endDateStr}<br>
+                <b>Total Calls:</b> ${totalCallsAll}<br>
+                <b>Total Sales:</b> ${totalSalesAll}<br>
+                <b>Top Performer:</b> ${topAgent} (${agentSummary[topAgent]?.calls || 0} calls)<br>
             `;
             modal.style.display = 'flex';
         }
@@ -928,8 +946,6 @@
                     Object.keys(globalSessions).forEach(key => {
                         let sObj = globalSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
-                        if (deletedUsersBlacklist.has(name) || deletedUsersBlacklist.has(key)) return;
-                        
                         if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
                             uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
                         }
@@ -937,10 +953,10 @@
                 }
 
                 Object.keys(globalReports).forEach(n => { 
-                    if (!deletedUsersBlacklist.has(n) && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
                 });
                 Object.keys(globalCallLogs).forEach(n => { 
-                    if (!deletedUsersBlacklist.has(n) && !uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
+                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
                 });
 
                 let userKeys = Object.keys(uniqueUsers);
@@ -953,45 +969,39 @@
                 userKeys.forEach(nameKey => {
                     let uData = uniqueUsers[nameKey];
                     let displayName = uData.resolvedName || nameKey;
-                    if (deletedUsersBlacklist.has(displayName)) return;
-
                     let lastActiveTime = uData.lastActive || 0;
                     let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
 
-                    let inactiveMs = now - lastActiveTime;
-                    let inactiveMins = lastActiveTime ? Math.floor(inactiveMs / 60000) : 'Never Active';
-                    let idleText = isOnline ? (inactiveMins < 1 ? 'Active just now' : `${inactiveMins} mins idle`) : `Offline`;
-
-                    if (onlineFilterMode === 'online' && !isOnline) return;
-                    if (onlineFilterMode === 'offline' && isOnline) return;
+                    if (!isOnline) return;
 
                     renderedCount++;
-                    let badge = isOnline ? `<span class="badge badge-online">🟢 Online</span>` : `<span class="badge badge-offline">⚪ Offline</span>`;
-                    let formattedLastActive = lastActiveTime ? new Date(lastActiveTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
-                    let isChecked = selectedUserNames.has(displayName) ? 'checked' : '';
+                    
+                    let login12Hr = 'N/A';
+                    if (uData.loginTime) {
+                        let parsedDate = new Date(uData.loginTime);
+                        if (!isNaN(parsedDate)) {
+                            login12Hr = parsedDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                        } else {
+                            login12Hr = uData.loginTime;
+                        }
+                    }
                     
                     html += `
-                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${isOnline ? '#22c55e' : '#cbd5e1'}; width: 100%;">
+                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid #22c55e; width: 100%;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 8px;">
                                 <div style="display: flex; align-items: center; gap: 8px; word-break: break-all;">
-                                    <input type="checkbox" class="user-checkbox" data-username="${displayName.replace(/"/g, '&quot;')}" ${isChecked} onchange="toggleUserSelection('${displayName.replace(/'/g, "\\'")}', this)" style="width: 16px; height: 16px; cursor: pointer;">
-                                    <b style="font-size: 15px; color: #0f172a;">👤 ${displayName}</b>
+                                    <b style="font-size: 15px; color: #0f172a;">${displayName}</b>
                                 </div>
-                                ${badge}
+                                <span class="badge badge-online"><span class="online-dot"></span>Online</span>
                             </div>
-                            <div style="font-size: 12px; color: #64748b; display: flex; justify-content: space-between; width: 100%; gap: 8px; flex-wrap: wrap;">
-                                <span>Login: <b>${uData.loginTime || 'N/A'}</b></span>
-                                <span style="color: ${isOnline && inactiveMins > 10 ? '#dc2626' : '#64748b'};">Status: <b>${idleText}</b></span>
-                            </div>
-                            <div style="font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span>Last Active: ${formattedLastActive}</span>
-                                <button onclick="deleteUserRecord('${displayName.replace(/'/g, "\\'")}')" class="btn-danger">🗑️ Remove</button>
+                            <div style="font-size: 13px; color: #334155; width: 100%;">
+                                Login: <b style="color: #0f172a;">${login12Hr}</b>
                             </div>
                         </div>`;
                 });
 
                 if (renderedCount === 0) {
-                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No users match filter (${onlineFilterMode}).</p>`;
+                    container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No online users currently active.</p>`;
                     return;
                 }
                 container.innerHTML = html + `</div>`;
@@ -1004,7 +1014,6 @@
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allAgents.forEach(name => {
-                    if (deletedUsersBlacklist.has(name)) return;
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -1028,7 +1037,7 @@
                         let rawDate = filteredLogs[0].date;
                         if (rawDate) {
                             let dObj = new Date(rawDate);
-                            if (!isNaN(dObj)) latestTime = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                            if (!isNaN(dObj)) latestTime = dObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
                         }
                     }
                     agentLastCallTime[name] = latestTime;
@@ -1043,20 +1052,19 @@
 
                 let rank = 1;
                 sortedLeaderboard.forEach(name => {
-                    if (deletedUsersBlacklist.has(name)) return;
                     let calls = agentCallingStats[name];
                     let lastCall = agentLastCallTime[name];
                     let rankBadgeBg = rank === 1 ? '#f59e0b' : (rank === 2 ? '#94a3b8' : (rank === 3 ? '#b45309' : '#e2e8f0'));
-                    let rankIcon = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
+                    let rankText = rank === 1 ? '1' : (rank === 2 ? '2' : (rank === 3 ? '3' : `${rank}`));
 
                     html += `
                         <div class="card" style="border-left: 6px solid ${rank === 1 ? '#f59e0b' : '#0284c7'}; align-items: center; width: 100%;">
                             <div style="display: flex; align-items: center; gap: 14px;">
-                                <div style="font-size: 20px; font-weight: 800; background: ${rankBadgeBg}; color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">${rankIcon}</div>
+                                <div style="font-size: 16px; font-weight: 800; background: ${rankBadgeBg}; color: white; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">${rankText}</div>
                                 <div>
-                                    <b style="font-size: 16px; color: #0f172a;">👤 ${name}</b>
+                                    <b style="font-size: 16px; color: #0f172a;">${name}</b>
                                     <div style="font-size: 12px; color: #64748b; margin-top: 2px;">Company Agent</div>
-                                    <div style="font-size: 11px; color: #0284c7; font-weight: 600; margin-top: 3px;">🕒 Last Call: ${lastCall}</div>
+                                    <div style="font-size: 11px; color: #0284c7; font-weight: 600; margin-top: 3px;">Last Call: ${lastCall}</div>
                                 </div>
                             </div>
                             <div style="text-align: right;">
@@ -1074,7 +1082,6 @@
                 let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
                 allAgents.forEach(name => {
-                    if (deletedUsersBlacklist.has(name)) return;
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                     let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
@@ -1101,7 +1108,7 @@
                         let lastCallTime = 'N/A';
                         if (sortedDateLogs.length > 0 && sortedDateLogs[0].date) {
                             let dObj = new Date(sortedDateLogs[0].date);
-                            if (!isNaN(dObj)) lastCallTime = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                            if (!isNaN(dObj)) lastCallTime = dObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
                         }
 
                         finalLogs.forEach(l => {
@@ -1117,9 +1124,9 @@
                         html += `
                             <div class="card" style="flex-direction: column; align-items: flex-start; gap: 12px; border-left: 4px solid #16a34a; width: 100%;">
                                 <div style="display: flex; justify-content: space-between; width: 100%; flex-wrap: wrap; align-items: center;">
-                                    <b style="color: #0f172a; font-size: 15px;">👤 Agent: ${name}</b>
+                                    <b style="color: #0f172a; font-size: 15px;">Agent: ${name}</b>
                                     <div style="display: flex; gap: 8px; align-items: center;">
-                                        <span style="font-size: 11px; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 4px 8px; border-radius: 6px;">🕒 Last Call: ${lastCallTime}</span>
+                                        <span style="font-size: 11px; color: #0284c7; font-weight: 700; background: #e0f2fe; padding: 4px 8px; border-radius: 6px;">Last Call: ${lastCallTime}</span>
                                         <span style="font-size: 12px; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">USA Date: ${dateStr}</span>
                                     </div>
                                 </div>
@@ -1150,7 +1157,6 @@
             let allAgents = new Set([...Object.keys(globalCallLogs), ...Object.keys(globalReports)]);
 
             allAgents.forEach(name => {
-                if (deletedUsersBlacklist.has(name)) return;
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
                 let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
