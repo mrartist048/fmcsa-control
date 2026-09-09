@@ -274,8 +274,7 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        // Updated Apps Script URL provided by user
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHUXFt839U_v_lgoTt8z7MnKctRBZtSA9KneL1VVD3kgsleVUNyaDes6Ga96x57JPUuQ/exec";
+        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyHFaKK_h-KKylndBhZS7yuS32X1wDiNcJmPyDXpp12GvqHNKlDNmyB-T2nB93EOS14KA/exec";
 
         let allowedUsers = {};
         const MASTER_ADMIN_PASS = "admin890";
@@ -288,6 +287,7 @@
         let cachedAttendanceData = [];
         let cachedAgentList = [];
         let selectedSummaryAgent = "";
+        let isFetchingAttendance = false;
 
         async function fetchAllowedUsersFromFirebase() {
             try {
@@ -527,7 +527,9 @@
                 pageTitle.innerText = "Agent Attendance Sheet";
                 filterBar.style.display = 'none';
                 summaryBtn.style.display = 'none';
-                if (container) container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance records...</p>`;
+                if (container && cachedAgentList.length === 0) {
+                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance records...</p>`;
+                }
                 fetchAttendanceFromSheet();
             }
         }
@@ -568,17 +570,26 @@
         }
 
         async function fetchAttendanceFromSheet() {
+            if (isFetchingAttendance) return;
+            isFetchingAttendance = true;
             try {
                 let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
                 let json = await res.json();
-                cachedAttendanceData = Array.isArray(json.records) ? json.records : [];
-                cachedAgentList = Array.isArray(json.agents) ? json.agents : [];
-                if (activeTab === 'attendance') renderAttendanceView();
+                
+                if (json.agents && Array.isArray(json.agents)) {
+                    cachedAgentList = json.agents;
+                }
+                if (json.records && Array.isArray(json.records)) {
+                    cachedAttendanceData = json.records;
+                }
+                
+                if (activeTab === 'attendance') {
+                    renderAttendanceView();
+                }
             } catch(e) {
                 console.error("Google Sheet fetch error:", e);
-                cachedAttendanceData = [];
-                cachedAgentList = [];
-                if (activeTab === 'attendance') renderAttendanceView();
+            } finally {
+                isFetchingAttendance = false;
             }
         }
 
@@ -603,7 +614,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                setTimeout(fetchAttendanceFromSheet, 1000);
             } catch(err) { console.error(err); }
         }
 
@@ -621,7 +632,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                setTimeout(fetchAttendanceFromSheet, 1200);
+                setTimeout(fetchAttendanceFromSheet, 1000);
             } catch(err) { console.error(err); }
         }
 
@@ -646,10 +657,10 @@
                     body: JSON.stringify(payload)
                 });
                 alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1500);
+                setTimeout(fetchAttendanceFromSheet, 1200);
             } catch(err) { 
                 alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1500);
+                setTimeout(fetchAttendanceFromSheet, 1200);
             }
         }
 
@@ -676,57 +687,59 @@
             if(!container) return;
             let curDate = getUSACurrentDate();
 
-            container.innerHTML = `
-                <div class="attendance-header-card">
-                    <h3 style="margin:0 0 8px 0; font-size:18px;">Daily Attendance</h3>
-                    <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance</p>
-                    
-                    <form onsubmit="handleAddAgentForm(event); return false;" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;">
-                        <input type="text" id="newAgentNameInput" class="auth-input" placeholder="Enter Agent Name" style="max-width:250px;margin-bottom:0;background:#fff;" autocomplete="off">
-                        <button type="submit" class="btn-info" style="padding:10px 16px;">Add Agent</button>
-                    </form>
+            if (!document.getElementById('attendanceRowsContainer')) {
+                container.innerHTML = `
+                    <div class="attendance-header-card">
+                        <h3 style="margin:0 0 8px 0; font-size:18px;">Daily Attendance</h3>
+                        <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance</p>
+                        
+                        <form onsubmit="handleAddAgentForm(event); return false;" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;">
+                            <input type="text" id="newAgentNameInput" class="auth-input" placeholder="Enter Agent Name" style="max-width:250px;margin-bottom:0;background:#fff;" autocomplete="off">
+                            <button type="submit" class="btn-info" style="padding:10px 16px;">Add Agent</button>
+                        </form>
 
-                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-                        <input type="date" id="attDateInput" class="single-range-input" value="${curDate}" style="width: 180px;">
-                        <button type="button" onclick="submitAttendance()" class="btn-success">Submit Attendance</button>
+                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                            <input type="date" id="attDateInput" class="single-range-input" value="${curDate}" style="width: 180px;">
+                            <button type="button" onclick="submitAttendance()" class="btn-success">Submit Attendance</button>
+                        </div>
                     </div>
-                </div>
 
-                <h4 style="margin:20px 0 10px 0; font-size:15px; color:#0f172a;">Mark Attendance List:</h4>
-                <table class="attendance-table" style="margin-bottom:30px;">
-                    <thead><tr><th>Agent Name</th><th>Attendance Status</th><th style="text-align: right;">Action</th></tr></thead>
-                    <tbody id="attendanceRowsContainer"></tbody>
-                </table>
+                    <h4 style="margin:20px 0 10px 0; font-size:15px; color:#0f172a;">Mark Attendance List:</h4>
+                    <table class="attendance-table" style="margin-bottom:30px;">
+                        <thead><tr><th>Agent Name</th><th>Attendance Status</th><th style="text-align: right;">Action</th></tr></thead>
+                        <tbody id="attendanceRowsContainer"></tbody>
+                    </table>
 
-                <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px 0;flex-wrap:wrap;gap:12px;background:#ffffff;padding:14px 18px;border:1px solid #e2e8f0;border-radius:10px;">
-                    <h4 style="margin:0; font-size:15px; color:#0f172a;">Summary & Filter Controls:</h4>
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                        <select id="summaryAgentDropdown" class="holiday-dropdown" onchange="onSummaryAgentChange(this)" style="min-width: 160px;">
-                            <option value="" selected>-- Select Agent --</option>
-                            <option value="all">All Agents</option>
-                        </select>
-                        <input type="text" id="attendanceDateFilter" class="single-range-input" placeholder="Filter Date Range..." style="width: 180px;">
-                        <button type="button" onclick="downloadAttendanceCSV()" class="btn-success" style="padding: 7px 14px; font-size: 12px;">Download Sheet</button>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px 0;flex-wrap:wrap;gap:12px;background:#ffffff;padding:14px 18px;border:1px solid #e2e8f0;border-radius:10px;">
+                        <h4 style="margin:0; font-size:15px; color:#0f172a;">Summary & Filter Controls:</h4>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <select id="summaryAgentDropdown" class="holiday-dropdown" onchange="onSummaryAgentChange(this)" style="min-width: 160px;">
+                                <option value="" selected>-- Select Agent --</option>
+                                <option value="all">All Agents</option>
+                            </select>
+                            <input type="text" id="attendanceDateFilter" class="single-range-input" placeholder="Filter Date Range..." style="width: 180px;">
+                            <button type="button" onclick="downloadAttendanceCSV()" class="btn-success" style="padding: 7px 14px; font-size: 12px;">Download Sheet</button>
+                        </div>
                     </div>
-                </div>
-                <div id="attendanceSummaryCards" class="summary-cards-grid" style="margin-top: 16px;"></div>
+                    <div id="attendanceSummaryCards" class="summary-cards-grid" style="margin-top: 16px;"></div>
 
-                <h4 style="margin: 20px 0 10px 0; font-size: 15px; color:#0f172a;">Attendance Records List:</h4>
-                <table class="attendance-table">
-                    <thead><tr><th>Date</th><th>Agent Name</th><th>Status</th></tr></thead>
-                    <tbody id="attendanceSummaryContainer"></tbody>
-                </table>`;
+                    <h4 style="margin: 20px 0 10px 0; font-size: 15px; color:#0f172a;">Attendance Records List:</h4>
+                    <table class="attendance-table">
+                        <thead><tr><th>Date</th><th>Agent Name</th><th>Status</th></tr></thead>
+                        <tbody id="attendanceSummaryContainer"></tbody>
+                    </table>`;
 
-            flatpickr("#attendanceDateFilter", {
-                mode: "range", dateFormat: "Y-m-d", defaultDate: [startDateStr, endDateStr],
-                onChange: function(selectedDates, dateStr, instance) {
-                    if (selectedDates.length >= 1) {
-                        startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                        endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
-                        updateAttendanceTablesOnly();
+                flatpickr("#attendanceDateFilter", {
+                    mode: "range", dateFormat: "Y-m-d", defaultDate: [startDateStr, endDateStr],
+                    onChange: function(selectedDates, dateStr, instance) {
+                        if (selectedDates.length >= 1) {
+                            startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
+                            endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
+                            updateAttendanceTablesOnly();
+                        }
                     }
-                }
-            });
+                });
+            }
 
             updateAttendanceTablesOnly();
         }
