@@ -569,7 +569,7 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // Robust Google Sheet fetch using JSONP with auto-fallback
+        // JSONP fetch method for Google Sheet
         function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
@@ -609,20 +609,10 @@
                 if (script && script.parentNode) document.body.removeChild(script);
                 isFetchingAttendance = false;
                 
-                // Fallback: direct fetch check incase script tag blocked
-                fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}`)
-                    .then(res => res.json())
-                    .then(json => {
-                        if (json.agents) cachedAgentList = json.agents;
-                        if (json.records) cachedAttendanceData = json.records;
-                        if (activeTab === 'attendance') renderAttendanceView();
-                    })
-                    .catch(err => {
-                        let container = document.getElementById('adminBodyContent');
-                        if (container) {
-                            container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load from Google Sheet. Please ensure Apps Script deployment access is set to <b>"Anyone"</b>.</p>`;
-                        }
-                    });
+                let container = document.getElementById('adminBodyContent');
+                if (container) {
+                    container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load from Google Sheet. Please ensure Apps Script deployment access is set to <b>"Anyone"</b> and a <b>New Version</b> is deployed.</p>`;
+                }
             };
 
             document.body.appendChild(script);
@@ -1167,7 +1157,7 @@
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                let filteredLogs = Array.isArray(logs) ? logs.log.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let reps = globalReports[name] || [];
                 let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
