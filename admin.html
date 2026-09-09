@@ -569,11 +569,16 @@
 
         async function fetchAttendanceFromSheet() {
             try {
-                // Cache-busting timestamp add kiya gaya hai taake browser purana response cache na kare
-                let cacheBuster = `&_t=${new Date().getTime()}`;
+                // Anti-caching parameters to bypass normal browser cache permanently
+                let cacheBuster = `&_t=${new Date().getTime()}&nocache=true`;
                 let res = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}${cacheBuster}`, {
                     method: 'GET',
-                    cache: 'no-store'
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
+                    cache: 'reload'
                 });
                 let json = await res.json();
                 cachedAttendanceData = Array.isArray(json.records) ? json.records : (Array.isArray(json) ? json : []);
