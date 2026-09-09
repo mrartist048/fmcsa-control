@@ -93,24 +93,32 @@ function getCurrentShiftDateKey() {
     return `${uYear}-${uMonth}-${uDay}`;
 }
 
+// Check shift change and clear local temp data automatically
+function checkAndClearLocalStorageOnShiftChange() {
+    let currentShiftKey = getCurrentShiftDateKey();
+    let lastShiftKey = localStorage.getItem(`dl_shift_date_tracker_${currentClient}`);
+
+    if (lastShiftKey && lastShiftKey !== currentShiftKey) {
+        // Shift changed (3 AM crossed), clear temporary local storage data
+        console.log("New USA Shift detected! Clearing temporary local storage data...");
+        let keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            let key = localStorage.key(i);
+            // Temp keys ko target karo, login/client ko chhor kar
+            if (key && (key.includes('dl_call_logs_') || key.includes('dl_subj_') || key.includes('dl_body_'))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+    localStorage.setItem(`dl_shift_date_tracker_${currentClient}`, currentShiftKey);
+}
+
 async function performAutomaticDataCleanup() {
     if (!currentClient) return;
+    checkAndClearLocalStorageOnShiftChange();
     
-    let storageKey = `dl_call_logs_${currentClient}_${dispatcherNickname}`;
-    let callLogs = JSON.parse(localStorage.getItem(storageKey)) || [];
-    
-    // Current shift date key get karein (USA Timezone ke mutabiq)
     let currentShiftKey = getCurrentShiftDateKey();
-    
-    // Sirf current shift date ke logs filter karein taake refresh ya laptop band hone par 0 na ho
-    let filteredLogs = callLogs.filter(log => {
-        return log.shiftDate === currentShiftKey;
-    });
-
-    if (filteredLogs.length !== callLogs.length) {
-        localStorage.setItem(storageKey, JSON.stringify(filteredLogs));
-    }
-
     try {
         if (dispatcherNickname) {
             let safeUserKey = dispatcherNickname.replace(/[.#$\/\[\]]/g, "_");
@@ -167,7 +175,7 @@ function showPremiumNotification(message, duration = 4500) {
         </div>
     `;
     toast.style.cssText = `
-        position: fixed; top: -100px; right: 20px; background: #002d62; color: #ffffff; padding: 14px 22px; border-radius: 6px; font-family: sans-serif; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.25); border-left: 5px solid #17a2b8; z-index: 1000000; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s; opacity: 0;
+        position: fixed; top: -100px; right: 20px; background: #002d62; color: #ffffff; padding: 14px 22px; border-radius: 6px; font-family: sans-serif; font-size: 13px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.25); border-left: 5px solid #17a2b8; z-index: 100000; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s; opacity: 0;
     `;
     document.body.appendChild(toast);
     setTimeout(() => { toast.style.top = "20px"; toast.style.opacity = "1"; }, 100);
@@ -247,6 +255,9 @@ window.processLogin = async function() {
 
     localStorage.setItem("dl_logged_client", uInput);
     currentClient = uInput;
+
+    // Save Login data in IndexedDB
+    saveAppDataToIndexedDB("settings", { key: "client_login", value: uInput });
     
     let overlay = document.getElementById('dlLoginOverlay');
     if (overlay) overlay.remove();
@@ -255,17 +266,20 @@ window.processLogin = async function() {
 };
 
 function setupDispatcherIdentity() {
-    dispatcherNickname = localStorage.getItem(`dl_nick_${currentClient}`) || "";
-    if (!dispatcherNickname) {
-        let inputName = prompt("Welcome! Please enter your name (e.g., Nauman, Ali, Bilal):");
-        if (inputName && inputName.trim() !== "") {
-            dispatcherNickname = inputName.trim();
-        } else {
-            dispatcherNickname = "User_" + Math.floor(100 + Math.random() * 900);
+    // Check IndexedDB for Agent Name first
+    getAppDataFromIndexedDB("settings", "agent_nickname", function(savedNick) {
+        dispatcherNickname = savedNick || "";
+        if (!dispatcherNickname) {
+            let inputName = prompt("Welcome! Please enter your name (e.g., Nauman, Ali, Bilal):");
+            if (inputName && inputName.trim() !== "") {
+                dispatcherNickname = inputName.trim();
+            } else {
+                dispatcherNickname = "User_" + Math.floor(100 + Math.random() * 900);
+            }
+            saveAppDataToIndexedDB("settings", { key: "agent_nickname", value: dispatcherNickname });
         }
-        localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
-    }
-    injectNicknameProfileUI();
+        injectNicknameProfileUI();
+    });
 }
 
 // ====== PROFESSIONAL RIGHT-ALIGNED FLOATING UI & ROUNDED NAME BADGE ======
@@ -278,24 +292,21 @@ function injectNicknameProfileUI() {
     
     panel.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px;">
-            <!-- Today Calls Button on Right Side -->
-            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(245,158,11,0.25); transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
+            <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(245,158,11,0.25);" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
                 📞 Today Calls
             </button>
 
-            <!-- Fully Rounded Profile / Name Box on Right Side -->
             <div style="display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 30px; padding: 5px 14px 5px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); position: relative; cursor: pointer;" onclick="toggleAgentDropdown(event)">
-                <div style="width: 32px; height: 32px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">
-                    ${dispatcherNickname.charAt(0).toUpperCase()}
+                <div style="width: 32px; height: 32px; background: #002d62; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;" id="dlDispAvatarLetter">
+                    A
                 </div>
                 <div style="display: flex; flex-direction: column; text-align: left;">
                     <span style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Active Agent</span>
                     <span id="dlDispCurrentName" style="font-size: 13px; color: #0f172a; font-weight: bold; display: flex; align-items: center; gap: 4px;">
-                        ${dispatcherNickname} <span style="font-size: 9px; color: #64748b;">▼</span>
+                        Loading... <span style="font-size: 9px; color: #64748b;">▼</span>
                     </span>
                 </div>
 
-                <!-- Professional Right-Aligned Dropdown Menu -->
                 <div id="dlAgentDropdownMenu" style="display: none; position: absolute; top: 48px; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); width: 180px; z-index: 99999; padding: 6px 0; font-family: sans-serif;">
                     <div onclick="changeDispatcherName(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #334155; font-weight: 600; cursor: pointer;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">Edit Name</div>
                     <div onclick="openAdminPanelPrompt(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #334155; font-weight: 600; cursor: pointer;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">Admin Panel</div>
@@ -306,6 +317,14 @@ function injectNicknameProfileUI() {
         </div>
     `;
     heading.parentNode.insertBefore(panel, heading.nextSibling);
+    
+    // Update UI elements with dispatcherNickname once loaded
+    setTimeout(() => {
+        let nameSpan = document.getElementById('dlDispCurrentName');
+        let avatarDiv = document.getElementById('dlDispAvatarLetter');
+        if(nameSpan) nameSpan.innerHTML = `${dispatcherNickname} <span style="font-size: 9px; color: #64748b;">▼</span>`;
+        if(avatarDiv) avatarDiv.innerText = dispatcherNickname.charAt(0).toUpperCase();
+    }, 100);
 
     document.addEventListener('click', function(e) {
         let dropdown = document.getElementById('dlAgentDropdownMenu');
@@ -324,13 +343,15 @@ window.toggleAgentDropdown = function(e) {
 };
 
 window.changeDispatcherName = function() {
-    let oldName = localStorage.getItem(`dl_nick_${currentClient}`) || "";
+    let oldName = dispatcherNickname;
     let newName = prompt("Enter your new display name:", oldName);
     if (newName && newName.trim() !== "") {
         dispatcherNickname = newName.trim();
-        localStorage.setItem(`dl_nick_${currentClient}`, dispatcherNickname);
+        saveAppDataToIndexedDB("settings", { key: "agent_nickname", value: dispatcherNickname });
         let label = document.getElementById('dlDispCurrentName');
-        if (label) label.innerText = dispatcherNickname;
+        let avatarDiv = document.getElementById('dlDispAvatarLetter');
+        if (label) label.innerHTML = `${dispatcherNickname} <span style="font-size: 9px; color: #64748b;">▼</span>`;
+        if (avatarDiv) avatarDiv.innerText = dispatcherNickname.charAt(0).toUpperCase();
         updateActiveSessionData();
         window.location.reload();
     }
@@ -340,7 +361,6 @@ window.logoutUser = function() {
     let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
     localStorage.removeItem("dl_logged_client");
-    localStorage.removeItem(`dl_fixed_login_time_${currentClient}_${dispatcherNickname}`);
     window.location.reload();
 };
 
@@ -464,61 +484,73 @@ async function checkGlobalSessions() {
 
 window.addEventListener('beforeunload', function () {
     if (!currentClient) return;
-    if (typeof scraping !== 'undefined' && scraping && currentHistoryId) {
-        let currentRangeStr = window.activeScrapeRange || "1 - 100";
-        let backupObj = {
-            id: currentHistoryId,
-            date: new Date().toLocaleString('en-US', { hour12: true }),
-            range: currentRangeStr,
-            totalRecords: scrapedData.length,
-            status: "Interrupted (Auto-Saved)",
-            records: scrapedData
-        };
-        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        let idx = lsBackup.findIndex(r => r.id === currentHistoryId);
-        if (idx !== -1) lsBackup[idx] = backupObj;
-        else lsBackup.push(backupObj);
-        localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-    }
     let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
     navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
 });
 
+// ====== INDEXEDDB SETUP FOR HISTORY, FOLLOW-UPS & LOGIN ======
 let db;
 let currentHistoryId = null;
 let availableCategories = new Set();
 
-const request = indexedDB.open("DispatchLinkHistoryDB", 1);
+const request = indexedDB.open("DispatchLinkHistoryDB", 2);
 request.onupgradeneeded = function(e) {
     db = e.target.result;
     if (!db.objectStoreNames.contains("history")) {
         db.createObjectStore("history", { keyPath: "id", autoIncrement: true });
     }
+    if (!db.objectStoreNames.contains("followups")) {
+        db.createObjectStore("followups", { keyPath: "mc" });
+    }
+    if (!db.objectStoreNames.contains("settings")) {
+        db.createObjectStore("settings", { keyPath: "key" });
+    }
 };
+
 request.onsuccess = function(e) {
     db = e.target.result;
-    syncIndexedDBWithLocalStorage();
     injectHistoryUIFramework();
 };
 
-function syncIndexedDBWithLocalStorage() {
+function saveAppDataToIndexedDB(storeName, dataObj) {
     if (!db) return;
-    const tx = db.transaction("history", "readwrite");
-    const store = tx.objectStore("history");
-    const getAll = store.getAll();
-    
-    getAll.onsuccess = function() {
-        let dbRecords = getAll.result || [];
-        let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        
-        if (dbRecords.length === 0 && lsBackup.length > 0) {
-            lsBackup.forEach(item => {
-                store.put(item);
-            });
-        } else if (dbRecords.length > 0) {
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(dbRecords));
-        }
-    };
+    try {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.put(dataObj);
+    } catch(e) {
+        console.error("IndexedDB save error:", e);
+    }
+}
+
+function getAppDataFromIndexedDB(storeName, key, callback) {
+    if (!db) { callback(null); return; }
+    try {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const req = store.get(key);
+        req.onsuccess = function() {
+            callback(req.result ? req.result.value : null);
+        };
+        req.onerror = function() { callback(null); };
+    } catch(e) {
+        callback(null);
+    }
+}
+
+function getAllAppDataFromIndexedDB(storeName, callback) {
+    if (!db) { callback([]); return; }
+    try {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const req = store.getAll();
+        req.onsuccess = function() {
+            callback(req.result || []);
+        };
+        req.onerror = function() { callback([]); };
+    } catch(e) {
+        callback([]);
+    }
 }
 
 const DEFAULT_REMARKS_TEMPLATE = 
@@ -1330,24 +1362,25 @@ window.addLeadToFollowUpList = function(index, buttonElement) {
     let record = scrapedData[index];
     if (!record) return;
 
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    if (followUpStore.some(r => r.mc === record.mc)) {
-        return alert("This carrier is already added to your Follow-Up list.");
-    }
-    
-    pendingFollowUpIndex = index;
-    pendingFollowUpRowBtn = buttonElement;
+    getAllAppDataFromIndexedDB("followups", function(followUpStore) {
+        if (followUpStore.some(r => r.mc === record.mc)) {
+            return alert("This carrier is already added to your Follow-Up list.");
+        }
+        
+        pendingFollowUpIndex = index;
+        pendingFollowUpRowBtn = buttonElement;
 
-    let todayDateStr = new Date().toISOString().split('T')[0];
-    let nowTimeStr = new Date().toTimeString().substring(0, 5);
+        let todayDateStr = new Date().toISOString().split('T')[0];
+        let nowTimeStr = new Date().toTimeString().substring(0, 5);
 
-    let dateInput = document.getElementById('dlModalDateInput');
-    let timeInput = document.getElementById('dlModalTimeInput');
-    if (dateInput) dateInput.value = todayDateStr;
-    if (timeInput) timeInput.value = nowTimeStr;
+        let dateInput = document.getElementById('dlModalDateInput');
+        let timeInput = document.getElementById('dlModalTimeInput');
+        if (dateInput) dateInput.value = todayDateStr;
+        if (timeInput) timeInput.value = nowTimeStr;
 
-    let modal = document.getElementById('dlDatePickerModal');
-    if (modal) modal.style.display = 'flex';
+        let modal = document.getElementById('dlDatePickerModal');
+        if (modal) modal.style.display = 'flex';
+    });
 };
 
 window.closeFollowUpModal = function() {
@@ -1375,9 +1408,7 @@ window.confirmFollowUpSchedule = function() {
     record.followUpTime = selectedTime ? formatTime12Hour(selectedTime) : "N/A";
     record.sharedBy = dispatcherNickname;
 
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    followUpStore.push(record);
-    localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
+    saveAppDataToIndexedDB("followups", record);
     
     showPremiumNotification(`Added MC ${record.mc} for Follow-Up on ${record.followUpDate}`, 3500);
     
@@ -1457,23 +1488,25 @@ window.clearFollowUpFilters = function() {
 
 window.deleteFollowUpItem = function(mcNumber) {
     if (confirm("Remove carrier from Follow-Ups?")) {
-        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-        followUpStore = followUpStore.filter(r => r.mc !== mcNumber);
-        localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(followUpStore));
-        renderFollowUpItems();
-        
-        let tableRows = document.querySelectorAll('#resultsTable tr');
-        tableRows.forEach(row => {
-            let cellMc = parseInt(row.cells[0]?.textContent);
-            if (cellMc === mcNumber) row.style.background = "";
-        });
+        const tx = db.transaction("followups", "readwrite");
+        const store = tx.objectStore("followups");
+        store.delete(mcNumber);
+        tx.oncomplete = function() {
+            renderFollowUpItems();
+            let tableRows = document.querySelectorAll('#resultsTable tr');
+            tableRows.forEach(row => {
+                let cellMc = parseInt(row.cells[0]?.textContent);
+                if (cellMc === mcNumber) row.style.background = "";
+            });
+        };
     }
 };
 
 window.downloadFollowUpsCSV = function() {
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    if (followUpStore.length === 0) return alert("The follow-up list is currently empty.");
-    triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
+    getAllAppDataFromIndexedDB("followups", function(followUpStore) {
+        if (followUpStore.length === 0) return alert("The follow-up list is currently empty.");
+        triggerCSVDownload(followUpStore, `DispatchLink_FollowUps_${dispatcherNickname}.csv`);
+    });
 };
 
 let pendingShareRecords = [];
@@ -1592,11 +1625,11 @@ window.shareSelectedFollowUpsToTeam = function() {
         return alert("Please select at least one follow-up record to share with your team.");
     }
 
-    let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
-    let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
-
-    openTeamShareModal(selectedRecords);
+    getAllAppDataFromIndexedDB("followups", function(followUpStore) {
+        let selectedMCs = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+        let selectedRecords = followUpStore.filter(r => selectedMCs.includes(r.mc));
+        openTeamShareModal(selectedRecords);
+    });
 };
 
 async function pollIncomingSharedLeads() {
@@ -1607,24 +1640,23 @@ async function pollIncomingSharedLeads() {
         let sharedLeads = await res.json() || [];
         if (!Array.isArray(sharedLeads) || sharedLeads.length === 0) return;
 
-        let localFollowUps = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-        let newLeadsAdded = false;
+        getAllAppDataFromIndexedDB("followups", async function(localFollowUps) {
+            let newLeadsAdded = false;
+            sharedLeads.forEach(lead => {
+                if (!localFollowUps.some(r => r.mc === lead.mc)) {
+                    saveAppDataToIndexedDB("followups", lead);
+                    newLeadsAdded = true;
+                }
+            });
 
-        sharedLeads.forEach(lead => {
-            if (!localFollowUps.some(r => r.mc === lead.mc)) {
-                localFollowUps.push(lead);
-                newLeadsAdded = true;
+            if (newLeadsAdded) {
+                showPremiumNotification(`You received new shared follow-up leads from your team!`, 5000);
+                if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
+                    renderFollowUpItems();
+                }
+                await fetch(inboxUrl, { method: 'DELETE' });
             }
         });
-
-        if (newLeadsAdded) {
-            localStorage.setItem(`dl_followups_${currentClient}`, JSON.stringify(localFollowUps));
-            showPremiumNotification(`You received new shared follow-up leads from your team!`, 5000);
-            if (document.getElementById('dlFollowUpDrawer') && document.getElementById('dlFollowUpDrawer').style.right === "0px") {
-                renderFollowUpItems();
-            }
-            await fetch(inboxUrl, { method: 'DELETE' });
-        }
     } catch (e) {
         console.error("Polling shared leads failed:", e);
     }
@@ -1636,108 +1668,109 @@ function renderFollowUpItems() {
     const listContainer = document.getElementById('drawerFollowUpList');
     if (!listContainer) return;
 
-    let data = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-    data = data.reverse(); 
+    getAllAppDataFromIndexedDB("followups", function(data) {
+        data = data.reverse(); 
 
-    let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
-    let todayDateStr = new Date().toISOString().split('T')[0];
+        let filterQuery = (document.getElementById('followUpSearchInput')?.value || "").toLowerCase().trim();
+        let todayDateStr = new Date().toISOString().split('T')[0];
 
-    if (data.length === 0) {
-        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
-        return;
-    }
-
-    let itemsHTML = "";
-    let matchCount = 0;
-
-    data.forEach(item => {
-        let fuDate = item.followUpDate || "N/A";
-        let fuTime = item.followUpTime || "N/A";
-
-        if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) {
+        if (data.length === 0) {
+            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No follow-up leads saved yet.</p>`;
             return;
         }
 
-        let mcString = (item.mc || "").toString().toLowerCase();
-        let nameString = (item.name || "").toLowerCase();
-        let phoneString = (item.phone || "").toLowerCase();
+        let itemsHTML = "";
+        let matchCount = 0;
 
-        if (filterQuery !== "") {
-            let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
-            if (!textMatches) return;
-        }
+        data.forEach(item => {
+            let fuDate = item.followUpDate || "N/A";
+            let fuTime = item.followUpTime || "N/A";
 
-        matchCount++;
-        let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Sent by: ${item.sharedBy}</span>` : "";
-
-        itemsHTML += `
-            <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
-                    <span>Saved: ${item.addedAt}</span>
-                    <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">${fuDate} @ ${fuTime}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
-                    ${senderTag}
-                </div>
-                <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
-                <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
-                <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
-                    <b>Remarks:</b> ${item.remarks || 'No remarks added'}
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
-                    <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Send</button>
-                    <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Drop</button>
-                </div>
-            </div>
-        `;
-    });
-
-    if (matchCount === 0) {
-        listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
-    } else {
-        listContainer.innerHTML = itemsHTML;
-    }
-
-    if (!document.getElementById('dlBulkFollowUpActionBar')) {
-        let actionBar = document.createElement('div');
-        actionBar.id = 'dlBulkFollowUpActionBar';
-        actionBar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; align-items: center; background: #e2eafc; padding: 6px; border-radius: 4px; font-size: 11px;";
-        actionBar.innerHTML = `
-            <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
-                <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
-            </label>
-            <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">Share Selected</button>
-        `;
-        listContainer.parentNode.insertBefore(actionBar, listContainer);
-    }
-
-    let itemDivs = listContainer.querySelectorAll('div[style*="border-left"]');
-    itemDivs.forEach((div, idx) => {
-        if (!div.querySelector('.followup-select-checkbox')) {
-            let record = data[idx];
-            if (!record) return;
-
-            let topHeader = div.querySelector('div');
-            if (topHeader) {
-                let checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'followup-select-checkbox';
-                checkbox.value = record.mc;
-                checkbox.style.cssText = "margin-right: 6px; cursor: pointer;";
-                topHeader.insertBefore(checkbox, topHeader.firstChild);
+            if (currentFollowUpFilterMode === 'today' && fuDate !== todayDateStr) {
+                return;
             }
 
-            let btnContainer = div.querySelector('div[style*="justify-content: flex-end"]');
-            if (btnContainer && !btnContainer.querySelector('.single-team-share-btn')) {
-                let teamBtn = document.createElement('button');
-                teamBtn.className = 'single-team-share-btn';
-                teamBtn.innerHTML = "Share";
-                teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
-                teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
-                btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
+            let mcString = (item.mc || "").toString().toLowerCase();
+            let nameString = (item.name || "").toLowerCase();
+            let phoneString = (item.phone || "").toLowerCase();
+
+            if (filterQuery !== "") {
+                let textMatches = mcString.includes(filterQuery) || nameString.includes(filterQuery) || phoneString.includes(filterQuery);
+                if (!textMatches) return;
             }
+
+            matchCount++;
+            let senderTag = item.sharedBy ? `<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Sent by: ${item.sharedBy}</span>` : "";
+
+            itemsHTML += `
+                <div style="background: #fdfdfd; border: 1px solid #e9ecef; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); font-family:sans-serif;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6c757d; font-weight: bold; margin-bottom: 4px;">
+                        <span>Saved: ${item.addedAt}</span>
+                        <span style="background: #e2eafc; color: #002d62; padding: 2px 6px; border-radius: 3px;">${fuDate} @ ${fuTime}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <div style="font-size: 14px; font-weight: bold; color: #002d62;">${item.name}</div>
+                        ${senderTag}
+                    </div>
+                    <div style="font-size: 12px; color:#333;"><b>MC:</b> ${item.mc} | <b>Phone:</b> ${item.phone || 'N/A'}</div>
+                    <div style="font-size: 12px; color:#333; margin-top:3px;"><b>Email:</b> ${item.email || 'N/A'}</div>
+                    <div style="font-size: 12px; color: #555; background: #f1f3f4; padding: 4px 6px; margin-top: 6px; border-radius: 3px; font-style:italic;">
+                        <b>Remarks:</b> ${item.remarks || 'No remarks added'}
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 5px; margin-top: 8px;">
+                        <button onclick="triggerOneClickEmailPitch('${item.email}', '${item.name.replace(/'/g, "\\'")}')" style="background: #17a2b8; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Send</button>
+                        <button onclick="deleteFollowUpItem(${item.mc})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">Drop</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        if (matchCount === 0) {
+            listContainer.innerHTML = `<p style="color: #6c757d; font-size: 13px; font-style: italic; text-align: center; margin-top: 30px;">No matching follow-up records found for ${currentFollowUpFilterMode === 'today' ? "Today" : "this filter"}.</p>`;
+        } else {
+            listContainer.innerHTML = itemsHTML;
         }
+
+        if (!document.getElementById('dlBulkFollowUpActionBar')) {
+            let actionBar = document.createElement('div');
+            actionBar.id = 'dlBulkFollowUpActionBar';
+            actionBar.style.cssText = "display: flex; gap: 6px; margin-bottom: 10px; align-items: center; background: #e2eafc; padding: 6px; border-radius: 4px; font-size: 11px;";
+            actionBar.innerHTML = `
+                <label style="cursor: pointer; font-weight: bold; color: #002d62; display: flex; align-items: center; gap: 4px;">
+                    <input type="checkbox" id="selectAllFollowUpsCheckbox" onclick="toggleSelectAllFollowUps(this)"> Select All
+                </label>
+                <button onclick="shareSelectedFollowUpsToTeam()" style="background: #002d62; color: white; border: none; padding: 4px 8px; font-weight: bold; border-radius: 3px; cursor: pointer; flex: 1;" title="Share Selected with Team">Share Selected</button>
+            `;
+            listContainer.parentNode.insertBefore(actionBar, listContainer);
+        }
+
+        let itemDivs = listContainer.querySelectorAll('div[style*="border-left"]');
+        itemDivs.forEach((div, idx) => {
+            if (!div.querySelector('.followup-select-checkbox')) {
+                let record = data[idx];
+                if (!record) return;
+
+                let topHeader = div.querySelector('div');
+                if (topHeader) {
+                    let checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'followup-select-checkbox';
+                    checkbox.value = record.mc;
+                    checkbox.style.cssText = "margin-right: 6px; cursor: pointer;";
+                    topHeader.insertBefore(checkbox, topHeader.firstChild);
+                }
+
+                let btnContainer = div.querySelector('div[style*="justify-content: flex-end"]');
+                if (btnContainer && !btnContainer.querySelector('.single-team-share-btn')) {
+                    let teamBtn = document.createElement('button');
+                    teamBtn.className = 'single-team-share-btn';
+                    teamBtn.innerHTML = "Share";
+                    teamBtn.style.cssText = "background: #002d62; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;";
+                    teamBtn.onclick = () => shareSingleFollowUpToTeam(record);
+                    btnContainer.insertBefore(teamBtn, btnContainer.firstChild);
+                }
+            }
+        });
     });
 }
 
@@ -1817,9 +1850,6 @@ function renderHistoryItems() {
     
     getAll.onsuccess = function() {
         let data = getAll.result || [];
-        if (data.length === 0) {
-            data = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-        }
         data = data.reverse();
 
         if (data.length === 0) {
@@ -1873,10 +1903,6 @@ window.loadHistorySheetToTable = async function(id) {
 
     req.onsuccess = async function() {
         let item = req.result;
-        if (!item) {
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            item = lsBackup.find(r => r.id === id);
-        }
         if (!item || !item.records) return;
         
         scrapedData = item.records; 
@@ -1905,37 +1931,37 @@ window.loadHistorySheetToTable = async function(id) {
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
         
-        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
+        getAllAppDataFromIndexedDB("followups", function(followUpStore) {
+            for (let index = 0; index < scrapedData.length; index++) {
+                let record = scrapedData[index];
+                let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+                let phoneCellHTML = buildPhoneCellMarkup(record.phone);
+                
+                let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+                let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
+                let activeRemarksValue = record.remarks || "";
 
-        for (let index = 0; index < scrapedData.length; index++) {
-            let record = scrapedData[index];
-            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
-            let phoneCellHTML = buildPhoneCellMarkup(record.phone);
-            
-            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
-            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
-            let activeRemarksValue = record.remarks || "";
-
-            tableBody.innerHTML += `<tr ${rowStyleHTML}>
-                <td><b>${record.mc}</b></td>
-                <td>${record.usdot}</td>
-                <td>${record.name}</td>
-                <td>${record.entityType}</td>
-                <td><span class="badge badge-active">${record.status}</span></td>
-                ${phoneCellHTML}
-                <td>${record.address}</td> 
-                ${emailCellHTML}
-                <td>${record.powerUnits}</td>
-                <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
-                <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
-                </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">Follow</button></td>
-            </tr>`;
-        }
-        populateStateDropdown();
-        populateVehicleTypeCheckboxes();
-        toggleHistoryDrawer(); 
+                tableBody.innerHTML += `<tr ${rowStyleHTML}>
+                    <td><b>${record.mc}</b></td>
+                    <td>${record.usdot}</td>
+                    <td>${record.name}</td>
+                    <td>${record.entityType}</td>
+                    <td><span class="badge badge-active">${record.status}</span></td>
+                    ${phoneCellHTML}
+                    <td>${record.address}</td> 
+                    ${emailCellHTML}
+                    <td>${record.powerUnits}</td>
+                    <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
+                    <td class="remarks-cell-container">
+                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                    </td>
+                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">Follow</button></td>
+                </tr>`;
+            }
+            populateStateDropdown();
+            populateVehicleTypeCheckboxes();
+            toggleHistoryDrawer(); 
+        });
     };
 };
 
@@ -1945,10 +1971,6 @@ window.resumeHistorySheet = async function(id) {
 
     req.onsuccess = async function() {
         let item = req.result;
-        if (!item) {
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            item = lsBackup.find(r => r.id === id);
-        }
         if (!item || !item.range) return;
 
         let parts = item.range.split('-');
@@ -1977,45 +1999,46 @@ window.resumeHistorySheet = async function(id) {
         const tableBody = document.getElementById('resultsTable');
         tableBody.innerHTML = '';
         
-        let followUpStore = JSON.parse(localStorage.getItem(`dl_followups_${currentClient}`)) || [];
-        for (let index = 0; index < scrapedData.length; index++) {
-            let record = scrapedData[index];
-            let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
-            let phoneCellHTML = buildPhoneCellMarkup(record.phone);
-            let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
-            let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
-            let activeRemarksValue = record.remarks || "";
+        getAllAppDataFromIndexedDB("followups", function(followUpStore) {
+            for (let index = 0; index < scrapedData.length; index++) {
+                let record = scrapedData[index];
+                let emailCellHTML = buildEmailCellMarkup(record.email, record.name);
+                let phoneCellHTML = buildPhoneCellMarkup(record.phone);
+                let isAlreadyFollowed = followUpStore.some(r => r.mc === record.mc);
+                let rowStyleHTML = isAlreadyFollowed ? `style="background: #d4edda;"` : '';
+                let activeRemarksValue = record.remarks || "";
 
-            tableBody.innerHTML += `<tr ${rowStyleHTML}>
-                <td><b>${record.mc}</b></td>
-                <td>${record.usdot}</td>
-                <td>${record.name}</td>
-                <td>${record.entityType}</td>
-                <td><span class="badge badge-active">${record.status}</span></td>
-                ${phoneCellHTML}
-                <td>${record.address}</td> 
-                ${emailCellHTML}
-                <td>${record.powerUnits}</td>
-                <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
-                <td class="remarks-cell-container">
-                    <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
-                </td>
-                <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">Follow</button></td>
-            </tr>`;
-        }
-        populateStateDropdown();
-        populateVehicleTypeCheckboxes();
-        toggleHistoryDrawer();
-        
-        let nextStartMc = startRange;
-        if (scrapedData.length > 0) {
-            let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
-            if (!isNaN(maxScannedMc) && maxScannedMc >= startRange) {
-                nextStartMc = maxScannedMc + 1;
+                tableBody.innerHTML += `<tr ${rowStyleHTML}>
+                    <td><b>${record.mc}</b></td>
+                    <td>${record.usdot}</td>
+                    <td>${record.name}</td>
+                    <td>${record.entityType}</td>
+                    <td><span class="badge badge-active">${record.status}</span></td>
+                    ${phoneCellHTML}
+                    <td>${record.address}</td> 
+                    ${emailCellHTML}
+                    <td>${record.powerUnits}</td>
+                    <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
+                    <td class="remarks-cell-container">
+                        <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${index}, this)" onblur="remarksBlur(${index}, this)" oninput="syncRemarksData(${index}, this)">${activeRemarksValue}</textarea>
+                    </td>
+                    <td><button onclick="addLeadToFollowUpList(${index}, this)" class="premium-followup-btn">Follow</button></td>
+                </tr>`;
             }
-        }
-        
-        startScraping(nextStartMc, endRange);
+            populateStateDropdown();
+            populateVehicleTypeCheckboxes();
+            toggleHistoryDrawer();
+            
+            let nextStartMc = startRange;
+            if (scrapedData.length > 0) {
+                let maxScannedMc = Math.max(...scrapedData.map(r => parseInt(r.mc)));
+                if (!isNaN(maxScannedMc) && maxScannedMc >= startRange) {
+                    nextStartMc = maxScannedMc + 1;
+                }
+            }
+            
+            startScraping(nextStartMc, endRange);
+        });
     };
 };
 
@@ -2025,10 +2048,6 @@ window.downloadHistoryCSV = function(id) {
     const req = store.get(id);
     req.onsuccess = function() {
         let item = req.result;
-        if (!item) {
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            item = lsBackup.find(r => r.id === id);
-        }
         let recordsList = item && item.records ? item.records : [];
         if (recordsList.length > 0) {
             triggerCSVDownload(recordsList, `History_MC_${item.range.replace(/\s+/g, '_')}.csv`);
@@ -2042,9 +2061,6 @@ window.deleteHistoryItem = function(id) {
         const store = tx.objectStore("history");
         store.delete(id);
         tx.oncomplete = function() {
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            lsBackup = lsBackup.filter(r => r.id !== id);
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
             renderHistoryItems();
         };
     }
@@ -2071,23 +2087,7 @@ function updateRealTimeHistory(recordsArray, isCompleted = false) {
             data.totalRecords = recordsArray.length;
             data.records = recordsArray;
             data.status = isCompleted ? "Completed" : "Interrupted (Auto-Saved)";
-            
             store.put(data);
-            
-            tx.oncomplete = function() {
-                let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-                let index = lsBackup.findIndex(r => r.id === currentHistoryId);
-                if (index !== -1) {
-                    lsBackup[index] = data;
-                } else {
-                    lsBackup.push(data);
-                }
-                localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-                
-                if (document.getElementById('dlHistoryDrawer') && document.getElementById('dlHistoryDrawer').style.right === "0px") {
-                    renderHistoryItems();
-                }
-            };
         }
     };
 }
@@ -2352,12 +2352,6 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
         const tx = db.transaction("history", "readwrite");
         const store = tx.objectStore("history");
         store.add(initialHistoryItem);
-        
-        tx.oncomplete = function() {
-            let lsBackup = JSON.parse(localStorage.getItem(`dl_history_backup_${currentClient}`)) || [];
-            lsBackup.push(initialHistoryItem);
-            localStorage.setItem(`dl_history_backup_${currentClient}`, JSON.stringify(lsBackup));
-        };
     }
 
     let effectiveStart = start;
