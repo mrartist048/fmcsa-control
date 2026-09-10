@@ -958,10 +958,11 @@ function updateCategoryCheckboxes() {
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
+    let wrapperDiv = table.closest('.table-responsive') || table.parentNode;
 
     let filterDiv = document.createElement('div');
     filterDiv.id = 'advancedFilterWrapper';
-    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;";
+    filterDiv.style.cssText = "background: #f4f7fe; padding: 12px 15px; margin: 12px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; width: 100%; box-sizing: border-box;";
     filterDiv.innerHTML = `
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; flex: 1;">
             <div style="display: flex; align-items: center; gap: 6px;">
@@ -993,7 +994,7 @@ function injectAdvancedFilterBar() {
             Showing: <span id="visibleRecordCountBadge">0</span> Records
         </div>
     `;
-    table.parentNode.insertBefore(filterDiv, table);
+    wrapperDiv.parentNode.insertBefore(filterDiv, wrapperDiv);
     populateStateDropdown();
     populateVehicleTypeCheckboxes();
 
@@ -1159,13 +1160,14 @@ function updateVisibleRecordCount() {
 function injectEmailProposalPanel() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('premiumProposalWrapper')) return;
+    let wrapperDiv = table.closest('.table-responsive') || table.parentNode;
 
     let savedSubject = localStorage.getItem(`dl_subj_${currentClient}`) || "Dispatch Service Proposal";
     let savedBody = localStorage.getItem(`dl_body_${currentClient}`) || "Hello,\n\nWe found your profile via FMCSA. We offer dispatching services at 5% rate.\n\nBest Regards.";
 
     let proposalPanel = document.createElement('div');
     proposalPanel.id = 'premiumProposalWrapper';
-    proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif;";
+    proposalPanel.style.cssText = "background: #f4f7fe; padding: 15px; margin: 15px 0; border: 1px solid #b6ccfe; border-radius: 6px; font-family: sans-serif; width: 100%; box-sizing: border-box;";
     proposalPanel.innerHTML = `
         <div onclick="document.getElementById('proposalInputsBlock').style.display = document.getElementById('proposalInputsBlock').style.display === 'none' ? 'block' : 'none';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
             <strong style="font-size: 13px; color: #002d62;">Setup Email Proposal Template</strong>
@@ -1177,7 +1179,7 @@ function injectEmailProposalPanel() {
             <button onclick="saveProposalTemplateSettings()" style="background: #002d62; color: white; border: none; padding: 6px 15px; font-size: 12px; border-radius: 4px; cursor: pointer;">Save Template</button>
         </div>
     `;
-    table.parentNode.insertBefore(proposalPanel, table);
+    wrapperDiv.parentNode.insertBefore(proposalPanel, wrapperDiv);
 }
 
 window.saveProposalTemplateSettings = function() {
