@@ -65,7 +65,7 @@ const usStatesMap = {
     "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"
 };
 
-// ====== AUTOMATIC SHIFT-BASED DATA CLEANUP & RESET (USA TIMEZONE) ======
+// ====== AUTOMATIC SHIFT-BASED DATA CLEANUP (USA TIMEZONE) ======
 function getCurrentShiftDateKey() {
     let now = new Date();
     let options = { timeZone: "America/New_York", year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false };
@@ -174,7 +174,7 @@ function showPremiumNotification(message, duration = 4500) {
     setTimeout(() => { toast.style.top = "-100px"; toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, duration);
 }
 
-// ====== PROFESSIONAL LOGIN SCREEN ======
+// ====== LOGIN SCREEN ======
 function renderLoginScreen() {
     if (document.getElementById('dlLoginOverlay')) return;
 
@@ -254,8 +254,9 @@ function setupDispatcherIdentity() {
             } else {
                 dispatcherNickname = "User_" + Math.floor(100 + Math.random() * 900);
             }
-            saveAppDataFromIndexedDB("settings", { key: "agent_nickname", value: dispatcherNickname });
+            saveAppDataToIndexedDB("settings", { key: "agent_nickname", value: dispatcherNickname });
         }
+        injectTopRightProfileUI();
     });
 }
 
@@ -444,15 +445,13 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Zip Code:\n" +
     "Summary:";
 
-// ====== PROFESSIONAL SIDEBAR & FULL DARK/LIGHT THEME ENGINE ======
+// ====== PROFESSIONAL SIDEBAR & THEME ENGINE ======
 function injectProfessionalSidebarUI() {
     document.title = "Dispatch Link | CRM";
 
-    // Theme state setup
     let savedTheme = localStorage.getItem("dl_app_theme") || "light";
     applyThemeMode(savedTheme, false);
 
-    // Hide original small buttons if any
     let oldHistBtn = document.getElementById('openHistoryBtn');
     let oldFuBtn = document.getElementById('openFollowUpDrawerBtn');
     if(oldHistBtn) oldHistBtn.remove();
@@ -492,7 +491,6 @@ function injectProfessionalSidebarUI() {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             }
 
-            /* Main Layout Adjustments for Sidebar */
             #dlMainSidebar {
                 position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
                 background: var(--dl-sidebar-bg); color: #ffffff; z-index: 99999;
@@ -508,10 +506,9 @@ function injectProfessionalSidebarUI() {
             @media (max-width: 900px) {
                 #dlMainSidebar { width: 70px; }
                 #dlMainSidebar .dl-sidebar-text, #dlMainSidebar .dl-brand-title { display: none; }
-                .dl-app-wrapper { margin-left: 70px; padding: 10px; }
+                .dl-app-wrapper { margin-left: 70px; padding: 15px; }
             }
 
-            .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 0 !important; }
             .table-responsive { width: 100% !important; overflow-x: auto !important; margin-bottom: 20px !important; border: 1px solid var(--dl-border) !important; border-radius: 8px !important; background: var(--dl-table-bg); }
             table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; color: var(--dl-text-color) !important; }
             table.table th, table.table td { padding: 12px 10px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; border-bottom: 1px solid var(--dl-border) !important; background: var(--dl-table-bg) !important; color: var(--dl-text-color) !important; }
@@ -539,9 +536,7 @@ function injectProfessionalSidebarUI() {
             .clickable-phone-text { color: var(--dl-primary); font-weight: bold; font-size: 12px; white-space: nowrap; }
             .phone-hover-copy-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0; transition: opacity 0.2s; cursor: pointer; background: var(--dl-card-bg); padding: 3px 5px; border-radius: 3px; border: 1px solid var(--dl-border); z-index: 5; }
             .phone-clickable-container:hover .phone-hover-copy-icon { opacity: 1; }
-            .phone-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -18px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
 
-            /* Universal Overrides for Complete Dark/Light Mode Sync */
             input, select, textarea {
                 background-color: var(--dl-input-bg) !important;
                 color: var(--dl-text-color) !important;
@@ -551,7 +546,7 @@ function injectProfessionalSidebarUI() {
         document.head.appendChild(styleTag);
     }
 
-    // Wrap body content inside app wrapper
+    // Wrap body contents properly inside standard fluid layout
     if (!document.getElementById('dlAppContentWrapper')) {
         let wrapper = document.createElement('div');
         wrapper.id = 'dlAppContentWrapper';
@@ -563,7 +558,7 @@ function injectProfessionalSidebarUI() {
         document.body.appendChild(wrapper);
     }
 
-    // Build Professional Sidebar
+    // Sidebar with Dispatch Link Logo & Title at Top
     if (!document.getElementById('dlMainSidebar')) {
         let sidebar = document.createElement('div');
         sidebar.id = 'dlMainSidebar';
@@ -573,7 +568,7 @@ function injectProfessionalSidebarUI() {
                 <span class="dl-brand-title" style="font-size: 18px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px;">Dispatch Link</span>
             </div>
             
-            <div style="flex: 1; padding: 15px 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto;">
+            <div style="flex: 1; padding: 15px 10px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto;">
                 <div onclick="toggleHistoryDrawer()" class="dl-sidebar-item" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
                     <span style="font-size: 16px;">📜</span>
                     <span class="dl-sidebar-text" style="font-size: 13px; font-weight: 600; color: #e2e8f0;">View History</span>
@@ -586,25 +581,79 @@ function injectProfessionalSidebarUI() {
                     <span style="font-size: 16px;">✉️</span>
                     <span class="dl-sidebar-text" style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Email Proposal</span>
                 </div>
+                <div onclick="openCallingDetailModal()" class="dl-sidebar-item" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
+                    <span style="font-size: 16px;">📞</span>
+                    <span class="dl-sidebar-text" style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Today Calls</span>
+                </div>
                 <div onclick="openSettingsModal()" class="dl-sidebar-item" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
                     <span style="font-size: 16px;">⚙️</span>
                     <span class="dl-sidebar-text" style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Settings</span>
                 </div>
             </div>
-
-            <div style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px;">
-                <button onclick="openCallingDetailModal()" style="background: #f59e0b; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">📞 Today Calls</button>
-                <button onclick="logoutUser()" style="background: #dc2626; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">🔒 Logout</button>
-            </div>
         `;
         document.body.insertBefore(sidebar, document.body.firstChild);
     }
 
-    // Inject Modals & Drawers Framework
     buildModalsAndDrawers();
     injectAdvancedFilterBar();
     injectEmailProposalPanel();
 }
+
+// ====== TOP RIGHT PROFILE & LOGOUT ======
+function injectTopRightProfileUI() {
+    let container = document.getElementById('dlTopProfileContainer');
+    if (container) container.remove();
+
+    let topBar = document.createElement('div');
+    topBar.id = 'dlTopProfileContainer';
+    topBar.style.cssText = "position: absolute; top: 20px; right: 30px; display: flex; align-items: center; gap: 12px; z-index: 99999; font-family: sans-serif;";
+    
+    topBar.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; background: var(--dl-card-bg); border: 1px solid var(--dl-border); border-radius: 30px; padding: 4px 14px 4px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); position: relative; cursor: pointer;" onclick="toggleAgentDropdown(event)">
+            <div style="width: 30px; height: 30px; background: var(--dl-primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;" id="dlDispAvatarLetter">
+                ${dispatcherNickname.charAt(0).toUpperCase()}
+            </div>
+            <div style="display: flex; flex-direction: column; text-align: left;">
+                <span style="font-size: 8px; color: var(--dl-text-muted); text-transform: uppercase; font-weight: bold;">Agent</span>
+                <span id="dlDispCurrentName" style="font-size: 12px; color: var(--dl-text-color); font-weight: bold;">
+                    ${dispatcherNickname} ▼
+                </span>
+            </div>
+
+            <div id="dlAgentDropdownMenu" style="display: none; position: absolute; top: 44px; right: 0; background: var(--dl-card-bg); border: 1px solid var(--dl-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); width: 160px; z-index: 99999; padding: 6px 0;">
+                <div onclick="openSettingsModal(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: var(--dl-text-color); font-weight: 600; cursor: pointer;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">Settings</div>
+                <div style="height: 1px; background: var(--dl-border); margin: 4px 0;"></div>
+                <div onclick="logoutUser(); event.stopPropagation();" style="padding: 10px 14px; font-size: 12px; color: #dc2626; font-weight: 600; cursor: pointer;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='transparent'">Logout</div>
+            </div>
+        </div>
+    `;
+    
+    let appWrapper = document.getElementById('dlAppContentWrapper') || document.body;
+    appWrapper.style.position = 'relative';
+    appWrapper.appendChild(topBar);
+
+    document.addEventListener('click', function(e) {
+        let dropdown = document.getElementById('dlAgentDropdownMenu');
+        if (dropdown && !e.target.closest('#dlTopProfileContainer')) {
+            dropdown.style.display = 'none';
+        }
+    });
+}
+
+window.toggleAgentDropdown = function(e) {
+    e.stopPropagation();
+    let dropdown = document.getElementById('dlAgentDropdownMenu');
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
+};
+
+window.logoutUser = function() {
+    let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
+    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
+    localStorage.removeItem("dl_logged_client");
+    window.location.reload();
+};
 
 // ====== THEME TOGGLER ENGINE ======
 window.applyThemeMode = function(theme, save = true) {
@@ -618,7 +667,7 @@ window.applyThemeMode = function(theme, save = true) {
     }
 };
 
-// ====== SETTINGS MODAL (Name Change & Dark/Light Toggle) ======
+// ====== SETTINGS MODAL ======
 function openSettingsModal() {
     let existing = document.getElementById('dlSettingsModal');
     if (existing) existing.remove();
@@ -721,7 +770,7 @@ function buildModalsAndDrawers() {
     }
 }
 
-// Ensure core helper elements & tables format properly
+// Table wrapper setup
 let coreTable = document.querySelector('table');
 if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
     let wrapperDiv = document.createElement('div');
@@ -730,7 +779,6 @@ if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
     wrapperDiv.appendChild(coreTable);
 }
 
-// Universal filter bar and proposal panel definitions as before
 function injectAdvancedFilterBar() {
     let table = document.querySelector('table');
     if (!table || document.getElementById('advancedFilterWrapper')) return;
@@ -793,7 +841,6 @@ window.saveProposalTemplateSettings = function() {
     document.getElementById('proposalInputsBlock').style.display = 'none';
 };
 
-// Toggle Drawers logic
 window.toggleHistoryDrawer = function() {
     let drawer = document.getElementById('dlHistoryDrawer');
     if (!drawer) return;
@@ -807,12 +854,3 @@ window.toggleFollowUpDrawer = function() {
     drawer.style.right = drawer.style.right === "0px" ? "-420px" : "0px";
     if (drawer.style.right === "0px") renderFollowUpItems();
 };
-
-window.logoutUser = function() {
-    let safeTabKey = tabUniqueId.replace(/[.#$\/\[\]]/g, "_");
-    navigator.sendBeacon(`${FIREBASE_DB_URL}sessions/${currentClient}/${safeTabKey}.json?_method=DELETE`);
-    localStorage.removeItem("dl_logged_client");
-    window.location.reload();
-};
-
-// Include other necessary table building, scraping, and follow-up handlers cleanly
