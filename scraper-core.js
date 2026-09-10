@@ -148,7 +148,7 @@ function showLimitExceededModal(message) {
     modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999999999; display: flex; align-items: center; justify-content: center; font-family: sans-serif;";
     
     modal.innerHTML = `
-        <div style="background: var(--dl-card-bg, #ffffff); color: var(--dl-text-color, #333); padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
+        <div style="background: var(--dl-card-bg); color: var(--dl-text-color); padding: 35px 30px; border-radius: 10px; width: 400px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); text-align: center; border-top: 6px solid #dc3545;">
             <div style="font-size: 42px; margin-bottom: 10px;">⚠️</div>
             <h2 style="color: #dc3545; margin-top: 0; margin-bottom: 10px; font-size: 22px;">License Limit Exceeded!</h2>
             <p style="font-size: 13px; line-height: 1.5; margin-bottom: 20px;">${message}</p>
@@ -445,7 +445,7 @@ const DEFAULT_REMARKS_TEMPLATE =
     "Zip Code:\n" +
     "Summary:";
 
-// ====== PROFESSIONAL SIDEBAR & THEME ENGINE ======
+// ====== SEAMLESS PROFESSIONAL SIDEBAR & FULL DARK/LIGHT THEME ENGINE ======
 function injectProfessionalSidebarUI() {
     document.title = "Dispatch Link | CRM";
 
@@ -470,7 +470,7 @@ function injectProfessionalSidebarUI() {
                 --dl-primary: #002d62;
                 --dl-sidebar-bg: #001a3a;
                 --dl-table-bg: #ffffff;
-                --dl-input-bg: #f8fafc;
+                --dl-input-bg: #ffffff;
             }
             [data-theme="dark"] {
                 --dl-bg: #0b0f19 !important;
@@ -499,13 +499,13 @@ function injectProfessionalSidebarUI() {
             }
 
             .dl-app-wrapper {
-                margin-left: 260px; padding: 25px; box-sizing: border-box; min-height: 100vh;
+                margin-left: 260px; padding: 30px; box-sizing: border-box; min-height: 100vh;
                 background: var(--dl-bg); color: var(--dl-text-color); transition: background 0.3s, color 0.3s;
             }
 
             @media (max-width: 900px) {
                 #dlMainSidebar { width: 70px; }
-                #dlMainSidebar .dl-sidebar-text, #dlMainSidebar .dl-brand-title { display: none; }
+                #dlMainSidebar .dl-sidebar-text, #dlMainSidebar .dl-brand-title, #dlMainSidebar .dl-dev-credit { display: none; }
                 .dl-app-wrapper { margin-left: 70px; padding: 15px; }
             }
 
@@ -546,7 +546,7 @@ function injectProfessionalSidebarUI() {
         document.head.appendChild(styleTag);
     }
 
-    // Wrap body contents properly inside standard fluid layout
+    // Wrap body contents properly inside full-width professional container
     if (!document.getElementById('dlAppContentWrapper')) {
         let wrapper = document.createElement('div');
         wrapper.id = 'dlAppContentWrapper';
@@ -558,7 +558,7 @@ function injectProfessionalSidebarUI() {
         document.body.appendChild(wrapper);
     }
 
-    // Sidebar with Dispatch Link Logo & Title at Top
+    // Professional Sidebar with Developer Credit at Bottom Footer
     if (!document.getElementById('dlMainSidebar')) {
         let sidebar = document.createElement('div');
         sidebar.id = 'dlMainSidebar';
@@ -589,6 +589,10 @@ function injectProfessionalSidebarUI() {
                     <span style="font-size: 16px;">⚙️</span>
                     <span class="dl-sidebar-text" style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Settings</span>
                 </div>
+            </div>
+
+            <div class="dl-dev-credit" style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.4;">
+                Developed by<br><strong style="color: #cbd5e1;">Mr. Nauman</strong><br>Ph: <span style="color: #38bdf8;">03700684849</span>
             </div>
         `;
         document.body.insertBefore(sidebar, document.body.firstChild);
@@ -688,7 +692,7 @@ function openSettingsModal() {
                 <input type="text" id="dlSettingsAgentName" value="${dispatcherNickname}" style="width: 100%; padding: 10px; font-size: 13px; border-radius: 6px; box-sizing: border-box;">
             </div>
 
-            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: var(--dl-input-bg); padding: 12px; border-radius: 6px;">
+            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: var(--dl-input-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--dl-border);">
                 <span style="font-size: 13px; font-weight: bold;">Dark Theme Mode</span>
                 <input type="checkbox" id="dlThemeToggleCheckbox" ${isDarkChecked} onchange="toggleThemeFromSettings(this)" style="width: 18px; height: 18px; cursor: pointer;">
             </div>
@@ -770,7 +774,6 @@ function buildModalsAndDrawers() {
     }
 }
 
-// Table wrapper setup
 let coreTable = document.querySelector('table');
 if (coreTable && !coreTable.parentNode.classList.contains('table-responsive')) {
     let wrapperDiv = document.createElement('div');
