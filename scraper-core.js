@@ -127,6 +127,7 @@ async function cleanupOldFirebaseData() {
             let sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             
+            // Sirf pichle 7 din ke andarkay logs ko filter kar ke rakhein
             let filteredLogs = remoteLogs.filter(log => {
                 if (!log.shiftDate) return false;
                 let logDate = new Date(log.shiftDate);
@@ -415,6 +416,8 @@ async function initializeAccessControl() {
     showPremiumNotification(`License Active: Verified for "${currentClient}" (Expires: ${clientConfig.expires})`);
 
     performAutomaticDataCleanup();
+    
+    // Firebase 7-days cleanup (allowedUsers safe rahega, IndexedDB untouched)
     cleanupOldFirebaseData();
 
     await checkGlobalSessions();
@@ -613,26 +616,23 @@ function injectHistoryUIFramework() {
         styleTag.id = 'dlResponsiveTheme';
         styleTag.innerHTML = `
             .container, .container-fluid { width: 100% !important; max-width: 100% !important; padding: 10px !important; box-sizing: border-box !important; }
-            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+            .table-responsive { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; margin-bottom: 20px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: #fff; }
             table.table { width: 100% !important; min-width: 1100px !important; border-collapse: collapse !important; }
-            table.table th { background: #002d62 !important; color: #ffffff !important; font-weight: 600 !important; border-bottom: 2px solid #001a3a !important; }
-            table.table tr:nth-child(even) { background-color: #f8fafc !important; }
-            table.table tr:hover { background-color: #f1f5f9 !important; }
-            table.table th, table.table td { padding: 12px 10px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; border-bottom: 1px solid #e2e8f0 !important; }
+            table.table th, table.table td { padding: 10px 8px !important; vertical-align: middle !important; text-align: left !important; font-size: 13px !important; white-space: nowrap !important; }
             table.table th:nth-child(4), table.table td:nth-child(4) { width: 90px !important; max-width: 90px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
             
             .remarks-cell-container { min-width: 250px !important; width: 260px !important; position: relative; white-space: normal !important; }
             .remarks-input-field { 
                 width: 100% !important; 
                 height: 38px !important; 
-                border: 1px solid #cbd5e1 !important; 
+                border: 1px solid #b6ccfe !important; 
                 border-radius: 6px !important; 
                 padding: 6px 10px !important; 
                 font-size: 12px !important; 
                 line-height: 1.4 !important;
                 box-sizing: border-box !important; 
-                color: #1e293b !important; 
-                background: #f8fafc !important; 
+                color: #222 !important; 
+                background: #fafafa !important; 
                 resize: none !important;
                 font-family: monospace !important;
                 overflow: hidden !important;
@@ -647,14 +647,14 @@ function injectHistoryUIFramework() {
                 box-shadow: 0 4px 10px rgba(0,45,98,0.15) !important; 
             }
             .premium-copy-badge { position: absolute; background: #28a745; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px; top: -15px; left: 50%; transform: translateX(-50%); z-index: 100; font-weight: bold; }
-            .premium-pitch-btn { display: inline-block; background: #0284c7; color: white; text-decoration: none; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 4px; border: none; margin-left: 5px; transition: background 0.2s; vertical-align: middle; box-shadow: 0 2px 4px rgba(2,132,199,0.2); }
-            .premium-pitch-btn:hover { background: #0369a1; }
-            .premium-followup-btn { display: inline-block; background: #f59e0b; color: #ffffff; text-decoration: none; font-size: 11px; font-weight: bold; padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-family: sans-serif; transition: background 0.2s; box-shadow: 0 2px 4px rgba(245,158,11,0.2); }
-            .premium-followup-btn:hover { background: #d97706; }
+            .premium-pitch-btn { display: inline-block; background: #17a2b8; color: white; text-decoration: none; font-size: 10px; font-weight: bold; padding: 4px 6px; border-radius: 3px; border: 1px solid #138496; margin-left: 5px; transition: background 0.2s; vertical-align: middle; }
+            .premium-pitch-btn:hover { background: #138496; }
+            .premium-followup-btn { display: inline-block; background: #ffc107; color: #212529; text-decoration: none; font-size: 10px; font-weight: bold; padding: 5px 8px; border-radius: 3px; border: 1px solid #e0a800; cursor: pointer; font-family: sans-serif; transition: background 0.2s; }
+            .premium-followup-btn:hover { background: #e0a800; }
             
             .phone-clickable-container { padding: 4px !important; text-align: center !important; position: relative !important; }
-            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; text-decoration: none !important; display: block; border-radius: 6px !important; transition: background 0.2s; }
-            .phone-clickable-cell:hover { background-color: #002d62 !important; }
+            .phone-clickable-cell { padding: 8px 10px !important; text-align: center !important; cursor: pointer !important; transition: none !important; text-decoration: none !important; display: block; border-radius: 6px !important; }
+            .phone-clickable-cell:hover { background-color: #001a3a !important; }
             .phone-clickable-cell:hover .clickable-phone-text { color: #ffffff !important; }
             .phone-clickable-cell.active-called-cell { background-color: #d1ecf1 !important; border: 1px solid #bee5eb !important; }
             .phone-clickable-cell.active-called-cell .clickable-phone-text { color: #0c5460 !important; font-weight: 900 !important; }
@@ -735,18 +735,14 @@ function injectHistoryUIFramework() {
         let historyBtn = document.createElement('button');
         historyBtn.id = 'openHistoryBtn';
         historyBtn.innerHTML = "📜 View History";
-        historyBtn.style.cssText = "background: linear-gradient(135deg, #002d62, #001a3a); color: white; border: none; padding: 10px 18px; font-size: 13px; font-weight: 600; font-family: sans-serif; border-radius: 6px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle; box-shadow: 0 4px 12px rgba(0,45,98,0.25); transition: all 0.2s;";
-        historyBtn.onmouseover = () => historyBtn.style.transform = 'translateY(-1px)';
-        historyBtn.onmouseout = () => historyBtn.style.transform = 'translateY(0)';
+        historyBtn.style.cssText = "background: #002d62; color: white; border: 1px solid #001a3a; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 10px; display: inline-block; vertical-align: middle;";
         historyBtn.onclick = (e) => { e.stopPropagation(); toggleHistoryDrawer(); };
         startBtn.parentNode.insertBefore(historyBtn, startBtn.nextSibling);
 
         let followUpBtn = document.createElement('button');
         followUpBtn.id = 'openFollowUpDrawerBtn';
         followUpBtn.innerHTML = "📅 View Follow-Ups";
-        followUpBtn.style.cssText = "background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 10px 18px; font-size: 13px; font-weight: 600; font-family: sans-serif; border-radius: 6px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle; box-shadow: 0 4px 12px rgba(2,132,199,0.25); transition: all 0.2s;";
-        followUpBtn.onmouseover = () => followUpBtn.style.transform = 'translateY(-1px)';
-        followUpBtn.onmouseout = () => followUpBtn.style.transform = 'translateY(0)';
+        followUpBtn.style.cssText = "background: #17a2b8; color: white; border: 1px solid #138496; padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: sans-serif; border-radius: 4px; cursor: pointer; margin-left: 8px; display: inline-block; vertical-align: middle;";
         followUpBtn.onclick = (e) => { e.stopPropagation(); toggleFollowUpDrawer(); };
         startBtn.parentNode.insertBefore(followUpBtn, historyBtn.nextSibling);
     }
@@ -990,7 +986,7 @@ function injectAdvancedFilterBar() {
             </div>
             <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px;">
                 <span style="font-size: 13px; font-weight: bold; color: #002d62;">Search:</span>
-                <input type="text" id="universalSearchInput" placeholder="Search MC or Company/Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()" onkeypress="handleUniversalSearchKeyPress(event)">
+                <input type="text" id="universalSearchInput" placeholder="Search by MC, Company Name, or Phone..." style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #b6ccfe; border-radius: 4px;" oninput="applyAdvancedFilters()">
             </div>
             <button onclick="resetAdvancedFilters()" style="background: #002d62; color: white; border: none; padding: 6px 14px; font-size: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">Reset</button>
         </div>
@@ -1089,59 +1085,6 @@ function populateVehicleTypeCheckboxes() {
     });
     container.innerHTML = html;
 }
-
-window.handleUniversalSearchKeyPress = async function(event) {
-    if (event.key === 'Enter') {
-        let query = (document.getElementById('universalSearchInput')?.value || "").trim();
-        // Check if query is an MC number (digits only)
-        if (/^\d+$/.test(query)) {
-            let targetMc = parseInt(query);
-            let exists = scrapedData.some(r => parseInt(r.mc) === targetMc);
-            if (!exists) {
-                showPremiumNotification(`MC ${targetMc} not in current list. Fetching from Safer...`, 3000);
-                let stBox = document.getElementById('status');
-                let result = await processSingleMCWithDetailedError(targetMc, stBox);
-                if (result.status === "success" && result.data) {
-                    let record = result.data;
-                    scrapedData.push(record);
-                    let recordIndex = scrapedData.length - 1;
-                    updateRealTimeHistory(scrapedData, false);
-                    updateCategoryCheckboxes();
-
-                    let emailCellMarkup = buildEmailCellMarkup(record.email, record.name);
-                    let phoneCellMarkup = buildPhoneCellMarkup(record.phone);
-                    let activeRemarksValue = record.remarks || "";
-
-                    const tableBody = document.getElementById('resultsTable');
-                    let newRow = document.createElement('tr');
-                    newRow.innerHTML = `
-                        <td><b>${record.mc}</b></td>
-                        <td>${record.usdot}</td>
-                        <td>${record.name}</td>
-                        <td>${record.entityType}</td>
-                        <td><span class="badge badge-active">${record.status}</span></td>
-                        ${phoneCellMarkup}
-                        <td>${record.address}</td>
-                        ${emailCellMarkup}
-                        <td>${record.powerUnits}</td>
-                        <td style="white-space: nowrap !important;"><b>${record.vehicleType || 'N/A'}</b></td>
-                        <td class="remarks-cell-container">
-                            <textarea class="remarks-input-field" placeholder="Click to add remarks..." onfocus="remarksFocus(${recordIndex}, this)" onblur="remarksBlur(${recordIndex}, this)" oninput="syncRemarksData(${recordIndex}, this)">${activeRemarksValue}</textarea>
-                        </td>
-                        <td><button onclick="addLeadToFollowUpList(${recordIndex}, this)" class="premium-followup-btn">Follow</button></td>
-                    `;
-                    tableBody.appendChild(newRow);
-                    populateStateDropdown();
-                    populateVehicleTypeCheckboxes();
-                    applyAdvancedFilters();
-                    showPremiumNotification(`MC ${targetMc} successfully fetched and added!`, 3000);
-                } else {
-                    alert(`Could not find record for MC ${targetMc} on Safer database.`);
-                }
-            }
-        }
-    }
-};
 
 window.applyAdvancedFilters = function() {
     let selectedState = (document.getElementById('stateDropdownSelect')?.value || "").toUpperCase().trim();
@@ -2403,6 +2346,8 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     scraping = true; 
     document.getElementById('startBtn').style.display = 'none';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'none';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('downloadBtn').style.display = 'none';
 
@@ -2515,7 +2460,7 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
         let mins = Math.floor(estimatedRemainingSeconds / 60);
         let secs = Math.floor(estimatedRemainingSeconds % 60);
-        let timeString = totalProcessed < 3 ? "Processing active data stream..." : `ETA: ${mins}m ${secs}s`;
+        let timeString = totalProcessed < 3 ? "Calculating ETA..." : `ETA: ${mins}m ${secs}s`;
         let degrees = percentage * 3.6;
 
         let latestErrorText = errorDetailsList.length > 0 ? `<span style="color:#d9534f; font-size:11px;" title="${errorDetailsList[errorDetailsList.length - 1]}">Retrying/Err</span>` : `<span style="color:#28a745; font-size:11px; font-weight:bold;">Status: Stable</span>`;
@@ -2544,6 +2489,8 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
 
     scraping = false;
     document.getElementById('startBtn').style.display = 'inline-block';
+    if(document.getElementById('openHistoryBtn')) document.getElementById('openHistoryBtn').style.display = 'inline-block';
+    if(document.getElementById('openFollowUpDrawerBtn')) document.getElementById('openFollowUpDrawerBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'none';
 
     if (statusBox) {
