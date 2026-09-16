@@ -2324,6 +2324,13 @@ window.startScraping = async function(overrideStart = null, overrideEnd = null) 
     const start = overrideStart !== null ? overrideStart : parseInt(document.getElementById('startMc').value);
     const end = overrideEnd !== null ? overrideEnd : parseInt(document.getElementById('endMc').value);
 
+    // FIX: Force immediate status update on Start click
+    let statusBox = document.getElementById('status');
+    if (statusBox) {
+        statusBox.style.display = "block";
+        statusBox.innerHTML = "<strong>Initializing scan and connecting to Safer Web...</strong>";
+    }
+
     if (isNaN(start) || isNaN(end) || start > end) {
         let stBox = document.getElementById('status');
         if (stBox) stBox.innerText = "Please enter a valid MC range.";
