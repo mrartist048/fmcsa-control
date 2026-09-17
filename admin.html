@@ -569,13 +569,13 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // FIXED JSONP METHOD TO BYPASS LIVE CORS RESTRICTIONS
+        // ROBUST JSONP METHOD WITH FETCH FALLBACK FOR LIVE DOMAIN
         function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
             let container = document.getElementById('adminBodyContent');
-            let callbackName = 'jsonp_sheet_cb_' + Math.round(100000 * Math.random());
+            let callbackName = 'jsonp_sheet_cb_' + Math.floor(Math.random() * 1000000);
             
             window[callbackName] = function(json) {
                 window[callbackName] = null;
@@ -608,18 +608,30 @@
                     delete window[callbackName];
                 }
                 if (script && script.parentNode) document.body.removeChild(script);
-                isFetchingAttendance = false;
                 
-                if (container) {
-                    container.innerHTML = `
-                        <div style="text-align:center; padding:40px;">
-                            <p style="color:#dc2626; font-weight:600; margin-bottom:10px;">Failed to load from Google Sheet.</p>
-                            <p style="color:#64748b; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
-                                Please ensure Apps Script deployment access is set to <b>"Anyone"</b> and a <b>New Version</b> is deployed.
-                            </p>
-                            <button onclick="fetchAttendanceFromSheet()" class="btn-info" style="margin: 0 auto;">Try Again</button>
-                        </div>`;
-                }
+                // Fallback to standard fetch if JSONP script tag fails
+                fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`)
+                    .then(res => res.json())
+                    .then(json => {
+                        cachedAgentList = (json && json.agents) ? json.agents : [];
+                        cachedAttendanceData = (json && json.records) ? json.records : [];
+                        isFetchingAttendance = false;
+                        if (activeTab === 'attendance') renderAttendanceView();
+                    })
+                    .catch(err => {
+                        console.error("Attendance fetch error:", err);
+                        isFetchingAttendance = false;
+                        if (container) {
+                            container.innerHTML = `
+                                <div style="text-align:center; padding:40px;">
+                                    <p style="color:#dc2626; font-weight:600; margin-bottom:10px;">Failed to load from Google Sheet.</p>
+                                    <p style="color:#64748b; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
+                                        Please ensure Apps Script deployment access is set to <b>"Anyone"</b> and a <b>New Version</b> is deployed.
+                                    </p>
+                                    <button onclick="fetchAttendanceFromSheet()" class="btn-info" style="margin: 0 auto;">Try Again</button>
+                                </div>`;
+                        }
+                    });
             };
 
             document.body.appendChild(script);
