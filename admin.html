@@ -569,18 +569,19 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // Fixed Direct Fetch Method for Google Sheet
-        async function fetchAttendanceFromSheet() {
+        // FIXED JSONP METHOD TO BYPASS LIVE CORS RESTRICTIONS
+        function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
             let container = document.getElementById('adminBodyContent');
+            let callbackName = 'jsonp_sheet_cb_' + Math.round(100000 * Math.random());
             
-            try {
-                let url = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`;
-                let response = await fetch(url);
-                let json = await response.json();
-
+            window[callbackName] = function(json) {
+                window[callbackName] = null;
+                delete window[callbackName];
+                if (script && script.parentNode) document.body.removeChild(script);
+                
                 if (json && json.agents && Array.isArray(json.agents)) {
                     cachedAgentList = json.agents;
                 } else {
@@ -596,8 +597,17 @@
                 if (activeTab === 'attendance') {
                     renderAttendanceView();
                 }
-            } catch (err) {
-                console.error("Attendance fetch error:", err);
+            };
+
+            let script = document.createElement('script');
+            script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
+            
+            script.onerror = function() {
+                if (window[callbackName]) {
+                    window[callbackName] = null;
+                    delete window[callbackName];
+                }
+                if (script && script.parentNode) document.body.removeChild(script);
                 isFetchingAttendance = false;
                 
                 if (container) {
@@ -610,7 +620,9 @@
                             <button onclick="fetchAttendanceFromSheet()" class="btn-info" style="margin: 0 auto;">Try Again</button>
                         </div>`;
                 }
-            }
+            };
+
+            document.body.appendChild(script);
         }
 
         async function handleAddAgentForm(event) {
