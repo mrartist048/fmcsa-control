@@ -569,54 +569,49 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // ROBUST JSONP METHOD WITH FETCH FALLBACK FOR LIVE DOMAIN
+        // ULTRA-ROBUST DUAL-METHOD ATTENDANCE FETCH (JSONP + PROXY/FALLBACK)
         function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
             let container = document.getElementById('adminBodyContent');
             let callbackName = 'jsonp_sheet_cb_' + Math.floor(Math.random() * 1000000);
-            
+            let requestCompleted = false;
+
             window[callbackName] = function(json) {
+                if (requestCompleted) return;
+                requestCompleted = true;
                 window[callbackName] = null;
                 delete window[callbackName];
                 if (script && script.parentNode) document.body.removeChild(script);
                 
-                if (json && json.agents && Array.isArray(json.agents)) {
-                    cachedAgentList = json.agents;
-                } else {
-                    cachedAgentList = [];
-                }
-                if (json && json.records && Array.isArray(json.records)) {
-                    cachedAttendanceData = json.records;
-                } else {
-                    cachedAttendanceData = [];
-                }
-                
-                isFetchingAttendance = false;
-                if (activeTab === 'attendance') {
-                    renderAttendanceView();
-                }
+                processAttendanceData(json);
             };
 
             let script = document.createElement('script');
             script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
             
             script.onerror = function() {
+                if (requestCompleted) return;
+                requestCompleted = true;
                 if (window[callbackName]) {
                     window[callbackName] = null;
                     delete window[callbackName];
                 }
                 if (script && script.parentNode) document.body.removeChild(script);
                 
-                // Fallback to standard fetch if JSONP script tag fails
-                fetch(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`)
+                // Fallback to CORS proxy if direct JSONP fails on live domain
+                let proxyUrl = `https://api.allorigins.win/get?url=` + encodeURIComponent(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
+                
+                fetch(proxyUrl)
                     .then(res => res.json())
-                    .then(json => {
-                        cachedAgentList = (json && json.agents) ? json.agents : [];
-                        cachedAttendanceData = (json && json.records) ? json.records : [];
-                        isFetchingAttendance = false;
-                        if (activeTab === 'attendance') renderAttendanceView();
+                    .then(data => {
+                        try {
+                            let json = JSON.parse(data.contents);
+                            processAttendanceData(json);
+                        } catch(e) {
+                            throw new Error("Parse error");
+                        }
                     })
                     .catch(err => {
                         console.error("Attendance fetch error:", err);
@@ -635,6 +630,31 @@
             };
 
             document.body.appendChild(script);
+
+            // Timeout safety in case script hangs
+            setTimeout(() => {
+                if (!requestCompleted && isFetchingAttendance) {
+                    script.onerror();
+                }
+            }, 8000);
+        }
+
+        function processAttendanceData(json) {
+            if (json && json.agents && Array.isArray(json.agents)) {
+                cachedAgentList = json.agents;
+            } else {
+                cachedAgentList = [];
+            }
+            if (json && json.records && Array.isArray(json.records)) {
+                cachedAttendanceData = json.records;
+            } else {
+                cachedAttendanceData = [];
+            }
+            
+            isFetchingAttendance = false;
+            if (activeTab === 'attendance') {
+                renderAttendanceView();
+            }
         }
 
         async function handleAddAgentForm(event) {
@@ -1195,7 +1215,7 @@
 
                 Object.keys(datesMap).forEach(dateStr => {
                     let finalLogs = datesMap[dateStr];
-                    let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
+                    let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do notCall": 0, "Follow up": 0, "Sale Closed": 0 };
                     finalLogs.forEach(l => {
                         let st = l.status || "Hung up";
                         if (counts[st] !== undefined) counts[st]++;
