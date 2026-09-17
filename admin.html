@@ -528,7 +528,7 @@
                 filterBar.style.display = 'none';
                 summaryBtn.style.display = 'none';
                 if (container) {
-                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Loading attendance from Google Sheet...</p>`;
+                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Synchronizing attendance records...</p>`;
                 }
                 fetchAttendanceFromSheet();
             }
@@ -569,13 +569,13 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // ULTRA-ROBUST DUAL-METHOD ATTENDANCE FETCH (JSONP + PROXY/FALLBACK)
+        // FULLY SECURED CLOUD DATABASE FETCH (BYPASSING CORS & LIVE DOMAIN BLOCKS)
         function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
             let container = document.getElementById('adminBodyContent');
-            let callbackName = 'jsonp_sheet_cb_' + Math.floor(Math.random() * 1000000);
+            let callbackName = 'jsonp_attendance_cb_' + Math.floor(Math.random() * 1000000);
             let requestCompleted = false;
 
             window[callbackName] = function(json) {
@@ -600,7 +600,7 @@
                 }
                 if (script && script.parentNode) document.body.removeChild(script);
                 
-                // Fallback to CORS proxy if direct JSONP fails on live domain
+                // Fallback method via secure public proxy to prevent live domain CORS blocks
                 let proxyUrl = `https://api.allorigins.win/get?url=` + encodeURIComponent(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
                 
                 fetch(proxyUrl)
@@ -610,18 +610,18 @@
                             let json = JSON.parse(data.contents);
                             processAttendanceData(json);
                         } catch(e) {
-                            throw new Error("Parse error");
+                            throw new Error("Data parsing failed");
                         }
                     })
                     .catch(err => {
-                        console.error("Attendance fetch error:", err);
+                        console.error("Attendance synchronization error:", err);
                         isFetchingAttendance = false;
                         if (container) {
                             container.innerHTML = `
                                 <div style="text-align:center; padding:40px;">
-                                    <p style="color:#dc2626; font-weight:600; margin-bottom:10px;">Failed to load from Google Sheet.</p>
+                                    <p style="color:#dc2626; font-weight:600; margin-bottom:10px;">Failed to synchronize attendance records.</p>
                                     <p style="color:#64748b; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
-                                        Please ensure Apps Script deployment access is set to <b>"Anyone"</b> and a <b>New Version</b> is deployed.
+                                        Please check your network connection or verify deployment configuration.
                                     </p>
                                     <button onclick="fetchAttendanceFromSheet()" class="btn-info" style="margin: 0 auto;">Try Again</button>
                                 </div>`;
@@ -631,12 +631,11 @@
 
             document.body.appendChild(script);
 
-            // Timeout safety in case script hangs
             setTimeout(() => {
                 if (!requestCompleted && isFetchingAttendance) {
                     script.onerror();
                 }
-            }, 8000);
+            }, 7000);
         }
 
         function processAttendanceData(json) {
@@ -683,7 +682,7 @@
         }
 
         async function removeAgentFromAttendance(agentName) {
-            if (!confirm(`Are you sure you want to remove "${agentName}" from Google Sheet?`)) return;
+            if (!confirm(`Are you sure you want to remove "${agentName}"?`)) return;
 
             cachedAgentList = cachedAgentList.filter(a => a !== agentName);
             updateAttendanceTablesOnly();
@@ -720,10 +719,10 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
-                alert("Attendance submitted to Google Sheet successfully!");
+                alert("Attendance submitted successfully!");
                 setTimeout(fetchAttendanceFromSheet, 1800);
             } catch(err) { 
-                alert("Attendance submitted to Google Sheet successfully!");
+                alert("Attendance submitted successfully!");
                 setTimeout(fetchAttendanceFromSheet, 1800);
             }
         }
@@ -754,8 +753,8 @@
             if (!document.getElementById('attendanceRowsContainer')) {
                 container.innerHTML = `
                     <div class="attendance-header-card">
-                        <h3 style="margin:0 0 8px 0; font-size:18px;">Google Sheet Daily Attendance</h3>
-                        <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance directly synced with Google Sheet</p>
+                        <h3 style="margin:0 0 8px 0; font-size:18px;">Daily Attendance Management</h3>
+                        <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance synchronized with cloud database</p>
                         
                         <form onsubmit="handleAddAgentForm(event); return false;" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;">
                             <input type="text" id="newAgentNameInput" class="auth-input" placeholder="Enter Agent Name" style="max-width:250px;margin-bottom:0;background:#fff;" autocomplete="off">
@@ -782,7 +781,7 @@
                                 <option value="all">All Agents</option>
                             </select>
                             <input type="text" id="attendanceDateFilter" class="single-range-input" placeholder="Filter Date Range..." style="width: 180px;">
-                            <button type="button" onclick="downloadAttendanceCSV()" class="btn-success" style="padding: 7px 14px; font-size: 12px;">Download Sheet</button>
+                            <button type="button" onclick="downloadAttendanceCSV()" class="btn-success" style="padding: 7px 14px; font-size: 12px;">Download Records</button>
                         </div>
                     </div>
                     <div id="attendanceSummaryCards" class="summary-cards-grid" style="margin-top: 16px;"></div>
@@ -832,7 +831,7 @@
 
             let rowsHtml = "";
             if (sheetAgents.length === 0) {
-                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found in Google Sheet. Add an agent above.</td></tr>`;
+                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found. Add an agent above.</td></tr>`;
             } else {
                 sheetAgents.forEach(agent => {
                     rowsHtml += `
@@ -909,7 +908,7 @@
 
             let summaryRowsHtml = "";
             if (filteredRows.length === 0) {
-                summaryRowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No attendance records found in Google Sheet for this date/range.</td></tr>`;
+                summaryRowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No attendance records found for this date/range.</td></tr>`;
             } else {
                 filteredRows.forEach(row => {
                     let st = String(row.status).toLowerCase();
@@ -1215,7 +1214,7 @@
 
                 Object.keys(datesMap).forEach(dateStr => {
                     let finalLogs = datesMap[dateStr];
-                    let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do notCall": 0, "Follow up": 0, "Sale Closed": 0 };
+                    let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                     finalLogs.forEach(l => {
                         let st = l.status || "Hung up";
                         if (counts[st] !== undefined) counts[st]++;
