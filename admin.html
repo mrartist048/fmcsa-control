@@ -569,18 +569,18 @@
             return dStr >= startDateStr && dStr <= endDateStr;
         }
 
-        // JSONP fetch method for Google Sheet
-        function fetchAttendanceFromSheet() {
+        // Fixed Direct Fetch Method for Google Sheet
+        async function fetchAttendanceFromSheet() {
             if (isFetchingAttendance) return;
             isFetchingAttendance = true;
 
-            let callbackName = 'jsonp_sheet_cb_' + Math.round(100000 * Math.random());
+            let container = document.getElementById('adminBodyContent');
             
-            window[callbackName] = function(json) {
-                window[callbackName] = null;
-                delete window[callbackName];
-                if (script && script.parentNode) document.body.removeChild(script);
-                
+            try {
+                let url = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`;
+                let response = await fetch(url);
+                let json = await response.json();
+
                 if (json && json.agents && Array.isArray(json.agents)) {
                     cachedAgentList = json.agents;
                 } else {
@@ -596,26 +596,21 @@
                 if (activeTab === 'attendance') {
                     renderAttendanceView();
                 }
-            };
-
-            let script = document.createElement('script');
-            script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
-            
-            script.onerror = function() {
-                if (window[callbackName]) {
-                    window[callbackName] = null;
-                    delete window[callbackName];
-                }
-                if (script && script.parentNode) document.body.removeChild(script);
+            } catch (err) {
+                console.error("Attendance fetch error:", err);
                 isFetchingAttendance = false;
                 
-                let container = document.getElementById('adminBodyContent');
                 if (container) {
-                    container.innerHTML = `<p style="text-align:center;color:#dc2626;padding:40px;">Failed to load from Google Sheet. Please ensure Apps Script deployment access is set to <b>"Anyone"</b> and a <b>New Version</b> is deployed.</p>`;
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:40px;">
+                            <p style="color:#dc2626; font-weight:600; margin-bottom:10px;">Failed to load from Google Sheet.</p>
+                            <p style="color:#64748b; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
+                                Please ensure Apps Script deployment access is set to <b>"Anyone"</b> and a <b>New Version</b> is deployed.
+                            </p>
+                            <button onclick="fetchAttendanceFromSheet()" class="btn-info" style="margin: 0 auto;">Try Again</button>
+                        </div>`;
                 }
-            };
-
-            document.body.appendChild(script);
+            }
         }
 
         async function handleAddAgentForm(event) {
@@ -1041,9 +1036,11 @@
                     agentLastCallTime[name] = latestTime;
                 });
 
-                let sortedLeaderboard = Object.keys(agentCallingStats).sort((a, b) => agentCallingStats[b] - agentCallingStats[a]);
+                let sortedLeaderboard = Object.keys(agentCallingStats)
+                    .filter(name => agentCallingStats[name] > 0)
+                    .sort((a, b) => agentCallingStats[b] - agentCallingStats[a]);
 
-                if (sortedLeaderboard.length === 0 || sortedLeaderboard.every(n => agentCallingStats[n] === 0)) {
+                if (sortedLeaderboard.length === 0) {
                     container.innerHTML = `<p style="color: #64748b; text-align: center; padding: 40px; font-style: italic;">No calling data found for the selected date range.</p>`;
                     return;
                 }
@@ -1157,7 +1154,7 @@
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = Array.isArray(logs) ? logs.log.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                 let reps = globalReports[name] || [];
                 let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
 
