@@ -92,7 +92,6 @@
         .filter-btn.active { background: #0284c7 !important; color: white !important; border-color: #0284c7 !important; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
 
         .single-range-input { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; width: 210px; text-align: center; }
-        .holiday-dropdown { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; }
         
         .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
         
@@ -109,27 +108,10 @@
         .btn-info { background: #0284c7; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
         .btn-info:hover { background: #0369a1; }
 
-        .btn-danger { background: #dc2626; color: white; border: none; padding: 6px 12px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
-        .btn-danger:hover { background: #b91c1c; }
-
         .btn-refresh-top { background: #0f172a; color: white; border: none; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
         .btn-refresh-top:hover { background: #1e293b; }
 
         .stat-chip { background: #f8fafc; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #f1f5f9; }
-
-        .attendance-header-card {
-            background: linear-gradient(135deg, #0f172a, #1e293b); color: white; padding: 24px;
-            border-radius: 14px; margin-bottom: 20px; box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.2);
-        }
-        .attendance-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; margin-bottom: 24px; }
-        .attendance-table th, .attendance-table td { padding: 12px 16px; text-align: left; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
-        .attendance-table th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px; }
-        .status-select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 12px; outline: none; background: #fff; cursor: pointer; }
-
-        .summary-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .summary-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .summary-card h4 { margin: 0 0 12px 0; font-size: 15px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-        .summary-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; font-weight: 600; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 24px 32px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -208,9 +190,6 @@
                 <button onclick="switchTab('reports')" id="tabReports" class="nav-btn">
                     Shift Reports & Ratios
                 </button>
-                <button onclick="switchTab('attendance')" id="tabAttendance" class="nav-btn">
-                    Attendance Sheet
-                </button>
             </div>
 
             <div class="sidebar-license-widget">
@@ -274,8 +253,6 @@
         const FIREBASE_DB_URL_2 = "https://data-scraper-2-default-rtdb.firebaseio.com/";
         const FIREBASE_DB_URL_3 = "https://data-scraper-3-default-rtdb.firebaseio.com/";
 
-        const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxv2hy5NRnOaNSNDnAXWzEp_Rc5Ia1asS4sCUQlNUuH8eAsYKkF_eGdk3nLP4J0JNeCxA/exec";
-
         let allowedUsers = {};
         const MASTER_ADMIN_PASS = "admin890";
 
@@ -283,11 +260,6 @@
         let activeTab = 'online';
         let globalSessions = {}, globalReports = {}, globalCallLogs = {};
         let calendarPicker = null;
-        
-        let cachedAttendanceData = [];
-        let cachedAgentList = [];
-        let selectedSummaryAgent = "";
-        let isFetchingAttendance = false;
 
         async function fetchAllowedUsersFromFirebase() {
             try {
@@ -329,11 +301,7 @@
                             if (b) b.classList.remove('active');
                         });
                         
-                        if (activeTab === 'attendance') {
-                            updateAttendanceTablesOnly();
-                        } else {
-                            renderContent();
-                        }
+                        renderContent();
                     }
                 }
             });
@@ -503,7 +471,6 @@
             let exportBtn = document.getElementById('exportBtn');
             let summaryBtn = document.getElementById('summaryBtn');
             let pageTitle = document.getElementById('pageTitle');
-            let container = document.getElementById('adminBodyContent');
 
             filterBar.style.display = 'none';
             exportBtn.style.display = 'none';
@@ -523,14 +490,6 @@
                 exportBtn.innerText = "Export CSV";
                 exportBtn.onclick = exportCSV;
                 renderContent();
-            } else if (tab === 'attendance') {
-                pageTitle.innerText = "Agent Attendance Sheet";
-                filterBar.style.display = 'none';
-                summaryBtn.style.display = 'none';
-                if (container) {
-                    container.innerHTML = `<p style="text-align:center;color:#64748b;padding:40px;">Synchronizing attendance records...</p>`;
-                }
-                fetchAttendanceFromSheet();
             }
         }
 
@@ -556,379 +515,13 @@
                 calendarPicker.setDate([startDateStr, endDateStr], true);
             }
 
-            if (activeTab === 'attendance') {
-                updateAttendanceTablesOnly();
-            } else {
-                renderContent();
-            }
+            renderContent();
         }
 
         function isDateInRange(dateVal) {
             if (!dateVal) return false;
             let dStr = String(dateVal).substring(0, 10);
             return dStr >= startDateStr && dStr <= endDateStr;
-        }
-
-        // FULLY SECURED CLOUD DATABASE FETCH (BYPASSING CORS & LIVE DOMAIN BLOCKS)
-        function fetchAttendanceFromSheet() {
-            if (isFetchingAttendance) return;
-            isFetchingAttendance = true;
-
-            let container = document.getElementById('adminBodyContent');
-            let callbackName = 'jsonp_attendance_cb_' + Math.floor(Math.random() * 1000000);
-            let requestCompleted = false;
-
-            window[callbackName] = function(json) {
-                if (requestCompleted) return;
-                requestCompleted = true;
-                window[callbackName] = null;
-                delete window[callbackName];
-                if (script && script.parentNode) document.body.removeChild(script);
-                
-                processAttendanceData(json);
-            };
-
-            let script = document.createElement('script');
-            script.src = `${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&callback=${callbackName}&_t=${new Date().getTime()}`;
-            
-            script.onerror = function() {
-                if (requestCompleted) return;
-                requestCompleted = true;
-                if (window[callbackName]) {
-                    window[callbackName] = null;
-                    delete window[callbackName];
-                }
-                if (script && script.parentNode) document.body.removeChild(script);
-                
-                // Fallback method via secure public proxy to prevent live domain CORS blocks
-                let proxyUrl = `https://api.allorigins.win/get?url=` + encodeURIComponent(`${GOOGLE_APPS_SCRIPT_URL}?company=${encodeURIComponent(currentClient)}&_t=${new Date().getTime()}`);
-                
-                fetch(proxyUrl)
-                    .then(res => res.json())
-                    .then(data => {
-                        try {
-                            let json = JSON.parse(data.contents);
-                            processAttendanceData(json);
-                        } catch(e) {
-                            throw new Error("Data parsing failed");
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Attendance synchronization error:", err);
-                        isFetchingAttendance = false;
-                        if (container) {
-                            container.innerHTML = `
-                                <div style="text-align:center; padding:40px;">
-                                    <p style="color:#dc2626; font-weight:600; margin-bottom:10px;">Failed to synchronize attendance records.</p>
-                                    <p style="color:#64748b; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
-                                        Please check your network connection or verify deployment configuration.
-                                    </p>
-                                    <button onclick="fetchAttendanceFromSheet()" class="btn-info" style="margin: 0 auto;">Try Again</button>
-                                </div>`;
-                        }
-                    });
-            };
-
-            document.body.appendChild(script);
-
-            setTimeout(() => {
-                if (!requestCompleted && isFetchingAttendance) {
-                    script.onerror();
-                }
-            }, 7000);
-        }
-
-        function processAttendanceData(json) {
-            if (json && json.agents && Array.isArray(json.agents)) {
-                cachedAgentList = json.agents;
-            } else {
-                cachedAgentList = [];
-            }
-            if (json && json.records && Array.isArray(json.records)) {
-                cachedAttendanceData = json.records;
-            } else {
-                cachedAttendanceData = [];
-            }
-            
-            isFetchingAttendance = false;
-            if (activeTab === 'attendance') {
-                renderAttendanceView();
-            }
-        }
-
-        async function handleAddAgentForm(event) {
-            if (event) event.preventDefault();
-            let nameInput = document.getElementById('newAgentNameInput');
-            if (!nameInput) return;
-            let agentName = nameInput.value.trim();
-            if (!agentName) { alert("Please enter agent name!"); return; }
-
-            if (!cachedAgentList.includes(agentName)) {
-                cachedAgentList.push(agentName);
-                updateAttendanceTablesOnly();
-            }
-            nameInput.value = "";
-
-            let payload = { company: currentClient, action: "addAgent", agentName: agentName };
-            try {
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                setTimeout(fetchAttendanceFromSheet, 1500);
-            } catch(err) { console.error(err); }
-        }
-
-        async function removeAgentFromAttendance(agentName) {
-            if (!confirm(`Are you sure you want to remove "${agentName}"?`)) return;
-
-            cachedAgentList = cachedAgentList.filter(a => a !== agentName);
-            updateAttendanceTablesOnly();
-
-            let payload = { company: currentClient, action: "removeAgent", agentName: agentName };
-            try {
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                setTimeout(fetchAttendanceFromSheet, 1500);
-            } catch(err) { console.error(err); }
-        }
-
-        async function submitAttendance() {
-            let rows = document.querySelectorAll('.agent-attendance-row');
-            if (rows.length === 0) { alert("No agents available!"); return; }
-            let dateVal = document.getElementById('attDateInput').value;
-            let records = [];
-            
-            rows.forEach(r => {
-                let agentName = r.getAttribute('data-agent');
-                let status = r.querySelector('.attendance-status-select').value;
-                records.push({ date: dateVal, agentName: agentName, status: status });
-            });
-
-            let payload = { company: currentClient, action: "saveAttendance", records: records };
-            try {
-                await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
-                alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1800);
-            } catch(err) { 
-                alert("Attendance submitted successfully!");
-                setTimeout(fetchAttendanceFromSheet, 1800);
-            }
-        }
-
-        function downloadAttendanceCSV() {
-            if (!cachedAttendanceData || cachedAttendanceData.length === 0) {
-                alert("No attendance data available to download!");
-                return;
-            }
-            let csv = "Date,Agent Name,Status\n";
-            cachedAttendanceData.forEach(row => {
-                if (isDateInRange(row.date)) {
-                    csv += `"${row.date}","${row.agentName}","${row.status}"\n`;
-                }
-            });
-            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `${currentClient}_Attendance_${startDateStr}_to_${endDateStr}.csv`;
-            link.click();
-        }
-
-        function renderAttendanceView() {
-            let container = document.getElementById('adminBodyContent');
-            if(!container) return;
-            let curDate = getUSACurrentDate();
-
-            if (!document.getElementById('attendanceRowsContainer')) {
-                container.innerHTML = `
-                    <div class="attendance-header-card">
-                        <h3 style="margin:0 0 8px 0; font-size:18px;">Daily Attendance Management</h3>
-                        <p style="margin:0 0 16px 0; font-size:13px; color:#94a3b8;">Manage agent attendance synchronized with cloud database</p>
-                        
-                        <form onsubmit="handleAddAgentForm(event); return false;" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;">
-                            <input type="text" id="newAgentNameInput" class="auth-input" placeholder="Enter Agent Name" style="max-width:250px;margin-bottom:0;background:#fff;" autocomplete="off">
-                            <button type="submit" class="btn-info" style="padding:10px 16px;">Add Agent</button>
-                        </form>
-
-                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-                            <input type="date" id="attDateInput" class="single-range-input" value="${curDate}" style="width: 180px;">
-                            <button type="button" onclick="submitAttendance()" class="btn-success">Submit Attendance</button>
-                        </div>
-                    </div>
-
-                    <h4 style="margin:20px 0 10px 0; font-size:15px; color:#0f172a;">Mark Attendance List:</h4>
-                    <table class="attendance-table" style="margin-bottom:30px;">
-                        <thead><tr><th>Agent Name</th><th>Attendance Status</th><th style="text-align: right;">Action</th></tr></thead>
-                        <tbody id="attendanceRowsContainer"></tbody>
-                    </table>
-
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px 0;flex-wrap:wrap;gap:12px;background:#ffffff;padding:14px 18px;border:1px solid #e2e8f0;border-radius:10px;">
-                        <h4 style="margin:0; font-size:15px; color:#0f172a;">Summary & Filter Controls:</h4>
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                            <select id="summaryAgentDropdown" class="holiday-dropdown" onchange="onSummaryAgentChange(this)" style="min-width: 160px;">
-                                <option value="" selected>-- Select Agent --</option>
-                                <option value="all">All Agents</option>
-                            </select>
-                            <input type="text" id="attendanceDateFilter" class="single-range-input" placeholder="Filter Date Range..." style="width: 180px;">
-                            <button type="button" onclick="downloadAttendanceCSV()" class="btn-success" style="padding: 7px 14px; font-size: 12px;">Download Records</button>
-                        </div>
-                    </div>
-                    <div id="attendanceSummaryCards" class="summary-cards-grid" style="margin-top: 16px;"></div>
-
-                    <h4 style="margin: 20px 0 10px 0; font-size: 15px; color:#0f172a;">Attendance Records List:</h4>
-                    <table class="attendance-table">
-                        <thead><tr><th>Date</th><th>Agent Name</th><th>Status</th></tr></thead>
-                        <tbody id="attendanceSummaryContainer"></tbody>
-                    </table>`;
-
-                flatpickr("#attendanceDateFilter", {
-                    mode: "range", dateFormat: "Y-m-d", defaultDate: [startDateStr, endDateStr],
-                    onChange: function(selectedDates, dateStr, instance) {
-                        if (selectedDates.length >= 1) {
-                            startDateStr = instance.formatDate(selectedDates[0], "Y-m-d");
-                            endDateStr = selectedDates.length === 2 ? instance.formatDate(selectedDates[1], "Y-m-d") : startDateStr;
-                            updateAttendanceTablesOnly();
-                        }
-                    }
-                });
-            }
-
-            updateAttendanceTablesOnly();
-        }
-
-        function onSummaryAgentChange(selectElem) {
-            selectedSummaryAgent = selectElem.value;
-            updateAttendanceTablesOnly();
-        }
-
-        function updateAttendanceTablesOnly() {
-            let tbody = document.getElementById('attendanceRowsContainer');
-            let summaryTbody = document.getElementById('attendanceSummaryContainer');
-            let cardsContainer = document.getElementById('attendanceSummaryCards');
-            let dropdownElem = document.getElementById('summaryAgentDropdown');
-            if(!tbody || !summaryTbody || !cardsContainer || !dropdownElem) return;
-
-            let sheetAgents = cachedAgentList.filter(a => a && !a.startsWith('dl_inst_'));
-
-            let currentVal = selectedSummaryAgent;
-            let dropdownHtml = `<option value="">-- Select Agent --</option><option value="all">All Agents</option>`;
-            sheetAgents.forEach(agent => {
-                let sel = (agent === currentVal) ? 'selected' : '';
-                dropdownHtml += `<option value="${agent}" ${sel}>${agent}</option>`;
-            });
-            dropdownElem.innerHTML = dropdownHtml;
-
-            let rowsHtml = "";
-            if (sheetAgents.length === 0) {
-                rowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No agents found. Add an agent above.</td></tr>`;
-            } else {
-                sheetAgents.forEach(agent => {
-                    rowsHtml += `
-                        <tr class="agent-attendance-row" data-agent="${agent}">
-                            <td style="font-weight: 600; color: #0f172a;">${agent}</td>
-                            <td>
-                                <select class="status-select attendance-status-select">
-                                    <option value="Present">Present</option>
-                                    <option value="Absent">Absent</option>
-                                    <option value="Half Day">Half Day</option>
-                                    <option value="Leave">Leave</option>
-                                    <option value="Weekend">Weekend</option>
-                                </select>
-                            </td>
-                            <td style="text-align: right;"><button type="button" onclick="removeAgentFromAttendance('${agent}')" class="btn-danger" style="padding:4px 8px; font-size:10px;">Remove</button></td>
-                        </tr>`;
-                });
-            }
-            tbody.innerHTML = rowsHtml;
-
-            let filteredRows = cachedAttendanceData.filter(row => {
-                if (!row.agentName || row.agentName.startsWith('dl_inst_')) return false;
-                if (!startDateStr || !endDateStr) return true;
-                let rDate = String(row.date).substring(0, 10);
-                return (rDate >= startDateStr && rDate <= endDateStr);
-            });
-
-            let agentTotals = {};
-            sheetAgents.forEach(agent => {
-                agentTotals[agent] = { present: 0, absent: 0, halfday: 0, leave: 0, weekend: 0 };
-            });
-
-            filteredRows.forEach(row => {
-                let agent = row.agentName;
-                if (!agentTotals[agent]) agentTotals[agent] = { present: 0, absent: 0, halfday: 0, leave: 0, weekend: 0 };
-                let st = String(row.status).toLowerCase();
-                if (st.includes('present')) agentTotals[agent].present++;
-                else if (st.includes('absent')) agentTotals[agent].absent++;
-                else if (st.includes('half')) agentTotals[agent].halfday++;
-                else if (st.includes('leave')) agentTotals[agent].leave++;
-                else if (st.includes('weekend')) agentTotals[agent].weekend++;
-            });
-
-            let cardsHtml = "";
-            if (selectedSummaryAgent === "") {
-                cardsHtml = `<p style="color:#64748b; grid-column: 1 / -1; padding: 10px 0;">Please select an agent or "All Agents" from the dropdown above to view summary totals.</p>`;
-            } else if (selectedSummaryAgent === "all") {
-                Object.keys(agentTotals).forEach(agent => {
-                    let t = agentTotals[agent];
-                    cardsHtml += `
-                        <div class="summary-card">
-                            <h4>${agent}</h4>
-                            <div class="summary-row"><span>Presents:</span> <b style="color:#15803d">${t.present}</b></div>
-                            <div class="summary-row"><span>Absents:</span> <b style="color:#991b1b">${t.absent}</b></div>
-                            <div class="summary-row"><span>Half Days:</span> <b style="color:#b45309">${t.halfday}</b></div>
-                            <div class="summary-row"><span>Leaves:</span> <b style="color:#0369a1">${t.leave}</b></div>
-                            <div class="summary-row"><span>Weekends:</span> <b style="color:#7c3aed">${t.weekend}</b></div>
-                        </div>`;
-                });
-            } else {
-                let agent = selectedSummaryAgent;
-                let t = agentTotals[agent] || { present: 0, absent: 0, halfday: 0, leave: 0, weekend: 0 };
-                cardsHtml += `
-                    <div class="summary-card" style="max-width: 320px;">
-                        <h4>${agent}</h4>
-                        <div class="summary-row"><span>Presents:</span> <b style="color:#15803d">${t.present}</b></div>
-                        <div class="summary-row"><span>Absents:</span> <b style="color:#991b1b">${t.absent}</b></div>
-                        <div class="summary-row"><span>Half Days:</span> <b style="color:#b45309">${t.halfday}</b></div>
-                        <div class="summary-row"><span>Leaves:</span> <b style="color:#0369a1">${t.leave}</b></div>
-                        <div class="summary-row"><span>Weekends:</span> <b style="color:#7c3aed">${t.weekend}</b></div>
-                    </div>`;
-            }
-            cardsContainer.innerHTML = cardsHtml;
-
-            let summaryRowsHtml = "";
-            if (filteredRows.length === 0) {
-                summaryRowsHtml = `<tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No attendance records found for this date/range.</td></tr>`;
-            } else {
-                filteredRows.forEach(row => {
-                    let st = String(row.status).toLowerCase();
-                    let badgeStyle = "background:#f1f5f9;color:#64748b;";
-                    if (st.includes('present')) badgeStyle = "background:#dcfce7;color:#15803d;";
-                    else if (st.includes('absent')) badgeStyle = "background:#fee2e2;color:#991b1b;";
-                    else if (st.includes('half')) badgeStyle = "background:#fef3c7;color:#b45309;";
-                    else if (st.includes('leave')) badgeStyle = "background:#e0f2fe;color:#0369a1;";
-                    else if (st.includes('weekend')) badgeStyle = "background:#ede9fe;color:#7c3aed;";
-
-                    let cleanDate = String(row.date).substring(0, 10) || row.date;
-                    summaryRowsHtml += `
-                        <tr>
-                            <td style="font-weight: 600;">${cleanDate}</td>
-                            <td style="font-weight: 600;">${row.agentName}</td>
-                            <td><span class="badge" style="${badgeStyle}">${row.status}</span></td>
-                        </tr>`;
-                });
-            }
-            summaryTbody.innerHTML = summaryRowsHtml;
         }
 
         function openSummaryModal() {
@@ -1052,28 +645,43 @@
                 allAgents.forEach(name => {
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
                     
                     let reps = globalReports[name] || [];
-                    let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
+                    if (reps && typeof reps === 'object' && !Array.isArray(reps)) reps = Object.values(reps);
 
-                    let totalCalls = filteredLogs.length;
-                    filteredReps.forEach(r => {
-                        if (r.logs && Array.isArray(r.logs)) {
-                            totalCalls += r.logs.length;
-                            filteredLogs = filteredLogs.concat(r.logs);
+                    let allAgentLogs = [...logs];
+                    reps.forEach(r => {
+                        if (r.logs) {
+                            let rLogs = Array.isArray(r.logs) ? r.logs : Object.values(r.logs);
+                            allAgentLogs = allAgentLogs.concat(rLogs);
+                        } else if (r.date && r.status) {
+                            allAgentLogs.push(r);
                         }
                     });
 
-                    agentCallingStats[name] = totalCalls;
+                    let filteredLogs = allAgentLogs.filter(l => isDateInRange(l.shiftDate || l.date));
+                    agentCallingStats[name] = filteredLogs.length;
 
                     let latestTime = 'N/A';
                     if (filteredLogs.length > 0) {
-                        filteredLogs.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-                        let rawDate = filteredLogs[0].date;
+                        filteredLogs.sort((a, b) => {
+                            let timeA = new Date(a.timestamp || a.date || 0).getTime();
+                            let timeB = new Date(b.timestamp || b.date || 0).getTime();
+                            if (isNaN(timeA)) timeA = 0;
+                            if (isNaN(timeB)) timeB = 0;
+                            return timeB - timeA;
+                        });
+
+                        let rawDate = filteredLogs[0].timestamp || filteredLogs[0].date;
                         if (rawDate) {
                             let dObj = new Date(rawDate);
-                            if (!isNaN(dObj)) latestTime = dObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                            if (!isNaN(dObj.getTime())) {
+                                latestTime = dObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                            } else {
+                                latestTime = String(rawDate).split('T')[1] ? String(rawDate).split('T')[1].substring(0, 5) : 'Just Now';
+                            }
+                        } else {
+                            latestTime = 'Just Now';
                         }
                     }
                     agentLastCallTime[name] = latestTime;
@@ -1122,9 +730,21 @@
                 allAgents.forEach(name => {
                     let logs = globalCallLogs[name] || [];
                     if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                    let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                    
                     let reps = globalReports[name] || [];
-                    let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
+                    if (reps && typeof reps === 'object' && !Array.isArray(reps)) reps = Object.values(reps);
+
+                    let allAgentLogs = [...logs];
+                    reps.forEach(r => {
+                        if (r.logs) {
+                            let rLogs = Array.isArray(r.logs) ? r.logs : Object.values(r.logs);
+                            allAgentLogs = allAgentLogs.concat(rLogs);
+                        } else if (r.date && r.status) {
+                            allAgentLogs.push(r);
+                        }
+                    });
+
+                    let filteredLogs = allAgentLogs.filter(l => isDateInRange(l.shiftDate || l.date));
 
                     let datesMap = {};
                     filteredLogs.forEach(l => {
@@ -1132,21 +752,33 @@
                         if (!datesMap[d]) datesMap[d] = [];
                         datesMap[d].push(l);
                     });
-                    filteredReps.forEach(r => {
-                        let d = (r.date || startDateStr).substring(0, 10);
-                        if (!datesMap[d]) datesMap[d] = r.logs || [];
-                    });
 
                     Object.keys(datesMap).forEach(dateStr => {
                         hasReports = true;
                         let finalLogs = datesMap[dateStr];
                         let counts = { "Hung up": 0, "Voicemail": 0, "Not interested": 0, "Do not Call": 0, "Follow up": 0, "Sale Closed": 0 };
                         
-                        let sortedDateLogs = [...finalLogs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                        let sortedDateLogs = [...finalLogs].sort((a, b) => {
+                            let timeA = new Date(a.timestamp || a.date || 0).getTime();
+                            let timeB = new Date(b.timestamp || b.date || 0).getTime();
+                            if (isNaN(timeA)) timeA = 0;
+                            if (isNaN(timeB)) timeB = 0;
+                            return timeB - timeA;
+                        });
+
                         let lastCallTime = 'N/A';
-                        if (sortedDateLogs.length > 0 && sortedDateLogs[0].date) {
-                            let dObj = new Date(sortedDateLogs[0].date);
-                            if (!isNaN(dObj)) lastCallTime = dObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                        if (sortedDateLogs.length > 0) {
+                            let rawDate = sortedDateLogs[0].timestamp || sortedDateLogs[0].date;
+                            if (rawDate) {
+                                let dObj = new Date(rawDate);
+                                if (!isNaN(dObj.getTime())) {
+                                    lastCallTime = dObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                                } else {
+                                    lastCallTime = String(rawDate).split('T')[1] ? String(rawDate).split('T')[1].substring(0, 5) : 'Just Now';
+                                }
+                            } else {
+                                lastCallTime = 'Just Now';
+                            }
                         }
 
                         finalLogs.forEach(l => {
@@ -1197,19 +829,27 @@
             allAgents.forEach(name => {
                 let logs = globalCallLogs[name] || [];
                 if (logs && typeof logs === 'object' && !Array.isArray(logs)) logs = Object.values(logs);
-                let filteredLogs = Array.isArray(logs) ? logs.filter(l => isDateInRange(l.shiftDate || l.date)) : [];
+                
                 let reps = globalReports[name] || [];
-                let filteredReps = Array.isArray(reps) ? reps.filter(r => isDateInRange(r.date)) : [];
+                if (reps && typeof reps === 'object' && !Array.isArray(reps)) reps = Object.values(reps);
+
+                let allAgentLogs = [...logs];
+                reps.forEach(r => {
+                    if (r.logs) {
+                        let rLogs = Array.isArray(r.logs) ? r.logs : Object.values(r.logs);
+                        allAgentLogs = allAgentLogs.concat(rLogs);
+                    } else if (r.date && r.status) {
+                        allAgentLogs.push(r);
+                    }
+                });
+
+                let filteredLogs = allAgentLogs.filter(l => isDateInRange(l.shiftDate || l.date));
 
                 let datesMap = {};
                 filteredLogs.forEach(l => {
                     let d = (l.shiftDate || l.date || startDateStr).substring(0, 10);
                     if (!datesMap[d]) datesMap[d] = [];
                     datesMap[d].push(l);
-                });
-                filteredReps.forEach(r => {
-                    let d = (r.date || startDateStr).substring(0, 10);
-                    if (!datesMap[d]) datesMap[d] = r.logs || [];
                 });
 
                 Object.keys(datesMap).forEach(dateStr => {
