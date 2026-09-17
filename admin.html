@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         * { box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #0f172a; margin: 0; padding: 0; min-height: 100vh; overflow-y: auto; }
         
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -50,9 +50,9 @@
         .auth-btn:hover { background: #1e293b; }
         .auth-error { color: #dc2626; font-size: 12px; margin-top: 10px; font-weight: 600; display: none; }
 
-        .admin-layout { display: flex; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
+        .admin-layout { display: flex; min-height: 100vh; width: 100vw; position: relative; }
         
-        .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 100; transition: transform 0.3s ease; }
+        .sidebar { width: 280px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 100; transition: transform 0.3s ease; position: fixed; height: 100vh; top: 0; left: 0; }
         .sidebar-brand { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
         .sidebar-brand h2 { margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
         .sidebar-brand span { font-size: 11px; color: #38bdf8; font-weight: 600; display: block; margin-top: 2px; }
@@ -75,7 +75,7 @@
         .sidebar-license-row { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-bottom: 4px; }
         .sidebar-license-row:last-child { margin-bottom: 0; }
 
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; width: 100%; }
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; background: #f8fafc; margin-left: 280px; min-height: 100vh; width: calc(100vw - 280px); }
         
         .top-header { height: auto; min-height: 70px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-shrink: 0; gap: 12px; flex-wrap: wrap; }
         .header-title-wrapper { display: flex; align-items: center; gap: 12px; }
@@ -93,13 +93,14 @@
 
         .single-range-input { padding: 6px 12px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-weight: 600; color: #0f172a; background: #fff; cursor: pointer; width: 210px; text-align: center; }
         
-        .admin-body { flex: 1; padding: 24px; overflow-y: auto; background: #f8fafc; }
+        .admin-body { flex: 1; padding: 24px; background: #f8fafc; min-height: calc(100vh - 70px); }
         
         .card { background: white; border: 1px solid #e2e8f0; padding: 20px 24px; border-radius: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.15s ease; }
         .card:hover { transform: translateY(-1px); }
         
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
         .badge-online { background: #dcfce7; color: #15803d; }
+        .badge-warning { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .online-dot { width: 8px; height: 8px; background-color: #22c55e; border-radius: 50%; display: inline-block; }
         
         .btn-success { background: #16a34a; color: white; border: none; padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; white-space: nowrap; }
@@ -118,12 +119,11 @@
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 90; }
 
         @media (max-width: 900px) {
-            body { overflow: auto; height: auto; }
-            .admin-layout { height: 100vh; overflow: hidden; }
-            .sidebar { position: fixed; top: 0; left: -280px; height: 100%; z-index: 100; transition: left 0.3s ease; }
+            .sidebar { left: -280px; }
             .sidebar.open { left: 0; }
             .sidebar-overlay.active { display: block; }
             .menu-toggle { display: block; }
+            .main-wrapper { margin-left: 0; width: 100vw; }
             .top-header { padding: 12px 16px; flex-direction: column; align-items: stretch; }
             .header-title-wrapper { width: 100%; justify-content: flex-start; }
             .header-actions { width: 100%; justify-content: space-between; }
@@ -437,7 +437,7 @@
             let maxLimit = allowedUsers[currentClient].maxLaptops || 0;
             let now = Date.now();
             let activeCount = 0;
-            const offlineThreshold = 120000;
+            const offlineThreshold = 180000; // Updated to 3 minutes (180 seconds)
 
             if (globalSessions) {
                 Object.keys(globalSessions).forEach(k => {
@@ -566,27 +566,36 @@
             let container = document.getElementById('adminBodyContent');
             if(!container) return;
             let now = Date.now();
+            const offlineThreshold = 180000; // Updated to 3 minutes (180 seconds)
 
             if (activeTab === 'online') {
                 let html = `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">`;
-                let uniqueUsers = {};
-
+                
+                // Track active sessions per agent name to detect double tabs
+                let activeNameCounts = {};
                 if (globalSessions) {
                     Object.keys(globalSessions).forEach(key => {
                         let sObj = globalSessions[key];
                         let name = sObj?.nickname || sObj?.name || key;
+                        let lastActiveTime = sObj?.timestamp || sObj?.lastActive || 0;
+                        let isOnline = (lastActiveTime && (now - lastActiveTime < offlineThreshold)) || lastActiveTime === 0;
+                        if (isOnline) {
+                            activeNameCounts[name] = (activeNameCounts[name] || 0) + 1;
+                        }
+                    });
+                }
+
+                let uniqueUsers = {};
+                if (globalSessions) {
+                    Object.keys(globalSessions).forEach(key => {
+                        let sObj = globalSessions[key];
+                        let name = sObj?.nickname || sObj?.name || key;
+                        // Keep the most recent session object if multiple exist for the same name
                         if (!uniqueUsers[name] || (sObj?.timestamp > (uniqueUsers[name].timestamp || 0))) {
                             uniqueUsers[name] = { ...sObj, resolvedName: name, lastActive: sObj?.timestamp || sObj?.lastActive || 0 };
                         }
                     });
                 }
-
-                Object.keys(globalReports).forEach(n => { 
-                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
-                });
-                Object.keys(globalCallLogs).forEach(n => { 
-                    if (!uniqueUsers[n]) uniqueUsers[n] = { resolvedName: n, lastActive: 0, loginTime: 'N/A' }; 
-                });
 
                 let userKeys = Object.keys(uniqueUsers);
                 if (userKeys.length === 0) {
@@ -599,8 +608,9 @@
                     let uData = uniqueUsers[nameKey];
                     let displayName = uData.resolvedName || nameKey;
                     let lastActiveTime = uData.lastActive || 0;
-                    let isOnline = lastActiveTime && (now - lastActiveTime < 120000);
-
+                    
+                    let isOnline = lastActiveTime && (now - lastActiveTime < offlineThreshold);
+                    if (!isOnline && lastActiveTime === 0) isOnline = true;
                     if (!isOnline) return;
 
                     renderedCount++;
@@ -614,14 +624,22 @@
                             login12Hr = uData.loginTime;
                         }
                     }
+
+                    // Check if this user has opened double tabs/sessions
+                    let sessionCount = activeNameCounts[displayName] || 1;
+                    let doubleTabBadge = sessionCount > 1 
+                        ? `<span class="badge badge-warning">⚠️ Double Tab (${sessionCount} Active)</span>` 
+                        : `<span class="badge badge-online"><span class="online-dot"></span>Online</span>`;
+                    
+                    let borderColor = sessionCount > 1 ? '#dc2626' : '#22c55e';
                     
                     html += `
-                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid #22c55e; width: 100%;">
+                        <div class="card" style="margin-bottom:0; align-items: flex-start; flex-direction: column; gap: 12px; border-left: 4px solid ${borderColor}; width: 100%;">
                             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 8px;">
                                 <div style="display: flex; align-items: center; gap: 8px; word-break: break-all;">
                                     <b style="font-size: 15px; color: #0f172a;">${displayName}</b>
                                 </div>
-                                <span class="badge badge-online"><span class="online-dot"></span>Online</span>
+                                ${doubleTabBadge}
                             </div>
                             <div style="font-size: 13px; color: #334155; width: 100%;">
                                 Login: <b style="color: #0f172a;">${login12Hr}</b>
