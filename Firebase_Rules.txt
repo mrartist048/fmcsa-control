@@ -1,0 +1,18 @@
+If your CRM databases already allow read/write, nothing to change.
+Otherwise (Firebase console > Realtime Database > Rules) these paths must be readable AND writable.
+NEW: "login_log" is required for the sales agent login history (without it everything still works, but no history is saved).
+NEW: "device_locks" is required for the one-device-per-user login lock (without it sales/dispatch logins are refused):
+
+{
+  "rules": {
+    ".read": false, ".write": false,
+    "allowedUsers":  { ".read": true, ".write": true },
+    "sales_users":   { ".read": true, ".write": true },
+    "sessions":      { ".read": true, ".write": true },
+    "call_logs":     { ".read": true, ".write": true },
+    "shift_reports": { ".read": true, ".write": true },
+    "shared_leads":  { ".read": true, ".write": true },
+    "device_locks":  { ".read": true, ".write": true },
+    "login_log":     { ".read": true, ".write": true }
+  }
+}
