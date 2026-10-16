@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dispatch Link | Email campaigns</title>
+<link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png">
+<script>document.documentElement.dataset.theme=localStorage.getItem('dl_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+<style>
+/* campaigns: same shell as the admin panel (admin.css) */
+[hidden]{display:none!important}
+a.nav-btn{text-decoration:none}
+.nav-sep{margin:16px 14px 6px;font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6F84A6}
+.sidebar nav{padding:12px 10px;display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto}
+.hello{margin:0 0 22px}.hello h1{margin:0;font:800 26px/1.2 var(--head);letter-spacing:-.02em}.hello p{margin:6px 0 0;color:var(--mut);max-width:50em}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(15,26,51,.05),0 8px 24px rgba(15,26,51,.05)}
+.panel h2{margin:0 0 4px;font:700 17px var(--head)}.panel .sub{margin:0 0 16px;color:var(--mut);font-size:13.5px;line-height:1.55}
+.tw{overflow-x:auto;margin:0 -4px;padding:0 4px}
+table{width:100%;border-collapse:collapse}th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line2);white-space:nowrap;font-size:13.5px}
+td.wrap{white-space:normal;min-width:180px;max-width:360px}
+th{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);background:var(--surface2)}
+th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10px 0}
+.gl{display:block;margin:0 0 6px;font-size:13px;font-weight:600;color:var(--ink2)}
+.gi,.ta,.sel{width:100%;font:inherit;color:var(--ink);background:var(--input);border:1px solid var(--line);border-radius:10px;margin-bottom:14px}
+.gi,.sel{height:42px;padding:0 12px}.ta{padding:12px;min-height:150px;resize:vertical;line-height:1.5;box-sizing:border-box}
+.gi:focus,.ta:focus,.sel:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.hint{margin:-8px 0 14px;font-size:12.5px;color:var(--mut);line-height:1.5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{min-height:20px;margin-top:10px;font-size:13px;color:var(--bad)}.msg.ok{color:var(--ok)}
+.view{display:none}.view.on{display:block}
+.steps{margin:6px 0 16px;padding:0;list-style:none;counter-reset:s;display:grid;gap:12px}
+.steps li{position:relative;padding:2px 0 2px 44px;counter-increment:s;line-height:1.6;color:var(--ink2);font-size:14px}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:13px}
+.steps code,.note code{font:12px ui-monospace,Menlo,Consolas,monospace;background:var(--input);border:1px solid var(--line);padding:1px 6px;border-radius:5px}
+.steps a{color:var(--accent);font-weight:600}
+.note{margin:0 0 16px;padding:12px 14px;border-radius:10px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--ink2);font-size:13px;line-height:1.55}
+.note.ok{background:color-mix(in srgb,var(--ok) 10%,transparent);border-color:color-mix(in srgb,var(--ok) 35%,transparent)}
+.code{margin:14px 0 0;max-height:340px;overflow:auto;padding:16px;border-radius:12px;background:#0b1426;color:#d6e2ff;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;white-space:pre;tab-size:2}
+.drop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px;border:2px dashed var(--line);border-radius:14px;text-align:center;color:var(--mut);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}.drop b{color:var(--ink);font-size:15px}
+.btn.sm{height:32px;padding:0 12px;font-size:13px}.btn.del{color:var(--bad)}.btn[disabled]{opacity:.5;cursor:not-allowed}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.tag.ready,.tag.queued,.tag.done{background:color-mix(in srgb,var(--ok) 13%,transparent);color:var(--ok)}
+.tag.risky,.tag.paused{background:rgba(245,166,35,.16);color:#B54708}
+.tag.removed,.tag.bounced,.tag.error,.tag.unsub{background:color-mix(in srgb,var(--bad) 11%,transparent);color:var(--bad)}
+.tag.replied{background:var(--accent-soft);color:var(--accent)}
+.bar{height:8px;border-radius:99px;background:var(--line2);overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;border-radius:99px;background:var(--grad)}
+.step{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;background:var(--surface2)}
+.step h3{margin:0 0 12px;font:700 14px var(--head);display:flex;justify-content:space-between;align-items:center}
+.split{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;align-items:start}
+.bubble{background:#fff;color:#222;border:1px solid #dde3ee;border-radius:12px;padding:14px 16px;font:14px/1.55 Arial,Helvetica,sans-serif;white-space:pre-wrap;word-break:break-word}
+[data-theme=dark] .bubble{background:#fff}
+.bubble .s{font-weight:700;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e6eaf2}
+.bubble .f{margin-top:14px;color:#777;font-size:12px}
+.chk{display:flex;gap:8px;align-items:center;margin:0 0 14px;font-size:14px;color:var(--ink2)}.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.health{display:grid;gap:8px;margin-top:12px}.health div{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;line-height:1.5}
+.health .ok{border-color:color-mix(in srgb,var(--ok) 40%,transparent)}.health .warn{border-color:rgba(245,166,35,.5)}.health .bad{border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.health b{min-width:74px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:3000;max-width:92vw;padding:12px 18px;border-radius:12px;background:#0b1426;color:#fff;font-size:14px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.pick{display:block;text-align:left;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:14px 16px;cursor:pointer;font:inherit}.pick b{display:block;font-size:15px;margin-bottom:4px}.pick span{display:block;font-size:13px;color:var(--mut);line-height:1.45}.pick.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--mut);font-size:13px}
+@media(max-width:900px){.split,.grid2,.grid3{grid-template-columns:1fr}.hello h1{font-size:22px}}
+@media(max-width:560px){.panel{padding:16px}}
+.cmp-pick{margin:4px 14px 6px;padding:12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.cmp-pick label{display:block;font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#6F84A6;margin-bottom:6px}
+.cmp-pick select{width:100%;height:38px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:#0B1532;color:#fff;font:600 13.5px Inter,sans-serif}
+.cmp-pick small{display:block;margin-top:6px;color:#8A9ACB;font-size:11.5px;line-height:1.4}
+.hb-top{display:flex;align-items:center;gap:20px;margin-bottom:16px}
+.hb-ring{--p:0;--c:#22c55e;width:96px;height:96px;flex:none;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(closest-side,var(--surface,#0f1a3a) 78%,transparent 80% 100%),conic-gradient(var(--c) calc(var(--p)*1%),rgba(127,140,170,.18) 0)}
+.hb-ring b{font-size:30px;line-height:1;font-weight:800}.hb-ring small{color:var(--mut);font-size:12px}
+.hb-rows{display:grid;gap:8px}
+.hb-row{display:grid;grid-template-columns:14px 170px 1fr;gap:12px;align-items:start;padding:10px 12px;border-radius:10px;background:var(--surface2,rgba(127,140,170,.06))}
+.hb-row i{width:10px;height:10px;border-radius:50%;margin-top:5px}.hb-row i.ok{background:#22c55e}.hb-row i.warn{background:#f5a623}.hb-row i.bad{background:#ef4444}.hb-row i.na{background:#8a9acb}
+.hb-row b{font-size:14px}.hb-row span{font-size:13.5px;color:var(--ink2,var(--mut))}
+.hb-warm{margin-top:14px;padding:12px 14px;border-radius:10px;border:1px dashed var(--line);font-size:13.5px;color:var(--ink2,var(--mut))}
+@media(max-width:700px){.hb-row{grid-template-columns:14px 1fr}.hb-row span{grid-column:2}}
+.rowbtns{display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn.del{color:var(--bad)}
+.wiz{display:grid;gap:14px}
+.wiz-step{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface2,rgba(127,140,170,.05))}
+.wn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-soft,rgba(79,124,255,.15));color:var(--accent,#4f7cff);font-weight:800}
+.wb b{font-size:15px}.wiz-note{color:var(--mut);font-size:13px}
+.wiz-ol{margin:8px 0 4px;padding-left:20px;line-height:1.9;font-size:14px;color:var(--ink2,var(--ink))}
+.wiz-adv{margin-top:8px}.wiz-adv summary{cursor:pointer;color:var(--accent,#4f7cff);font-size:13px;font-weight:600}
+.wiz-grid{display:grid;grid-template-columns:2fr 1fr 2fr 1fr;gap:10px;margin-top:10px}.wiz-grid label{font-size:12px;color:var(--mut)}.wiz-grid .gi{margin:4px 0 0}
+#mbDetect.ok{color:var(--ok,#22c55e)}
+.hs{display:inline-flex;align-items:center;gap:6px;font-weight:700}.hs i{width:9px;height:9px;border-radius:50%;display:inline-block}
+@media(max-width:700px){.wiz-grid{grid-template-columns:1fr 1fr}}
+.run-next{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 16px;border-radius:12px;background:var(--accent-soft,rgba(79,124,255,.12));color:var(--ink);font-size:15px}
+.run-next svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--accent,#4f7cff)}
+.run-next b{font-weight:700}.run-next small{color:var(--mut);font-size:13px}
+
+/* ---- sending schedule ---- */
+.sch-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}.sch-head>div:first-child{flex:1 1 320px}
+.sch-tz{flex:0 1 280px;min-width:220px}
+.sch-presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}.sch-plbl{font-size:12px;font-weight:600;color:var(--mut);margin-right:4px;text-transform:uppercase;letter-spacing:.06em}
+.sch-presets .chip{cursor:pointer}
+.sch-bulk{margin:0 0 14px;padding:14px 16px;border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:14px;background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.sch-bulk-h b{display:block;font-size:14px;color:var(--ink)}.sch-bulk-h small{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}
+.sch-bulk-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.sch-bdays{display:flex;gap:6px;flex-wrap:wrap}
+.sch-bdays button{min-width:46px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--mut);font-weight:600;font-size:13px;cursor:pointer}
+.sch-bdays button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sch-btime{display:flex;gap:8px;align-items:center}.sch-btime .sel{height:36px;margin:0;padding:0 8px;font-size:13.5px;min-width:128px}.sch-btime .dash{color:var(--mut)}
+.sch-card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface2,var(--surface))}
+.sch-row{display:grid;grid-template-columns:46px 112px 128px 14px 128px minmax(140px,1fr) 40px;gap:10px;align-items:center;padding:9px 14px;border-top:1px solid var(--line)}
+.sch-row:first-child{border-top:0}
+.sch-top{font-size:11.5px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px;background:color-mix(in srgb,var(--line) 35%,transparent)}
+#schRows .sch-row{border-top:1px solid var(--line)}
+.sch-row b{font-size:14px;color:var(--ink)}.sch-row.off b{color:var(--mut);font-weight:500}
+.sch-row .sel{height:36px;margin:0;padding:0 8px;font-size:13.5px}.sch-row.off .sel{opacity:.45}
+.sch-row .dash{color:var(--mut);text-align:center}
+.sch-scale{display:flex;justify-content:space-between;text-transform:none;letter-spacing:0}.sch-scale i{font-style:normal;font-size:11px}
+.sch-bar{position:relative;height:10px;border-radius:99px;background:color-mix(in srgb,var(--line) 70%,transparent);overflow:hidden}
+.sch-bar i{position:absolute;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#a855f7));transition:left .2s,width .2s}
+.sch-bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--bad);border-radius:2px}
+.sch-row.off .sch-bar i{opacity:0}
+.sw{position:relative;display:inline-block;width:38px;height:22px;flex:none}.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:background .15s}.sw span:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.sw input:checked+span{background:var(--accent)}.sw input:checked+span:after{transform:translateX(16px)}.sw input:focus-visible+span{box-shadow:0 0 0 3px var(--accent-soft)}
+.sch-cp{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:none;color:var(--mut);cursor:pointer;display:grid;place-items:center}.sch-cp:hover{color:var(--accent);border-color:var(--accent)}
+.sch-cp svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.opt{font-weight:400;color:var(--mut)}
+.skipc{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 11px;border-radius:99px;background:var(--accent-soft);color:var(--ink);font-size:12.5px;font-weight:600}.skipc button{border:0;background:none;color:var(--mut);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}.skipc button:hover{color:var(--bad)}
+.sch-sum{margin-top:16px;padding:14px 16px;border-radius:12px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);font-size:13.5px;line-height:1.6;color:var(--ink2)}
+.sch-sum b{color:var(--ink)}.sch-sum .now{display:block;margin-top:4px}.sch-sum .dot{display:inline-block;margin-right:7px;vertical-align:1px;width:8px;height:8px;border-radius:50%;background:var(--mut)}.sch-sum .dot.on{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 20%,transparent)}
+@media(max-width:900px){.sch-row{grid-template-columns:42px 1fr 1fr 10px 1fr 36px}.sch-row .c-bar,.sch-top .c-bar{display:none}}
+@media(max-width:600px){.sch-head+.sch-presets .sch-plbl{width:100%}#v-limits .grid2>div+div{margin-top:14px}.sch-top{display:none}.sch-row{grid-template-columns:44px 1fr 12px 1fr 36px;grid-template-areas:"sw day day day cp" "fr fr da to to";row-gap:8px}
+  .sch-row .c-sw{grid-area:sw}.sch-row .c-day{grid-area:day}.sch-row .c-from{grid-area:fr}.sch-row .c-dash{grid-area:da}.sch-row .c-to{grid-area:to}.sch-row .c-cp{grid-area:cp}}
+
+/* ---- button feedback ---- */
+.btn.is-busy{cursor:progress;opacity:.85}
+.btn.is-busy:disabled{opacity:.85;cursor:progress}
+.bspin{display:inline-block;width:14px;height:14px;margin-right:8px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;vertical-align:-2px;animation:bspin .7s linear infinite}
+@keyframes bspin{to{transform:rotate(360deg)}}
+.live{display:inline-flex;align-items:center;gap:8px;line-height:1.4}
+.live i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--ok)}
+.live.busy i{width:12px;height:12px;border-radius:50%;background:none;border:2px solid color-mix(in srgb,var(--accent) 25%,transparent);border-top-color:var(--accent);animation:bspin .8s linear infinite}
+.live.busy{color:var(--accent)}.live.err{color:var(--bad)}.live.err i{background:var(--bad)}
+#allTbl .rowbtns{flex-wrap:nowrap}#allTbl td.r{white-space:nowrap}#allTbl .rowbtns .btn{min-width:64px}#allTbl{transition:opacity .25s}#allTbl.upd{opacity:.72}
+.btn.is-ok{background:var(--ok)!important;border-color:var(--ok)!important;color:#fff!important;animation:bpop .3s ease}
+.btn.is-err{background:var(--bad)!important;border-color:var(--bad)!important;color:#fff!important;animation:bshake .35s ease}
+.bico{width:15px;height:15px;margin-right:6px;vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+@keyframes bpop{0%{transform:scale(.96)}60%{transform:scale(1.04)}100%{transform:none}}
+@keyframes bshake{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.bspin{animation-duration:2s}.btn.is-ok,.btn.is-err{animation:none}}
+
+/* ---- email signature editor ---- */
+.sig-box{margin:6px 0 16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface2,var(--surface))}
+.sig-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:12px}.sig-head h3{margin:0 0 4px;font:700 15px var(--head)}.sig-head p{margin:0;color:var(--mut);font-size:13px;line-height:1.5}
+.sig-box.off #sigFields{display:none}.sig-box.off .sig-head{margin-bottom:0}
+.bubble .sig{white-space:normal}
+.bubble .sig table{border-collapse:collapse;width:auto;margin:0;background:none}.bubble .sig td{padding:0;border:0;background:none!important;white-space:normal}.bubble .sig tr:hover td{background:none!important}
+
+.logo-up{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 14px}
+.logo-prev{width:52px;height:52px;border-radius:12px;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--input);color:var(--mut);font:700 20px Arial,sans-serif;flex:none}
+.logo-prev{width:auto;min-width:52px;max-width:160px;padding:3px}.logo-prev img{max-width:150px;height:46px;width:auto;object-fit:contain;display:block}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></symbol>
+  <symbol id="i-clean" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+</svg>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<div class="layout">
+  <aside class="sidebar" id="appSidebar">
+    <div class="brand"><div class="brand-logo"><img src="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png" alt="Dispatch Link" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'logo-fallback',textContent:'DL'}))"></div><div><div class="brand-name">Dispatch Link</div><div class="brand-sub">Email campaigns</div></div></div>
+    <div class="cmp-pick"><label for="cmpSel">Campaign (mailbox)</label><select id="cmpSel"></select><small>Each mailbox has its own campaign: own list, emails and limits.</small></div>
+    <nav aria-label="Campaign steps">
+      <button class="nav-btn" data-v="all"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>All campaigns</button>
+      <button class="nav-btn active" data-v="connect"><svg class="ico"><use href="#i-link"/></svg>1. Connect</button>
+      <button class="nav-btn" data-v="clean"><svg class="ico"><use href="#i-clean"/></svg>2. Clean your list</button>
+      <button class="nav-btn" data-v="message"><svg class="ico"><use href="#i-mail"/></svg>3. Write the emails</button>
+      <button class="nav-btn" data-v="limits"><svg class="ico"><use href="#i-sliders"/></svg>4. Limits &amp; schedule</button>
+      <button class="nav-btn" data-v="run"><svg class="ico"><use href="#i-play"/></svg>5. Run &amp; results</button>
+    </nav>
+    <a class="back-link" href="hub.html"><svg class="ico"><use href="#i-arrow-left"/></svg>Back to admin panel</a>
+    <div style="height:14px"></div>
+  </aside>
+
+  <section class="main">
+    <header class="topbar">
+      <div class="topbar-left"><button class="menu-toggle" onclick="toggleSidebar()" aria-label="Open menu"><svg class="ico"><use href="#i-menu"/></svg></button><div id="pageTitle">1. Connect</div></div>
+      <div class="topbar-actions"><span class="pill gray" id="connPill">Not connected</span></div>
+    </header>
+    <div class="body">
+
+      <!-- 1 CONNECT -->
+      <div class="view" id="v-all">
+        <div class="hello"><h1>All campaigns</h1><p>Every mailbox in one place. Press Open to work on one.</p></div>
+        <div class="kpis" id="allKpis"></div>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between"><h2 style="margin:0">Mailboxes</h2><button class="btn" onclick="CMP.overview()"><svg class="ico"><use href="#i-refresh"/></svg>Refresh</button></div>
+          <div class="tw" style="margin-top:12px"><table><thead><tr><th>Mailbox</th><th>Sends with</th><th>Status</th><th>Sent today</th><th>Waiting</th><th>Replies</th><th>Bounces</th><th>Health</th><th>Next email</th><th class="r"></th></tr></thead><tbody id="allTbl"></tbody></table></div>
+          <p class="sub" id="allNote" style="margin:12px 0 0"></p>
+        </div>
+        <div class="panel">
+          <h2>Saved in this browser</h2>
+          <p class="sub"><b>Hide</b> removes the shortcut from this browser only (nothing in your Google Sheet changes). <b>Delete mailbox</b> removes a mailbox you no longer use: its campaign stops and its tabs are deleted from the sheet. The main campaign of a sheet can only be hidden or stopped.</p>
+          <div class="tw"><table><thead><tr><th>Name</th><th>Tabs in the sheet</th><th>Link</th><th class="r"></th></tr></thead><tbody id="savedRows"></tbody></table></div>
+        </div>
+      </div>
+      <div class="view on" id="v-connect">
+        <div class="hello"><h1>Send campaigns from your own email</h1><p>Your emails go out one by one, at the pace you choose, even when this page is closed. Send with Gmail / Google Workspace, or with Zoho, Outlook, hosting (cPanel) or any other email account. Contacts and settings stay in your own Google Sheet.</p></div>
+        <div class="panel">
+          <h2>Send with</h2>
+          <div class="grid2" id="senderPick">
+            <button type="button" class="pick" data-s="gmail"><b>Gmail / Google Workspace</b><span>Easiest. No extra program. Google limits you to about 100 per day (personal Gmail) or 1,500 per day (Workspace).</span></button>
+            <button type="button" class="pick" data-s="smtp"><b>Other email (Zoho, Outlook, cPanel, Thunderbird accounts)</b><span>Uses a small helper program ("Mailer") that you run on a computer that stays on. Works with any email account that has SMTP.</span></button>
+          </div>
+          <div id="asBox" hidden style="margin-top:16px">
+            <label class="gl" for="sendAs">Send as (the From address people see)</label>
+            <div class="row" style="flex-wrap:nowrap"><select id="sendAs" class="gi" style="margin-bottom:0"></select><button class="btn" style="flex:none" onclick="CMP.loadAliases()">Reload</button></div>
+            <p class="sub" id="asHint" style="margin:8px 0 0">Your domain email (for example sales@yourdomain.com) can send from Google too, 24/7, with your computer off and no Mailer. Add it once in Gmail: Settings, Accounts and Import, Send mail as, Add another email address (untick "Treat as an alias", enter your host's SMTP server). Then press Reload and pick it here. Replies arrive in that mailbox; forward them to this Gmail so a reply stops the follow-ups.</p>
+          </div>
+        </div>
+        <div class="panel" id="connBox">
+          <h2>Connect</h2>
+          <p class="sub" id="connSub">Follow the 5 steps below once, then paste your Web app URL here.</p>
+          <label class="gl" for="cUrl">Apps Script Web app URL</label>
+          <input id="cUrl" class="gi" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
+          <label class="gl" for="cKey">Secret key <span style="font-weight:400;color:var(--mut)">(protects your campaign page; keep a copy)</span></label>
+          <div class="row" style="flex-wrap:nowrap"><input id="cKey" class="gi" autocomplete="off" style="margin-bottom:14px"><button class="btn" style="margin-bottom:14px;flex:none" onclick="CMP.copyKey()">Copy</button></div>
+          <label class="gl" for="cBox">Mailbox for this campaign <span style="font-weight:400;color:var(--mut)">(leave empty for your main campaign; for another mailbox type it, e.g. info@yourdomain.com, and it gets its own tabs in the SAME sheet with the SAME link)</span></label>
+          <input id="cBox" class="gi" autocomplete="off" placeholder="Main campaign">
+          <div class="row"><button class="btn primary" id="cGo" onclick="CMP.connect()">Connect</button><button class="btn del" id="cOff" onclick="CMP.disconnect()" hidden>Remove from this device</button></div>
+          <div class="msg" id="cMsg" role="status"></div>
+          <div id="cInfo" hidden></div>
+        </div>
+        <div class="panel" id="mailerBox" hidden>
+          <h2>Connect your mailbox in 3 steps</h2>
+          <p class="sub">Do this once for each mailbox. The Mailer is a small free program that sends this campaign from your own email account (the same account you use in Thunderbird or webmail).</p>
+          <div class="wiz">
+            <div class="wiz-step"><span class="wn">1</span><div class="wb"><b>Type your mailbox</b>
+              <input id="mbEmail" class="gi" autocomplete="off" placeholder="sales@yourcompany.com" style="margin:8px 0 8px">
+              <div id="mbDetect" class="wiz-note">We find the right server settings for you.</div>
+              <details class="wiz-adv"><summary>Server settings (filled in automatically)</summary>
+                <div class="wiz-grid"><label>Outgoing (SMTP) server<input id="mbSH" class="gi"></label><label>Port<input id="mbSP" class="gi" inputmode="numeric"></label><label>Incoming (IMAP) server<input id="mbIH" class="gi"></label><label>Port<input id="mbIP" class="gi" inputmode="numeric"></label></div>
+              </details>
+            </div></div>
+            <div class="wiz-step"><span class="wn">2</span><div class="wb"><b>Get the Mailer</b> <span class="wiz-note">(once per computer)</span>
+              <ol class="wiz-ol"><li>Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (free, choose LTS). Next, next, finish.</li>
+              <li><button class="btn sm primary" onclick="CMP.downloadMailer()"><svg class="ico"><use href="#i-download"/></svg>Download Mailer</button> and unzip it into a folder you keep (for example Documents).</li></ol>
+              <span class="wiz-note">Already have it? Skip this step.</span>
+            </div></div>
+            <div class="wiz-step"><span class="wn">3</span><div class="wb"><b>Copy your setup code and paste it in the Mailer</b>
+              <div class="row" style="flex-wrap:nowrap;margin:8px 0"><input id="mbCode" class="gi" readonly style="margin:0;font-family:ui-monospace,Consolas,monospace;font-size:12px"><button class="btn primary" style="flex:none" onclick="CMP.copySetup()">Copy setup code</button></div>
+              <ol class="wiz-ol"><li>In the Mailer folder double-click <code>add-mailbox.bat</code> (very first mailbox: <code>start.bat</code>).</li>
+              <li>Paste the code (right-click in the black window) and press Enter.</li>
+              <li>Type the password of this mailbox and press Enter. <span id="mbPassTip" class="wiz-note"></span></li>
+              <li>Double-click <code>start.bat</code> and leave the window open.</li></ol>
+            </div></div>
+          </div>
+          <div id="mailerStatus" class="note" style="margin-top:14px"></div>
+          <details class="wiz-adv"><summary>Manual setup and help</summary>
+            <p class="sub" style="margin-top:10px">If you prefer, start the Mailer and answer its questions yourself with these:</p>
+            <div class="row"><button class="btn" onclick="CMP.copyUrl()">Copy Web app URL</button><button class="btn" onclick="CMP.copyKey()">Copy Secret key</button></div>
+            <div class="note"><b>Passwords:</b> Zoho, Outlook and Yahoo usually need an <i>app password</i> (always when two-factor login is on). Hosting mail (Hostinger, cPanel, GoDaddy) uses the normal mailbox password. Emails go out only while the Mailer is running, so use a computer that stays on, or a small server (VPS).</div>
+          </details>
+        </div>
+        <div class="panel">
+          <h2>How to set it up (5 minutes, once)</h2>
+          <p class="sub" id="setupSub">Create the Google Sheet that stores your campaign (in Gmail mode it also sends the emails).</p>
+          <ol class="steps">
+            <li><b>Create a new Google Sheet.</b> Open <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> and name it "Dispatch Link Campaign". It is only for campaigns.</li>
+            <li><b>Open Apps Script.</b> In that sheet click <i>Extensions</i>, then <i>Apps Script</i>. Delete everything in <code>Code.gs</code>.</li>
+            <li><b>Paste the code.</b> Press <i>Copy Apps Script code</i> below, paste it in <code>Code.gs</code> and press Save (Ctrl+S).</li>
+            <li><b>Allow it once.</b> In the toolbar choose the function <code>authorize</code> and press <i>Run</i>. Google asks for permission to send and read Gmail (Gmail mode uses it to send and to notice bounces and replies; in "Other email" mode it is not used, but you still allow it). If it says "not verified" choose <i>Advanced</i>, then <i>Go to project</i>, then <i>Allow</i>.</li>
+            <li><b>Deploy it.</b> Click <i>Deploy</i>, <i>New deployment</i>, type <i>Web app</i>, <i>Execute as: Me</i>, <i>Who has access: Anyone</i>, press Deploy. Copy the Web app URL (it ends with <code>/exec</code>) into the box above and press Connect.</li>
+          </ol>
+          <div class="note"><b>Changed the code later?</b> Deploy, Manage deployments, pencil icon, Version: New version, Deploy. The URL stays the same.</div>
+          <div class="row"><button class="btn primary" onclick="CMP.copyCode()">Copy Apps Script code</button><button class="btn" id="cShow" onclick="CMP.toggleCode()">Show code</button></div>
+          <pre class="code" id="gsCode" hidden></pre>
+        </div>
+      </div>
+
+      <!-- 2 CLEAN -->
+      <div class="view" id="v-clean">
+        <div class="hello"><h1>Clean your email list</h1><p>Load the list you downloaded from Leads Processing (CSV or Excel) or paste emails. Bad, duplicate and blocked addresses are removed so your campaign does not bounce or land in spam.</p></div>
+        <div class="panel">
+          <h2>Your list</h2>
+          <p class="sub">Works with columns such as Email, Owner name, Carrier / Company, Phone, MC. Everything stays in your browser until you add it to the campaign.</p>
+          <label class="drop" id="drop" for="file"><b>Drop a CSV or Excel file here</b><span>or click to choose one</span></label>
+          <input type="file" id="file" accept=".csv,.txt,.xlsx,.xls" hidden>
+          <label class="gl" for="paste" style="margin-top:16px">Or paste emails (one per line, or a CSV with a header row)</label>
+          <textarea class="ta" id="paste" placeholder="john@carrier.com&#10;mary@fleet.net" style="min-height:90px"></textarea>
+          <label class="gl" for="block">Extra block list <span style="font-weight:400;color:var(--mut)">(emails or whole domains such as @competitor.com, one per line)</span></label>
+          <textarea class="ta" id="block" style="min-height:70px" placeholder="@badcompany.com&#10;someone@example.org"></textarea>
+          <div class="row"><button class="btn primary" id="scanBtn" onclick="CMP.scan()">Scan &amp; clean</button><span id="scanState" style="color:var(--mut);font-size:13px"></span></div>
+          <div class="bar" id="scanBar" hidden><i style="width:0"></i></div>
+        </div>
+        <div id="cleanOut" hidden>
+          <div class="kpis" id="cleanKpis"></div>
+          <div class="panel">
+            <h2>Result</h2>
+            <p class="sub"><b>Ready</b> emails are safe to send. <b>Risky</b> ones are held back (you decide). <b>Removed</b> ones will never be sent.</p>
+            <div class="chips" id="reasonChips"></div>
+            <div class="row" style="margin-bottom:12px">
+              <button class="btn sm primary" onclick="CMP.addToCampaign()">Add to campaign</button>
+              <label class="chk" style="margin:0"><input type="checkbox" id="addRisky"> also add Risky (held, not sent)</label>
+              <span style="flex:1"></span>
+              <button class="btn sm" onclick="CMP.download('ready')"><svg class="ico"><use href="#i-download"/></svg>Ready CSV</button>
+              <button class="btn sm" onclick="CMP.download('risky')">Risky CSV</button>
+              <button class="btn sm" onclick="CMP.download('removed')">Removed CSV</button>
+              <button class="btn sm" onclick="CMP.download('all')">Full report</button>
+            </div>
+            <div class="msg" id="addMsg" role="status"></div>
+            <div class="tw"><table><thead><tr><th>Email</th><th>Company</th><th>Owner</th><th>Result</th><th>Why</th></tr></thead><tbody id="cleanRows"></tbody></table></div>
+            <div class="pager"><span id="cleanCount"></span><button class="btn sm" onclick="CMP.page(-1)">Previous</button><button class="btn sm" onclick="CMP.page(1)">Next</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 MESSAGE -->
+      <div class="view" id="v-message">
+        <div class="hello"><h1>Write the emails</h1><p>One first email and up to 4 follow-ups. A follow-up is sent only if the person has not replied, bounced or unsubscribed.</p></div>
+        <div class="split">
+          <div>
+            <div id="stepList"></div>
+            <div class="row" style="margin-bottom:18px"><button class="btn" onclick="CMP.addStep()">+ Add a follow-up</button></div>
+            <div class="panel">
+              <h2>Sender details</h2>
+              <p class="sub">The business address and the unsubscribe line are added to the bottom of every email. This is required by US law (CAN-SPAM).</p>
+              <div class="grid2">
+                <div><label class="gl" for="fromName">Sender name</label><input id="fromName" class="gi" placeholder="Ali from Dispatch Link"></div>
+                <div><label class="gl" for="replyTo">Reply-to email <span style="font-weight:400;color:var(--mut)">(optional)</span></label><input id="replyTo" class="gi" placeholder="you@yourcompany.com"></div>
+              </div>
+              <label class="gl" for="address">Business mailing address *</label>
+              <input id="address" class="gi" placeholder="Dispatch Link LLC, 123 Main St, Dallas, TX 75001">
+              <label class="gl" for="unsubText">Unsubscribe line</label>
+              <input id="unsubText" class="gi">
+              <div class="sig-box">
+                <div class="sig-head"><div><h3>Email signature</h3><p>A small professional card under every email: logo, name, contact and a green WhatsApp button. The email text stays plain, so it still lands in the inbox.</p></div>
+                  <label class="sw" title="Add the signature"><input type="checkbox" id="sigOn" aria-label="Add the signature"><span></span></label></div>
+                <div id="sigFields">
+                  <div class="grid2">
+                    <div><label class="gl" for="sigName">Your name</label><input id="sigName" class="gi" placeholder="John Carter"></div>
+                    <div><label class="gl" for="sigTitle">Title <span class="opt">(optional)</span></label><input id="sigTitle" class="gi" placeholder="Dispatch Manager"></div>
+                    <div><label class="gl" for="sigCompany">Company</label><input id="sigCompany" class="gi" placeholder="Your Company LLC"></div>
+                    <div><label class="gl" for="sigPhone">Phone shown <span class="opt">(optional)</span></label><input id="sigPhone" class="gi" placeholder="+1 (555) 123-4567"></div>
+                    <div><label class="gl" for="sigWa">WhatsApp number <span class="opt">(for the button, with country code)</span></label><input id="sigWa" class="gi" inputmode="tel" placeholder="+1 555 123 4567"></div>
+                    <div><label class="gl" for="sigSite">Website <span class="opt">(optional)</span></label><input id="sigSite" class="gi" placeholder="yourcompany.com"></div>
+                  </div>
+                  <label class="gl">Logo <span class="opt">(optional: PNG or JPG. It is made into a small square and saved in your Google Sheet. No logo = first letter of the company)</span></label>
+                  <div class="logo-up">
+                    <div class="logo-prev" id="logoPrev"></div>
+                    <div class="row" style="gap:8px"><label class="btn sm" for="logoFile" style="cursor:pointer">Upload logo</label><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" hidden>
+                      <button type="button" class="btn sm del" id="logoDel" onclick="CMP.delLogo()" hidden>Remove</button></div>
+                    <div class="msg" id="logoMsg" role="status" style="margin:0"></div>
+                  </div>
+                  <input id="sigLogo" type="hidden">
+                  <p class="hint" style="margin-top:-4px">Tip: end your email text with a short sign-off such as "Thanks," and leave out your name and company: the signature adds them.</p>
+                </div>
+              </div>
+              <div class="row"><button class="btn primary" onclick="CMP.saveCfg('Saved.')">Save emails &amp; details</button></div>
+              <div class="msg" id="mMsg" role="status"></div>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <h2>Preview</h2>
+              <p class="sub">Placeholders: <code>{name}</code> owner full name, <code>{firstname}</code> first name, <code>{company}</code> carrier name. If the name is unknown it becomes "there". Variations: <code>{Hello|Hi|Hey}</code> picks one at random for each email, which looks more natural to spam filters.</p>
+              <div class="chips" id="prevTabs"></div>
+              <div class="bubble" id="prev"></div>
+              <label class="gl" for="testTo" style="margin-top:16px">Send a test to</label>
+              <div class="row" style="flex-wrap:nowrap"><input id="testTo" class="gi" placeholder="your own email" style="margin-bottom:0"><button class="btn" style="flex:none" onclick="CMP.test()">Send test</button></div>
+              <div class="msg" id="tMsg" role="status"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 LIMITS -->
+      <div class="view" id="v-limits">
+        <div class="hello"><h1>Limits &amp; schedule</h1><p>You decide how many emails go out each day and when. Slow and steady keeps your email address healthy.</p></div>
+        <div class="panel">
+          <h2>Daily limit</h2>
+          <p class="sub" id="limitSub"></p>
+          <div class="grid3">
+            <div><label class="gl" for="limit">Emails per day</label><input id="limit" class="gi" type="number" min="1" step="1"></div>
+            <div><label class="gl" for="delayMin">Gap between emails: from (sec)</label><input id="delayMin" class="gi" type="number" min="0"></div>
+            <div><label class="gl" for="delayMax">to (sec)</label><input id="delayMax" class="gi" type="number" min="0"></div>
+          </div>
+          <p class="hint" id="limitHint"></p>
+          <label class="chk"><input type="checkbox" id="ramp"> Warm up slowly (recommended for a new or quiet email address)</label>
+          <div class="grid2" id="rampBox">
+            <div><label class="gl" for="rampStart">Start with (emails on day 1)</label><input id="rampStart" class="gi" type="number" min="1"></div>
+            <div><label class="gl" for="rampStep">Add every day</label><input id="rampStep" class="gi" type="number" min="0"></div>
+          </div>
+          <p class="hint" id="rampHint"></p>
+        </div>
+        <div class="panel">
+          <div class="sch-head">
+            <div><h2>Sending schedule</h2><p class="sub" style="margin:0">Pick the days and hours emails may go out. Each day can have its own hours, and emails are spread evenly inside them.</p></div>
+            <div class="sch-tz"><label class="gl" for="tz">Time zone of the schedule</label><select id="tz" class="sel" style="margin:0"></select></div>
+          </div>
+          <div class="sch-presets" id="schPresets">
+            <span class="sch-plbl">Quick setup</span>
+            <button type="button" class="chip" data-p="wk">Mon-Fri, 9 AM-5 PM</button>
+            <button type="button" class="chip" data-p="wkl">Mon-Fri, 8 AM-6 PM</button>
+            <button type="button" class="chip" data-p="am">Mornings, 8 AM-12 PM</button>
+            <button type="button" class="chip" data-p="all">Every day, 9 AM-5 PM</button>
+            <button type="button" class="chip" data-p="sat">Mon-Sat, 9 AM-3 PM</button>
+          </div>
+          <div class="sch-bulk" id="schBulk">
+            <div class="sch-bulk-h"><b>Set all days at once</b><small>Pick the days, pick the hours, press Apply. Every chosen day gets the same hours, the other days are turned off.</small></div>
+            <div class="sch-bulk-row">
+              <div class="sch-bdays" id="bulkDays"></div>
+              <div class="sch-btime"><select id="bulkFrom" class="sel" aria-label="All days from"></select><span class="dash">to</span><select id="bulkTo" class="sel" aria-label="All days until"></select></div>
+              <button type="button" class="btn sm primary" id="bulkApply">Apply to these days</button>
+            </div>
+          </div>
+          <div class="sch-card">
+            <div class="sch-row sch-top"><span></span><span>Day</span><span>From</span><span></span><span>Until</span><span class="sch-scale c-bar"><i>12 AM</i><i>6 AM</i><i>12 PM</i><i>6 PM</i><i>12 AM</i></span><span></span></div>
+            <div id="schRows"></div>
+          </div>
+          <div class="grid2" style="margin-top:18px">
+            <div><label class="gl" for="startAt">Start sending on <span class="opt">(optional, in the schedule's time zone)</span></label>
+              <div class="row" style="flex-wrap:nowrap"><input id="startAt" class="gi" type="datetime-local" style="margin:0"><button type="button" class="btn sm" style="flex:none;height:42px" onclick="CMP.clearStart()">Clear</button></div></div>
+            <div><label class="gl" for="skipAdd">Days off <span class="opt">(holidays: nothing is sent on these dates)</span></label>
+              <div class="row" style="flex-wrap:nowrap"><input id="skipAdd" class="gi" type="date" style="margin:0"><button type="button" class="btn sm" style="flex:none;height:42px" onclick="CMP.addSkip()">Add</button></div>
+              <div class="chips" id="skipList" style="margin:10px 0 0"></div></div>
+          </div>
+          <div class="sch-sum" id="schSum"></div>
+          <label class="gl" for="maxBouncePct" style="margin-top:18px">Stop the campaign automatically if more than this % of emails bounce</label>
+          <input id="maxBouncePct" class="gi" type="number" min="1" max="50" style="max-width:160px">
+          <div class="row"><button class="btn primary" onclick="CMP.saveCfg('Saved.','lMsg')">Save schedule &amp; limits</button></div>
+          <div class="msg" id="lMsg" role="status"></div>
+        </div>
+        <div class="panel">
+          <h2>Sender health check</h2>
+          <p class="sub">Checks your sending domain's SPF, DKIM and DMARC records. Emails from a domain without these often go to spam. (Gmail addresses are already set up by Google.)</p>
+          <div class="row" style="flex-wrap:nowrap"><input id="hDomain" class="gi" placeholder="yourcompany.com" style="margin-bottom:0"><button class="btn primary" style="flex:none" onclick="CMP.health()">Check domain</button></div>
+          <div class="health" id="healthOut"></div>
+        </div>
+      </div>
+
+      <!-- 5 RUN -->
+      <div class="view" id="v-run">
+        <div class="hello"><h1>Run &amp; results</h1><p id="runSub">Start the campaign and it sends by itself within your limits.</p></div>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between"><div><span class="tag paused" id="runTag">Stopped</span> <span id="runReason" style="color:var(--mut);font-size:13px"></span></div>
+          <div class="row"><button class="btn success" id="bStart" onclick="CMP.ctl('start')">Start campaign</button><button class="btn" id="bPause" onclick="CMP.ctl('pause')" hidden>Pause</button><button class="btn success" id="bResume" onclick="CMP.ctl('resume')" hidden>Resume</button><button class="btn del" id="bStop" onclick="CMP.ctl('stop')" hidden>Stop</button><button class="btn" id="bNow" onclick="CMP.sendNow()" title="Sends up to 10 emails right now (still respects your daily limit)">Send a batch now</button><button class="btn" onclick="CMP.refresh()"><svg class="ico"><use href="#i-refresh"/></svg>Refresh</button></div></div>
+          <div class="bar"><i id="todayBar" style="width:0"></i></div>
+          <div id="runUpd" style="margin-top:8px;font-size:12px;color:var(--mut)"></div>
+          <div id="runNext" class="run-next" hidden></div>
+          <div class="msg" id="rMsg" role="status"></div>
+        </div>
+        <div class="panel" id="healthBox" hidden>
+          <div class="hb-top"><div class="hb-ring" id="hbRing"><b id="hbScore">-</b><small>/100</small></div>
+            <div><h2 style="margin:0">Mailbox health <span class="tag" id="hbTag"></span></h2><p class="sub" id="hbSub" style="margin:4px 0 0">How safe this mailbox is to send from.</p></div></div>
+          <div class="hb-rows" id="hbRows"></div>
+          <div class="hb-warm" id="hbWarm"></div>
+        </div>
+        <div class="panel" id="allCmp" hidden><div class="row" style="justify-content:space-between"><span id="allMini" style="color:var(--mut)"></span><button class="btn" onclick="CMP.show('all')">See all campaigns</button></div></div>
+        <div class="kpis" id="runKpis"></div>
+        <div class="panel">
+          <h2>Contacts</h2>
+          <div class="row" style="margin-bottom:12px">
+            <div class="chips" id="stChips" style="margin:0"></div><span style="flex:1"></span>
+            <input id="qSearch" class="gi" placeholder="Search email or company" style="max-width:240px;margin:0;height:34px" oninput="CMP.searchSoon()">
+          </div>
+          <div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="CMP.bulk('promote')">Release all Risky</button><button class="btn sm del" onclick="CMP.bulk('del-risky')">Delete Risky</button><button class="btn sm del" onclick="CMP.bulk('del-done')">Delete finished</button><button class="btn sm del" onclick="CMP.bulk('del-bounced')">Delete bounced</button><button class="btn sm del" onclick="CMP.bulk('del-all')">Empty list</button></div>
+          <div class="tw"><table><thead><tr><th>Email</th><th>Company</th><th>Status</th><th>Sent</th><th>Next email</th><th>Note</th></tr></thead><tbody id="ctRows"></tbody></table></div>
+          <div class="pager"><span id="ctCount"></span><button class="btn sm" onclick="CMP.ctPage(-1)">Previous</button><button class="btn sm" onclick="CMP.ctPage(1)">Next</button></div>
+        </div>
+        <div class="panel">
+          <h2>Block list</h2>
+          <p class="sub">Anyone here is never emailed, now or in future campaigns. Unsubscribes and bounces are added automatically. <span id="blkCount"></span></p>
+          <textarea class="ta" id="blkAdd" style="min-height:70px" placeholder="emails or @domains, one per line"></textarea>
+          <button class="btn" onclick="CMP.blockAdd()">Add to block list</button>
+        </div>
+        <div class="panel"><h2>Latest activity</h2><div class="tw"><table><thead><tr><th>Time (UTC)</th><th>Email</th><th>Step</th><th>Result</th><th>Detail</th></tr></thead><tbody id="logRows"></tbody></table></div></div>
+      </div>
+
+    </div>
+  </section>
+</div>
+<script src="auth.js"></script>
+<script src="campaign-code.js"></script>
+<script src="mailer-files.js"></script>
+<script src="campaign.js?v=4"></script>
+</body>
+</html>
