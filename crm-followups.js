@@ -343,7 +343,7 @@
 
   /* ================= backup: follow-ups are also kept in the company's Google Sheet (tab "FollowUps") =================
      The page keeps working from this browser's storage; every change is copied to the sheet a few seconds later.
-     If this browser loses its data (crash, cleaned, new computer), the follow-ups come back from the sheet by themselves. */
+     If this browser loses its data (crash, cleaned, new computer), press "Get back lost follow-ups" to bring them back from the sheet. */
   var BK = { url: null, at: 0, err: '', busy: false, again: false, t: null, ready: false };
   function sess() { try { return (typeof DL !== 'undefined' && DL.session && DL.session()) || null; } catch (e) { return null; } }
   function bkKey() { var x = sess(); return x ? 'dl_fu_bk_' + x.company + '_' + x.username : 'dl_fu_bk_'; }
@@ -432,7 +432,7 @@
     el.className = 'fu-bk' + (bad ? ' off' : '');
     el.innerHTML = '<span class="fu-bk-dot"></span><span class="fu-bk-t">' + esc(txt) + '</span><button type="button" class="fu-bk-r" title="Lost some follow-ups (browser cleaned, crash, new computer)? Bring them back from your backup.">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Get back lost follow-ups</button>';
-    el.title = bad ? 'Your follow-ups are kept in this browser.' : 'Your follow-ups are also kept safe online. If this browser loses them, they come back.';
+    el.title = bad ? 'Your follow-ups are kept in this browser.' : 'Your follow-ups are also kept safe online. If this browser ever loses them, press Get back lost follow-ups.';
     el.querySelector('.fu-bk-r').onclick = function () {
       var b = this; b.disabled = true; b.lastChild.textContent = 'Bringing them back\u2026';
       pullMissing(false).then(function (n) { note(n ? n + ' follow-up' + (n > 1 ? 's' : '') + ' brought back.' : 'All your follow-ups are already here. Nothing was lost.', 4000); },
@@ -467,15 +467,9 @@
     var origR = window.renderFollowUpItems; // the page's own changes (Follow button, drawer) also trigger a backup
     if (typeof origR === 'function' && !origR.__bk) { var wr = function () { var r = origR.apply(this, arguments); bkSoon(); return r; }; wr.__bk = true; window.renderFollowUpItems = wr; }
     BK.ready = true;
-    var back = function (n) { if (n) note('Welcome back! ' + n + ' follow-up' + (n > 1 ? 's were' : ' was') + ' brought back from your backup.', 6000); };
-    pullMissing(false).then(back, function (e) { BK.err = e.message; }).then(backupNow);
-    setInterval(function () { // if follow-ups that were backed up are suddenly missing here (storage wiped), bring them back
-      all().then(function (l) {
-        var have = {}, tb = tombs(), lost = false; l.forEach(function (x) { have[String(x.key)] = 1; });
-        Object.keys(synced()).forEach(function (k) { if (!have[k] && !tb[k]) lost = true; });
-        return lost ? pullMissing(false).then(back) : 0;
-      }).catch(function () {}).then(function () { backupNow(); paintBk(); });
-    }, 60000);
+    // nothing is fetched from the sheet by itself: lost follow-ups come back only when the agent presses "Get back lost follow-ups"
+    backupNow();
+    setInterval(function () { backupNow(); paintBk(); }, 60000);
     document.addEventListener('visibilitychange', function () { if (document.hidden) backupNow(); });
   }
   bkStart(0);
