@@ -105,6 +105,37 @@
     var html = b._html; b._html = null; if (BTN.cur === tk) BTN.cur = null;
     setTimeout(function () { if (!b.isConnected) return; b.classList.remove('is-ok', 'is-err'); b.innerHTML = html; b.style.minWidth = ''; }, tk.err ? 2200 : 1600);
   }
+  /* ---- talking to Google: a normal POST first; if the browser cannot reach Google that way (it says "Failed to fetch"),
+     the same request goes as a script tag, which works through the same Web app link. Remembered per browser. ---- */
+  var NET = { tag: false }; try { NET.tag = localStorage.getItem('dl_cmp_net') === 'tag'; } catch (e) {}
+  function viaTag(url, obj) {
+    return new Promise(function (res, rej) {
+      var q = 'p=' + encodeURIComponent(JSON.stringify(obj));
+      if (q.length > 7000) return rej(new Error('NET'));
+      var cb = 'dlc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), s = document.createElement('script'), done = false, t;
+      function end() { done = true; clearTimeout(t); try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
+      window[cb] = function (j) { if (done) return; end(); res(j); };
+      s.onerror = function () { if (done) return; end(); rej(new Error('NET')); };
+      s.onload = function () { setTimeout(function () { if (done) return; end(); rej(new Error('OLD_CODE')); }, 400); };
+      t = setTimeout(function () { if (done) return; end(); rej(new Error('NET')); }, 60000);
+      s.src = url + (url.indexOf('?') < 0 ? '?' : '&') + q + '&callback=' + cb;
+      document.head.appendChild(s);
+    });
+  }
+  function gpost(url, obj) {
+    var small = JSON.stringify(obj).length < 5000;
+    function byFetch() { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(obj) }).then(function (r) { return r.json(); }); }
+    function byTag() { return viaTag(url, obj).then(function (j) { if (!NET.tag) { NET.tag = true; try { localStorage.setItem('dl_cmp_net', 'tag'); } catch (e) {} } return j; }); }
+    if (small && NET.tag) return viaTag(url, obj).catch(function (e) {
+      if (e.message === 'OLD_CODE') { NET.tag = false; try { localStorage.removeItem('dl_cmp_net'); } catch (x) {} return byFetch(); }
+      return byFetch(); // the script tag did not work this time: try the normal way
+    });
+    return byFetch().catch(function (e) {
+      if (!small) throw e;
+      return byTag().catch(function (e2) { throw e2.message === 'OLD_CODE' ? new Error('OLD_CODE') : e; });
+    });
+  }
+  var OLDMSG = 'Your Apps Script needs the new code: step 1, copy the code, paste it in Apps Script, then Deploy, Manage deployments, Edit, New version.';
   function api(action, data) {
     var tk = data && data.__retry ? null : btnTrack();
     return api0(action, data).then(function (j) { btnDone(tk, true); return j; }, function (e) { btnDone(tk, false); throw e; });
@@ -113,8 +144,8 @@
     if (!S.url) return Promise.reject(new Error('Connect your Apps Script first (step 1).'));
     var data_retry = data && data.__retry; if (data_retry) { data = Object.assign({}, data); delete data.__retry; }
     var body = JSON.stringify(Object.assign({ action: action, k: S.kh, box: S.box || '' }, data || {}));
-    return fetch(S.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body })
-      .then(function (r) { return r.json(); }, function () { throw new Error('Could not reach your Web app. Check the URL, and that "Who has access" is set to Anyone.'); })
+    return gpost(S.url, JSON.parse(body))
+      .then(null, function (e) { throw new Error(e && e.message === 'OLD_CODE' ? OLDMSG : 'Could not reach your Web app. Check the URL, and that "Who has access" is set to Anyone.'); })
       .then(function (j) {
         if (j && j.error) throw new Error(ERR[j.error] || String(j.error));
         if (j && j.info && action !== 'ping' && !data_retry) { // Google sometimes hands back the plain "hello" answer: ask again once
@@ -341,8 +372,8 @@
   /* overview of every campaign on this device (Run page) */
   function apiFor(c, action, retried) {
     return sha256(c.key).then(function (kh) {
-      return fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: action, k: kh, box: c.box || '' }) });
-    }).then(function (r) { return r.json(); }).then(function (j) { if (j && j.error) throw new Error(ERR[j.error] || String(j.error)); if (j && j.info && !retried) return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return apiFor(c, action, true); }); if (j && j.info) throw new Error('Google sent an incomplete answer. Press Refresh.'); return j; });
+      return gpost(c.url, { action: action, k: kh, box: c.box || '' }).then(null, function (e) { throw new Error(e && e.message === 'OLD_CODE' ? OLDMSG : 'Could not reach this Web app. Press Refresh in a minute.'); });
+    }).then(function (j) { if (j && j.error) throw new Error(ERR[j.error] || String(j.error)); if (j && j.info && !retried) return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return apiFor(c, action, true); }); if (j && j.info) throw new Error('Google sent an incomplete answer. Press Refresh.'); return j; });
   }
   function renderAll() { // Run page: small line that links to the All campaigns page
     var box = $('allCmp'), l = CL.list(); if (!box) return;

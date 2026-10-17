@@ -362,15 +362,28 @@
       return DL.sheetCall(url, Object.assign({ action: action, u: x.username, h: x.hash, name: x.name || '' }, body || {}), true);
     }).then(function (r) { if (!r) throw new Error('No answer from the Google Sheet'); if (r.error) throw new Error(r.error); return r; });
   }
+  function tKey() { return bkKey() + '_del'; }
+  function tombs() { try { return JSON.parse(localStorage.getItem(tKey()) || '{}') || {}; } catch (e) { return {}; } }
+  function setTombs(m) { try { localStorage.setItem(tKey(), JSON.stringify(m)); } catch (e) {} }
+  (function () { // a follow-up the agent removes is noted here, so only those are removed from the sheet too
+    var P = window.IDBObjectStore && IDBObjectStore.prototype; if (!P || P.delete.__dlbk) return;
+    var od = P.delete, nd = function (key) {
+      try { if (this.name === 'followups' && key != null) { var m = tombs(); m[String(key)] = Date.now(); setTombs(m); setTimeout(bkSoon, 0); } } catch (e) {}
+      return od.apply(this, arguments);
+    };
+    nd.__dlbk = true; P.delete = nd;
+  })();
   function bkSoon() { if (!BK.ready) return; clearTimeout(BK.t); BK.t = setTimeout(backupNow, 4000); }
   function backupNow() {
     if (!BK.ready) return Promise.resolve();
     if (BK.busy) { BK.again = true; return Promise.resolve(); }
     BK.busy = true;
     return all().then(function (l) {
-      var prev = synced(), cur = {}, put = [], del = [];
+      var prev = synced(), cur = {}, put = [], del = [], tb = tombs();
       l.forEach(function (x) { var k = String(x.key); cur[k] = hsh(JSON.stringify(x.v)); if (prev[k] !== cur[k]) put.push(x.v); });
-      Object.keys(prev).forEach(function (k) { if (!(k in cur)) del.push(k); });
+      // only follow-ups the agent removed leave the sheet; ones missing because the browser lost its data stay there
+      Object.keys(tb).forEach(function (k) { if (!(k in cur)) del.push(k); });
+      if (Object.keys(tb).some(function (k) { return k in cur; })) { Object.keys(cur).forEach(function (k) { delete tb[k]; }); setTombs(tb); } // added again
       if (!put.length && !del.length) return;
       var send = put.slice(0, 300);
       return sheet('fu_sync', { put: send, del: del }).then(function () {
@@ -378,6 +391,7 @@
         send.forEach(function (v) { var k = String(v.mc); next[k] = cur[k]; });
         del.forEach(function (k) { delete next[k]; });
         setSynced(next);
+        var t2 = tombs(); del.forEach(function (k) { delete t2[k]; }); setTombs(t2);
         if (put.length > send.length) BK.again = true;
       });
     }).then(function () { BK.at = Date.now(); BK.err = ''; }, function (e) { BK.err = e.message || String(e); })
@@ -386,9 +400,9 @@
   function pullMissing(onlyIfEmpty) { // bring back follow-ups that are in the sheet but not in this browser
     return all().then(function (l) {
       if (onlyIfEmpty && l.length) return 0;
-      var have = {}; l.forEach(function (x) { have[String(x.key)] = 1; });
+      var have = {}, tb = tombs(); l.forEach(function (x) { have[String(x.key)] = 1; });
       return sheet('fu_pull').then(function (r) {
-        var rows = (r.rows || []).filter(function (v) { return v && v.mc != null && !have[String(v.mc)]; });
+        var rows = (r.rows || []).filter(function (v) { return v && v.mc != null && !have[String(v.mc)] && !tb[String(v.mc)]; });
         if (!rows.length) return 0;
         return Promise.all(rows.map(put)).then(function () {
           var m = synced(); rows.forEach(function (v) { m[String(v.mc)] = hsh(JSON.stringify(v)); }); setSynced(m);
@@ -410,14 +424,15 @@
     var el = $('fuBk');
     if (!el) {
       el = document.createElement('div'); el.id = 'fuBk'; el.className = 'fu-bk';
-      list.parentNode.insertBefore(el, list);
+      list.parentNode.insertBefore(el, list.nextSibling);
     }
     var bad = !!BK.err; // technical reasons stay in the console, the agent only sees a simple line
     if (bad) try { console.info('[Dispatch Link] follow-up backup:', BKMSG[BK.err] || BK.err); } catch (e) {}
-    var txt = bad ? 'Your follow-ups are saved on this computer' : BK.at ? 'Your follow-ups are backed up \u00b7 ' + ago(BK.at) : 'Backing up your follow-ups\u2026';
+    var txt = bad ? 'Saved on this computer' : BK.at ? 'Backed up \u00b7 ' + ago(BK.at) : 'Backing up\u2026';
     el.className = 'fu-bk' + (bad ? ' off' : '');
     el.innerHTML = '<span class="fu-bk-dot"></span><span class="fu-bk-t">' + esc(txt) + '</span><button type="button" class="fu-bk-r" title="Lost some follow-ups (browser cleaned, crash, new computer)? Bring them back from your backup.">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Get back lost follow-ups</button>';
+    el.title = bad ? 'Your follow-ups are kept in this browser.' : 'Your follow-ups are also kept safe online. If this browser loses them, they come back.';
     el.querySelector('.fu-bk-r').onclick = function () {
       var b = this; b.disabled = true; b.lastChild.textContent = 'Bringing them back\u2026';
       pullMissing(false).then(function (n) { note(n ? n + ' follow-up' + (n > 1 ? 's' : '') + ' brought back.' : 'All your follow-ups are already here. Nothing was lost.', 4000); },
@@ -426,12 +441,25 @@
     };
   }
   css.textContent += [
-    '.fu-bk{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 10px 8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);font-size:12.5px;color:var(--mut)}',
+    '.fu-bk{flex:none;display:flex;align-items:center;gap:8px;margin:0;padding:8px 2px 0;border-top:1px solid var(--line);font-size:12px;color:var(--mut)}',
+    /* compact Follow-up drawer: more room for the list */
+    '#dlFollowUpDrawer{gap:8px;padding:16px 16px 12px}',
+    '#dlFollowUpDrawer .drawer-sub{display:none}',
+    '#dlFollowUpDrawer .drawer-head{padding-bottom:0}',
+    '#dlFollowUpDrawer .seg button{height:32px;display:inline-flex;align-items:center;justify-content:center;gap:7px}',
+    '#dlFollowUpDrawer .fu-n{min-width:20px;height:18px;padding:0 6px;border-radius:9px;background:var(--surface2);color:var(--ink);font-size:11.5px;font-weight:600;line-height:18px;font-variant-numeric:tabular-nums}',
+    '#dlFollowUpDrawer .seg button.active .fu-n{background:rgba(255,255,255,.25);color:#fff}',
+    '#dlFollowUpDrawer .drawer-search .ds-field,#dlFollowUpDrawer .drawer-search .btn-ghost{height:36px}',
+    '#dlFollowUpDrawer .drawer-search input{height:34px}',
+    '#dlFollowUpDrawer .fu-bulk{padding:5px 6px 5px 12px;border-radius:9px}',
+    '#dlFollowUpDrawer .fu-bulk label{font-size:13px}',
+    '#dlFollowUpDrawer .fu-bulk .hc-btn{height:30px;padding:0 10px;font-size:12.5px}',
+    '#dlFollowUpDrawer .fu-stats{display:none}',
     '.fu-bk-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--ok,#12805c);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok,#12805c) 18%,transparent)}',
     '.fu-bk.off .fu-bk-dot{background:var(--mut);box-shadow:none}',
     '.fu-bk-t{flex:1;min-width:0;line-height:1.4}',
     '.fu-bk-r svg{width:13px;height:13px;flex:none}',
-    '.fu-bk-r{flex:none;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer}.fu-bk-r:hover{border-color:var(--accent);color:var(--accent)}.fu-bk-r:disabled{opacity:.6;cursor:wait}'
+    '.fu-bk-r{flex:none;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer}.fu-bk-r:hover{border-color:var(--accent);color:var(--accent)}.fu-bk-r:disabled{opacity:.6;cursor:wait}'
   ].join('\n');
   function bkStart(n) {
     var x = sess();
@@ -439,10 +467,15 @@
     var origR = window.renderFollowUpItems; // the page's own changes (Follow button, drawer) also trigger a backup
     if (typeof origR === 'function' && !origR.__bk) { var wr = function () { var r = origR.apply(this, arguments); bkSoon(); return r; }; wr.__bk = true; window.renderFollowUpItems = wr; }
     BK.ready = true;
-    pullMissing(true).then(function (n) {
-      if (n) note('Welcome back! ' + n + ' follow-up' + (n > 1 ? 's were' : ' was') + ' brought back from your backup.', 6000);
-    }, function (e) { BK.err = e.message; }).then(backupNow);
-    setInterval(function () { backupNow(); paintBk(); }, 60000);
+    var back = function (n) { if (n) note('Welcome back! ' + n + ' follow-up' + (n > 1 ? 's were' : ' was') + ' brought back from your backup.', 6000); };
+    pullMissing(false).then(back, function (e) { BK.err = e.message; }).then(backupNow);
+    setInterval(function () { // if follow-ups that were backed up are suddenly missing here (storage wiped), bring them back
+      all().then(function (l) {
+        var have = {}, tb = tombs(), lost = false; l.forEach(function (x) { have[String(x.key)] = 1; });
+        Object.keys(synced()).forEach(function (k) { if (!have[k] && !tb[k]) lost = true; });
+        return lost ? pullMissing(false).then(back) : 0;
+      }).catch(function () {}).then(function () { backupNow(); paintBk(); });
+    }, 60000);
     document.addEventListener('visibilitychange', function () { if (document.hidden) backupNow(); });
   }
   bkStart(0);
@@ -457,10 +490,21 @@
     var tb = $('resultsTable'), tbl = tb && tb.closest('table'); if (!tbl) return;
     tbl.querySelectorAll('thead th').forEach(function (th) { if (/^\s*remarks\s*$/i.test(th.textContent)) th.classList.add('dlx-hide'); });
   }
+  function fuCounts() { // the two big number boxes are hidden; their numbers sit on the Due today / All saved buttons
+    var st = document.querySelector('#drawerFollowUpList .fu-stats'), b = st ? st.querySelectorAll('b') : [];
+    var setN = function (id, n) {
+      var btn = $(id); if (!btn) return; var sp = btn.querySelector('.fu-n');
+      if (!sp) { sp = document.createElement('span'); sp.className = 'fu-n'; btn.appendChild(sp); }
+      sp.textContent = n;
+    };
+    var empty = !!document.querySelector('#drawerFollowUpList .fu-empty') && !st;
+    if (b.length >= 2) { setN('fubtnToday', b[0].textContent); setN('fubtnAll', b[1].textContent); }
+    else if (empty && !document.getElementById('followUpSearchInput').value) { setN('fubtnToday', 0); setN('fubtnAll', 0); }
+  }
   var W = {};
   function start() {
     if (!W.a) W.a = watch('resultsTable', function () { paintRows(); marks(); });
-    if (!W.b) W.b = watch('drawerFollowUpList', function () { decorateCards(); if (!$('fuBk')) paintBk(); });
+    if (!W.b) W.b = watch('drawerFollowUpList', function () { decorateCards(); fuCounts(); if (!$('fuBk')) paintBk(); });
     if (!W.a || !W.b) setTimeout(start, 800);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
