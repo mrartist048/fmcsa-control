@@ -128,6 +128,17 @@
     '#esPrevBody .dl-sig table{border:0!important;box-shadow:none!important;background:none!important;width:auto!important;margin:0!important}',
     '#esPrevBody .dl-sig td{border:0!important;padding:0!important;background:none!important}#esPrevBody .dl-sig td:first-child{padding-right:12px!important}',
     '[data-theme=dark] #esPrevBody .dl-sig{background:#fff;border-radius:10px;padding:12px!important;border-top:0!important}',
+    '.ms-wayrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.ms-wayrow button{display:flex;align-items:center;justify-content:center;gap:8px;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink2);font:600 13px inherit;cursor:pointer}',
+    '.ms-wayrow button .ico,.ms-wayrow button svg{width:18px;height:18px}',
+    '.ms-wayrow button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}',
+    '.ms-way-bg{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(6,12,28,.55)}.ms-way-bg.show{display:flex}',
+    '.ms-way{position:relative;width:100%;max-width:440px;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 24px 60px -20px rgba(0,0,0,.5)}',
+    '.ms-way h3{margin:0 0 6px;font-size:17px;color:var(--ink)}.ms-way p{margin:0 0 16px;font-size:13px;color:var(--mut);line-height:1.5}',
+    '.ms-way-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border:0;border-radius:8px;background:none;color:var(--mut);font-size:15px;cursor:pointer}.ms-way-x:hover{background:var(--surface2);color:var(--ink)}',
+    '.ms-way-o{display:flex;align-items:center;gap:14px;width:100%;margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);text-align:left;cursor:pointer;color:var(--ink)}',
+    '.ms-way-o:hover{border-color:var(--accent)}.ms-way-o b{display:block;font-size:14px}.ms-way-o small{display:block;margin-top:2px;font-size:12px;color:var(--mut);line-height:1.4}',
+    '.ms-way-i{flex:none;width:42px;height:42px;display:grid;place-items:center;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--accent)}.ms-way-i .ico{width:20px;height:20px}',
     '@media (max-width:640px){.ms-grid{grid-template-columns:1fr}}'
   ].join('\n');
   document.head.appendChild(css);
@@ -139,6 +150,8 @@
     var g = sig();
     var box = document.createElement('div'); box.id = 'msSig';
     box.innerHTML =
+      '<div class="ms-sec"><div class="ms-head"><b>Send emails with</b><small>remembered in this browser</small></div>' +
+      '<div class="ms-wayrow" id="msWayRow"><button type="button" data-w="gmail" aria-pressed="false">' + gIcon() + 'Gmail</button><button type="button" data-w="app" aria-pressed="false">' + ico('mail') + 'Email app</button></div></div>' +
       '<div class="ms-sec' + (g.on ? '' : ' ms-off') + '" id="msSigSec"><div class="ms-head"><b>Signature</b><small>kept only in this browser</small><span class="sp"></span>' +
       '<button type="button" class="ms-btn del" id="msSigDel" title="Delete signature and logo from this browser">' + ico('trash') + 'Delete</button>' +
       '<button type="button" class="ms-sw" id="msOn" role="switch" aria-checked="' + (g.on ? 'true' : 'false') + '" aria-label="Add signature"></button></div>' +
@@ -159,6 +172,8 @@
       $('msSubjChip').onclick = function () { put('{company}'); }; $('msSubjChip2').onclick = function () { put('{firstname}'); };
     }
     paintLogo();
+    $('msWayRow').querySelectorAll('button').forEach(function (bt) { bt.onclick = function () { setWay(bt.dataset.w); note(bt.dataset.w === 'gmail' ? 'Send now opens Gmail.' : 'Send now opens your email app.', 2500); }; });
+    paintWay();
     $('msSigDel').onclick = function () {
       if (!confirm('Delete your signature and logo from this browser?')) return;
       LS.del(SK); LS.del(LK); LS.del(DK);
@@ -248,12 +263,46 @@
     var raw = fill(tpl.body || 'Hello', company, owner), blocks = F ? F.parse(raw) : null, plain = blocks ? F.toPlain(blocks) : raw;
     var g = sig(), rich = !!blocks && !(F.plainOnly && F.plainOnly()) && F.hasMarkup(raw);
     var body = rich ? F.toHtml(blocks) : '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#222">' + esc(plain).replace(/\n/g, '<br>') + '</div>';
-    if (!sigOn(g) && !rich) { openIn(email, subject, plain); return; } // nothing designed: text goes straight into the email
-    var html = body + sigHtml(g), text = plain + sigText(g);
-    copyRich(html, text).then(function (ok) {
-      note(ok ? 'Email opened. For the logo, WhatsApp button and design: click inside the message, press Ctrl+A, then Ctrl+V, then Send.' : 'Email opened with your template and signature.', ok ? 10000 : 5000);
+    var text = plain + (sigOn(g) ? sigText(g) : '');
+    var htmls = sigOn(g) || rich ? [body + sigHtml(g, 'link')] : null;
+    withWay(function (way) {
+      if (way === 'gmail') openGmail(email, subject, text);
+      else openIn(email, subject, text, htmls); // email apps such as Thunderbird also take the designed version
     });
-    openIn(email, subject, text, [body + sigHtml(g, 'link')]);
+  }
+
+  /* ---------------- how emails are sent: Gmail in the browser, or the email app on this computer ---------------- */
+  var WK = 'dl_send_with';
+  function way() { var v = LS.get(WK) || ''; try { if (!v) v = localStorage.getItem(WK) || ''; } catch (e) {} return v === 'gmail' || v === 'app' ? v : ''; }
+  function setWay(v) { LS.set(WK, v); try { localStorage.setItem(WK, v); } catch (e) {} paintWay(); }
+  function openGmail(to, subject, text) {
+    var u = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=' + encodeURIComponent(to) + '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
+    if (u.length > 7800) u = u.slice(0, 7800); // very long links are cut by the browser
+    var w = window.open(u, '_blank');
+    if (!w) note('Your browser blocked the Gmail window. Allow pop-ups for this site, then press Send again.', 6000);
+  }
+  function withWay(go) {
+    var w = way(); if (w) return go(w);
+    var m = $('msWay');
+    if (!m) {
+      m = document.createElement('div'); m.id = 'msWay'; m.className = 'ms-way-bg';
+      m.innerHTML = '<div class="ms-way" role="dialog" aria-modal="true" aria-labelledby="msWayT">' +
+        '<button type="button" class="ms-way-x" aria-label="Close">\u2715</button>' +
+        '<h3 id="msWayT">How do you send your emails?</h3><p>Pick one. We remember it, so next time Send opens it straight away. You can change it in Email setup.</p>' +
+        '<button type="button" class="ms-way-o" data-w="gmail"><span class="ms-way-i g">' + gIcon() + '</span><span><b>Gmail</b><small>Opens a new Gmail message in your browser, ready to send.</small></span></button>' +
+        '<button type="button" class="ms-way-o" data-w="app"><span class="ms-way-i">' + ico('mail') + '</span><span><b>Email app on this computer</b><small>Outlook, Thunderbird, Windows Mail or the business email app you use.</small></span></button>' +
+        '</div>';
+      document.body.appendChild(m);
+      m.addEventListener('click', function (e) { if (e.target === m || e.target.closest('.ms-way-x')) m.classList.remove('show'); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') m.classList.remove('show'); });
+    }
+    m.querySelectorAll('.ms-way-o').forEach(function (b) { b.onclick = function () { var v = b.dataset.w; setWay(v); m.classList.remove('show'); go(v); }; });
+    m.classList.add('show');
+  }
+  function gIcon() { return '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#EA4335" d="M3 6.5 12 13l9-6.5V18a1.5 1.5 0 0 1-1.5 1.5H18V10l-6 4.3L6 10v9.5H4.5A1.5 1.5 0 0 1 3 18z"/><path fill="#FBBC04" d="M18 10v9.5h1.5A1.5 1.5 0 0 0 21 18V6.5z" opacity=".9"/><path fill="#34A853" d="M3 6.5V18a1.5 1.5 0 0 0 1.5 1.5H6V10z" opacity=".9"/><path fill="#C5221F" d="M3 6.5 12 13l9-6.5A1.5 1.5 0 0 0 19.5 5h-15A1.5 1.5 0 0 0 3 6.5z"/></svg>'; }
+  function paintWay() {
+    var r = $('msWayRow'); if (!r) return; var w = way();
+    r.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.w === w ? 'true' : 'false'); });
   }
 
   window.triggerOneClickEmailPitch = function (email, company, owner) {
