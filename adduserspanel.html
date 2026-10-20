@@ -378,6 +378,49 @@
         .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;border:1px solid var(--border-color);padding:10px 16px;border-radius:10px;font-size:12px;display:none;z-index:60}
         .toast.err{border-color:var(--danger);color:#fca5a5}.toast.ok{border-color:var(--success);color:#6ee7b7}
         .action-btn-group{flex-wrap:wrap}
+
+        /* ---- Directory list (clean, one line of actions) ---- */
+        .admin-wrapper{max-width:1000px}
+        .table-container{max-height:none;border-radius:12px;overflow:auto}
+        .user-table{min-width:720px;font-size:12px}
+        .user-table th{padding:11px 14px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:#161e2e}
+        .user-table td{padding:12px 14px;vertical-align:middle;white-space:normal}
+        .user-table th.th-act{text-align:right}
+        .user-table tr:last-child td{border-bottom:0}
+        .cl{display:flex;align-items:center;gap:12px;min-width:0}
+        .av{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:rgba(234,88,12,.15);color:#fb923c;font-weight:700;font-size:14px}
+        .cl-t{min-width:0}.cl-t b{display:block;font-size:13px;color:var(--text-main)}.cl-t>small{display:block;font-size:11.5px;color:var(--text-muted);margin-top:1px}
+        .cl-m{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:5px;font-size:10.5px;color:var(--text-muted);align-items:center}
+        .cl-m .chip{padding:1px 7px;border-radius:5px;background:#1f2937;border:1px solid #374151;color:#d1d5db;font-weight:600}
+        .cl-m .pw{color:#cbd5e1}.cl-m .pw::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#64748b;margin-right:5px;vertical-align:1px}
+        .cl-m .pw.ok{color:#34d399}.cl-m .pw.ok::before{background:#34d399}
+        .c-exp b{display:block;font-weight:600;font-size:12.5px;white-space:nowrap}.c-exp small{display:block;font-size:10.5px;color:var(--text-muted);margin-top:2px;white-space:nowrap}
+        .c-exp small.warn{color:#fbbf24}.c-exp small.bad{color:#f87171}
+        .st{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+        .st-ok{background:rgba(16,185,129,.14);color:#34d399}.st-near{background:rgba(245,158,11,.14);color:#fbbf24}.st-exp{background:rgba(239,68,68,.14);color:#f87171}
+        .user-table td.c-act{text-align:right;width:1%;white-space:nowrap}
+        .acts{display:inline-flex;align-items:center;gap:6px;flex-wrap:nowrap;justify-content:flex-end}
+        .acts svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+        .act-main{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;border:1px solid rgba(37,211,102,.35);background:rgba(37,211,102,.12);color:#25d366;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+        .act-main:hover{background:rgba(37,211,102,.22)}
+        .act-main.warn{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.12);color:#fbbf24}.act-main.warn:hover{background:rgba(245,158,11,.22)}
+        .act-main.blue{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.12);color:#60a5fa}.act-main.blue:hover{background:rgba(59,130,246,.22)}
+        .ic{width:30px;height:30px;display:inline-grid;place-items:center;padding:0;border-radius:8px;border:1px solid var(--border-color);background:#1a2232;color:#cbd5e1;cursor:pointer}
+        .ic:hover{border-color:#fb923c;color:#fb923c;background:rgba(234,88,12,.1)}
+        .ic.del{color:#f87171}.ic.del:hover{border-color:#ef4444;background:rgba(239,68,68,.12);color:#f87171}
+        .ic:disabled{opacity:.5;cursor:wait}
+        .empty-row{text-align:center;color:var(--text-muted);padding:22px!important}
+        @media(max-width:640px){
+          .table-container{overflow:visible;border:0;background:none}
+          .user-table{min-width:0}.user-table thead{display:none}
+          .user-table tr{display:grid;grid-template-columns:1fr auto;gap:10px 12px;align-items:center;padding:14px;margin-bottom:10px;border:1px solid var(--border-color);border-radius:12px;background:#111827}
+          .user-table td{padding:0;border:0!important}
+          .user-table tr td:first-child{grid-column:1/-1}
+          .user-table tr:hover td{background:none}
+          .user-table td.c-act{grid-column:1/-1;width:auto;text-align:left}
+          .acts{justify-content:flex-start;flex-wrap:wrap}
+          .empty-row{grid-column:1/-1}
+        }
 </style>
 </head>
 <body>
@@ -437,8 +480,8 @@
       <button class="pill-btn" id="pillPending" onclick="setFilter('pending')">⏳ No password yet</button></div></div>
     <div class="form-group" style="margin-bottom:10px"><input type="text" id="tableSearchInput" placeholder="🔍 Quick search username..." oninput="applyTableFilters()"></div>
     <div class="table-container"><table class="user-table">
-      <thead><tr><th>User & Limits</th><th>Password</th><th>Node</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody id="allUsersTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:15px">Fetching data...</td></tr></tbody>
+      <thead><tr><th>Client</th><th>Expiry</th><th>Status</th><th class="th-act">Actions</th></tr></thead>
+      <tbody id="allUsersTableBody"><tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:15px">Fetching data...</td></tr></tbody>
     </table></div>
   </div>
 </div></div>
@@ -528,7 +571,7 @@ async function saveOrUpdateUserToFirebase() {
 }
 
 async function fetchAllUsersFromAllDBs() {
-  $('allUsersTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:15px">Synchronizing clusters...</td></tr>';
+  $('allUsersTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:15px">Synchronizing clusters...</td></tr>';
   globalUsersCache = [];
   await Promise.all(DB_CONFIGS.map(async dbObj => {
     try {
@@ -582,20 +625,38 @@ function openWA(number, text) { const p = formatPhoneNumber(number); window.open
 function sendInvite(u, exp, num) { openWA(num, MSG_INVITE(u, exp)); }
 function expiryText(u) { return u.days < 0 ? MSG_EXPIRED(u.username, u.expires) : MSG_SOON(u.username, u.expires, u.days); }
 
+const IC = {
+  chat: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20l1.3-5A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+  renew: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+  invite: '<svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
+  key: '<svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M16 7l3 3M18 5l2 2"/></svg>',
+  inv: '<svg viewBox="0 0 24 24"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
+  edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  del: '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
+};
 function renderUserTable(users, dbName) {
   const tb = $('allUsersTableBody');
-  if (!users.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:15px">No records found in ' + (dbName === 'All' ? 'All Databases' : esc(dbName)) + '.</td></tr>'; return; }
+  if (!users.length) { tb.innerHTML = '<tr><td colspan="4" class="empty-row">No clients found in ' + (dbName === 'All' ? 'all databases' : esc(dbName)) + '.</td></tr>'; return; }
   tb.innerHTML = users.map(u => {
-    const badge = u.isExpired ? '<span class="badge-expired">Expired</span>' : u.isNearExpire ? '<span class="badge-near">Near Exp</span>' : '<span class="badge-active">Active</span>';
-    const pw = u.hasPw ? '<span class="badge-pw">✔ Created</span>' : '<span class="badge-pend">⏳ Not yet</span>';
-    const wa = (u.isExpired || (u.days !== null && u.days <= REMIND_DAYS))
-      ? '<button class="action-wa-btn" data-a="renew" title="Send expiry / renewal message">⚠️ Renew</button>'
-      : (!u.hasPw ? '<button class="action-wa-btn" data-a="invite" title="Send create-password invite">💬 Invite</button>' : '<button class="action-wa-btn" data-a="msg" title="Open WhatsApp chat">💬 Chat</button>');
-    const reset = u.hasPw ? '<button class="action-edit-btn" data-a="reset" title="Let client create a new password">🔑 Reset</button>' : '';
-    return '<tr data-u="' + esc(u.username) + '" data-db="' + esc(u.dbUrl) + '"><td><b>' + esc(u.username) + '</b><br><span style="font-size:9px;color:var(--text-muted)">' + (u.company ? esc(u.company) + ' | ' : '') + 'Tabs: ' + u.maxLaptops + ' | Ph: ' + esc(u.number || 'No Phone') + '</span></td>'
-      + '<td>' + pw + '</td><td><span style="font-size:9px;background:#1f2937;color:#d1d5db;padding:2px 6px;border-radius:4px;font-weight:600;border:1px solid #374151">' + esc(u.dbName) + '</span></td>'
-      + '<td>' + esc(u.expires) + (u.days !== null ? '<br><span style="font-size:9px;color:var(--text-muted)">' + (u.days < 0 ? Math.abs(u.days) + 'd ago' : u.days === 0 ? 'today' : u.days + 'd left') + '</span>' : '') + '</td><td>' + badge + '</td>'
-      + '<td><div class="action-btn-group">' + wa + reset + '<button class="action-edit-btn" data-a="edit">✏️ Edit</button><button class="action-del-btn" data-a="del">🗑️</button></div></td></tr>';
+    const badge = u.isExpired ? '<span class="st st-exp">Expired</span>' : u.isNearExpire ? '<span class="st st-near">Near expiry</span>' : '<span class="st st-ok">Active</span>';
+    const due = u.isExpired || (u.days !== null && u.days <= REMIND_DAYS);
+    const main = due ? '<button class="act-main warn" data-a="renew" title="Send expiry / renewal message on WhatsApp">' + IC.renew + 'Renew</button>'
+      : !u.hasPw ? '<button class="act-main blue" data-a="invite" title="Send create-password invite on WhatsApp">' + IC.invite + 'Invite</button>'
+      : '<button class="act-main" data-a="msg" title="Open WhatsApp chat">' + IC.chat + 'Chat</button>';
+    const reset = u.hasPw ? '<button class="ic" data-a="reset" title="Reset password (client creates a new one)">' + IC.key + '</button>' : '';
+    const left = u.days === null ? '' : u.days < 0 ? Math.abs(u.days) + ' day' + (Math.abs(u.days) === 1 ? '' : 's') + ' ago' : u.days === 0 ? 'expires today' : u.days + ' day' + (u.days === 1 ? '' : 's') + ' left';
+    const ini = esc((u.company || u.username || '?').trim().charAt(0).toUpperCase());
+    return '<tr data-u="' + esc(u.username) + '" data-db="' + esc(u.dbUrl) + '">'
+      + '<td><div class="cl"><span class="av">' + ini + '</span><div class="cl-t"><b>' + esc(u.username) + '</b>'
+      + (u.company ? '<small>' + esc(u.company) + '</small>' : '')
+      + '<div class="cl-m"><span>' + u.maxLaptops + ' tab' + (u.maxLaptops == 1 ? '' : 's') + '</span><span>' + esc(u.number || 'No phone') + '</span><span class="chip">' + esc(u.dbName) + '</span>'
+      + (u.hasPw ? '<span class="pw ok">Password set</span>' : '<span class="pw">No password yet</span>') + '</div></div></div></td>'
+      + '<td class="c-exp"><b>' + esc(u.expires) + '</b>' + (left ? '<small class="' + (u.isExpired ? 'bad' : u.isNearExpire ? 'warn' : '') + '">' + left + '</small>' : '') + '</td>'
+      + '<td>' + badge + '</td>'
+      + '<td class="c-act"><div class="acts">' + main
+      + '<button class="ic" data-inv="1" title="Make an invoice for this client">' + IC.inv + '</button>' + reset
+      + '<button class="ic" data-a="edit" title="Edit client">' + IC.edit + '</button>'
+      + '<button class="ic del" data-a="del" title="Delete client">' + IC.del + '</button></div></td></tr>';
   }).join('');
 }
 
@@ -637,6 +698,7 @@ $('remModal').addEventListener('click', e => { if (e.target === $('remModal')) c
 // On open: check silently for expiring clients and show the banner
 fetchAllUsersFromAllDBs().then(() => { if (dueList.length) openReminders(); });
 </script>
+<script src="invoice.js?v=4"></script>
 </body>
 </html>
 
