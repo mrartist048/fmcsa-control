@@ -116,7 +116,7 @@
       function end() { done = true; clearTimeout(t); try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
       window[cb] = function (j) { if (done) return; end(); res(j); };
       s.onerror = function () { if (done) return; end(); rej(new Error('NET')); };
-      s.onload = function () { setTimeout(function () { if (done) return; end(); rej(new Error('OLD_CODE')); }, 400); };
+      s.onload = function () { setTimeout(function () { if (done) return; end(); var er = new Error('OLD_CODE'); er.nojs = true; rej(er); }, 400); }; // an answer that is not ours: old code, or a Google error page
       t = setTimeout(function () { if (done) return; end(); rej(new Error('NET')); }, 60000);
       s.src = url + (url.indexOf('?') < 0 ? '?' : '&') + q + '&callback=' + cb;
       document.head.appendChild(s);
@@ -129,15 +129,17 @@
       while (len > 200 && encodeURIComponent(JSON.stringify({ action: 'part', id: id, i: 999, n: 999, data: body.substr(pos, len) })).length > 6200) len = Math.floor(len * 0.8);
       parts.push(body.substr(pos, len)); pos += len;
     }
-    var n = parts.length, i = 0;
+    var n = parts.length, i = 0, proven = false; // proven: this Apps Script already took a part, so later odd answers are Google hiccups
     function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
     function one(tries) { // Google sometimes drops a request: each part is tried up to 5 times
       return viaTag(url, { action: 'part', id: id, i: i, n: n, data: parts[i] }).then(function (j) {
         if (i < n - 1 && j && j.error && !j.ok && j.error !== 'PARTS_MISSING') throw new Error('OLD_CODE'); // an older Apps Script does not know "part"
         if (j && j.error === 'PARTS_MISSING') throw new Error('NET');
+        if (j && j.ok) proven = true;
         return j;
       }).catch(function (e) {
-        if (e.message === 'OLD_CODE' || tries >= 4) throw e;
+        if ((e.message === 'OLD_CODE' && !(e.nojs && (proven || NET.tag))) || tries >= 4) throw e; // Google sometimes answers with its own error page: try again
+        if (e.message === 'OLD_CODE') e = new Error('NET');
         return wait([2000, 5000, 10000, 20000][tries]).then(function () { return one(tries + 1); });
       });
     }
@@ -784,9 +786,15 @@
     setMsg('addMsg', 'Adding...', true);
     (function next() {
       if (i >= rows.length) { setMsg('addMsg', 'Added ' + added + ' to the campaign. ' + skipped + ' were already in it, ' + blocked + ' were on your block list' + (before ? ', ' + before + ' were emailed before (History)' : '') + '.', true); toast('Added ' + added + ' contacts.'); loadState(true); return; }
-      var step = NET.tag ? 100 : 500, chunk = rows.slice(i, i + step).map(function (r) { return { email: r.email, name: r.name, company: r.company, phone: r.phone, mc: r.mc, status: r.status, reason: r.reason }; });
-      api('add', { rows: chunk }).then(function (j) { added += j.added; skipped += j.skipped; blocked += j.blocked; before += j.before || 0; i += step; setMsg('addMsg', 'Adding... ' + Math.min(i, rows.length) + ' of ' + rows.length, true); next(); })
-        .catch(function (e) { setMsg('addMsg', e.message + ' (added so far: ' + added + ')'); });
+      var step = NET.tag ? 50 : 500, chunk = rows.slice(i, i + step).map(function (r) { return { email: r.email, name: r.name, company: r.company, phone: r.phone, mc: r.mc, status: r.status, reason: r.reason }; });
+      var tries = 0;
+      (function go() {
+        api('add', { rows: chunk }).then(function (j) { added += j.added; skipped += j.skipped; blocked += j.blocked; before += j.before || 0; i += step; setMsg('addMsg', 'Adding... ' + Math.min(i, rows.length) + ' of ' + rows.length, true); next(); })
+          .catch(function (e) {
+            if (++tries <= 3) { setMsg('addMsg', 'Google is slow, trying again... (' + Math.min(i, rows.length) + ' of ' + rows.length + ' added)', true); setTimeout(go, 8000 * tries); return; } // emails already added are skipped, never doubled
+            setMsg('addMsg', e.message + ' (added so far: ' + added + '). Press Add to campaign again to continue: the ones already added are skipped.');
+          });
+      })();
     })();
   }
 
