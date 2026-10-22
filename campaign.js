@@ -130,12 +130,21 @@
       parts.push(body.substr(pos, len)); pos += len;
     }
     var n = parts.length, i = 0;
-    function send() {
+    function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+    function one(tries) { // Google sometimes drops a request: each part is tried up to 5 times
       return viaTag(url, { action: 'part', id: id, i: i, n: n, data: parts[i] }).then(function (j) {
-        if (i < n - 1) {
-          if (!j || !j.ok || j.part !== i) throw new Error('OLD_CODE'); // an older Apps Script does not know "part"
-          i++; return send();
-        }
+        if (i < n - 1 && j && j.error && !j.ok && j.error !== 'PARTS_MISSING') throw new Error('OLD_CODE'); // an older Apps Script does not know "part"
+        if (j && j.error === 'PARTS_MISSING') throw new Error('NET');
+        return j;
+      }).catch(function (e) {
+        if (e.message === 'OLD_CODE' || tries >= 4) throw e;
+        return wait([2000, 5000, 10000, 20000][tries]).then(function () { return one(tries + 1); });
+      });
+    }
+    function send() {
+      if (typeof byParts.onPart === 'function') try { byParts.onPart(i, n); } catch (e) {}
+      return one(0).then(function (j) {
+        if (i < n - 1) { if (!j || !j.ok || j.part !== i) throw new Error('OLD_CODE'); i++; return send(); }
         return j;
       });
     }
@@ -145,7 +154,11 @@
     var small = JSON.stringify(obj).length < 5000;
     function byFetch() { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(obj) }).then(function (r) { return r.json(); }); }
     function remember() { if (!NET.tag) { NET.tag = true; try { localStorage.setItem('dl_cmp_net', 'tag'); } catch (e) {} } }
-    function byTag() { return (small ? viaTag(url, obj) : byParts(url, obj)).then(function (j) { remember(); return j; }); }
+    function byTag() {
+      var go = small ? function () { return viaTag(url, obj); } : function () { return byParts(url, obj); };
+      return go().catch(function (e) { if (e.message === 'OLD_CODE' || !small) throw e; return new Promise(function (r) { setTimeout(r, 3000); }).then(go); })
+        .then(function (j) { remember(); return j; });
+    }
     if (NET.tag) return byTag().catch(function (e) { // this browser cannot POST to Google: always the script-tag way
       if (e.message === 'OLD_CODE' && small) { NET.tag = false; try { localStorage.removeItem('dl_cmp_net'); } catch (x) {} }
       if (e.message === 'OLD_CODE') return byFetch().catch(function () { throw new Error('OLD_CODE'); });
