@@ -416,7 +416,7 @@
     if (l.length > 1) $('allMini').textContent = 'You have ' + l.length + ' campaigns. See them all with their health on one page.';
   }
   /* ---- live status: the numbers stay on screen; a small line says when they were last updated or that new ones are on the way ---- */
-  var LIVE_MS = 20000, FR = { all: { at: 0, busy: false, err: '' }, run: { at: 0, busy: false, err: '' } };
+  var LIVE_MS = 60000, FR = { all: { at: 0, busy: false, err: '' }, run: { at: 0, busy: false, err: '' } };
   function ago(ms) {
     var s = Math.max(0, Math.round((Date.now() - ms) / 1000));
     if (s < 10) return 'just now'; if (s < 60) return s + ' sec ago';
@@ -426,9 +426,9 @@
   function paintLive(k) {
     var f = FR[k], el = $(k === 'all' ? 'allNote' : 'runUpd'); if (!el) return;
     var cls, txt;
-    if (f.busy) { cls = 'busy'; txt = f.at ? 'Updating from your Google Sheet... Showing the numbers from ' + ago(f.at) + ' until then.' : 'Loading from your Google Sheet...'; }
+    if (f.busy) { cls = 'busy'; txt = f.at ? 'Updating the campaign status... Showing the numbers from ' + ago(f.at) + ' until then.' : 'Loading the campaign status...'; }
     else if (f.err) { cls = 'err'; txt = 'Could not update: ' + f.err + '. Trying again in 20 sec.' + (f.at ? ' Showing the numbers from ' + ago(f.at) + '.' : ''); }
-    else if (f.at) { cls = 'ok'; txt = 'Updated ' + ago(f.at) + ' · refreshes every 20 sec'; }
+    else if (f.at) { cls = 'ok'; txt = 'Updated ' + ago(f.at) + ' · refreshes every minute'; }
     else { el.textContent = ''; return; }
     el.innerHTML = '<span class="live ' + cls + '"><i></i>' + esc(txt) + '</span>';
     if (k === 'all' && $('allTbl')) $('allTbl').classList.toggle('upd', f.busy && !!f.at);
