@@ -474,7 +474,8 @@
       var run = s.run || {}, c = s.counts || {}, w = s.worker, now = s.now || Date.now(), online = !!(w && now - w.seen < 6 * 60000), smtp = s.cfg && s.cfg.sender === 'smtp';
       var on = run.running && !run.paused;
       t.sent += run.sentToday || 0; t.lim += s.effLimit || 0; t.wait += c.queued || 0; t.rep += c.replied || 0; t.bnc += c.bounced || 0; if (on) t.run++; if (smtp && online) t.on++;
-      var tag = run.running ? (run.paused ? '<span class="tag paused">Paused</span>' : '<span class="tag queued">Running</span>') : '<span class="tag removed">Stopped</span>';
+      var tag = run.running ? (run.paused ? '<span class="tag paused">Paused</span>' : '<span class="tag queued">Running</span>') : run.ended ? '<span class="tag removed">7 days over</span>' : '<span class="tag removed">Stopped</span>';
+      if (run.running && run.endAt) tag += '<br><small style="color:var(--mut)">until ' + esc(fmtTz(run.endAt, (s.cfg && s.cfg.tz) || 'America/New_York').replace(/,\s*\d+:\d+\s*[AP]M$/i, '')) + '</small>';
       var nxt = '-';
       if (on && s.cfg && limitHit(run, s.effLimit || 0)) {
         var nd = nextDayOpen(s.cfg, Date.now());
@@ -852,6 +853,11 @@
     return guess;
   }
   function msToZoned(ms, tz) { if (!ms) return ''; var p = tzParts(ms, tz); return p.year + '-' + p.month + '-' + p.day + 'T' + (p.hour === '24' ? '00' : p.hour) + ':' + p.minute; }
+  function weekText(run) { // every schedule runs at most 7 days, then stops by itself
+    if (!run || !run.running || !run.endAt) return '';
+    var left = Math.max(0, Math.ceil((run.endAt - Date.now()) / 864e5));
+    return 'This schedule runs until ' + fmtTz(run.endAt, (S.cfg && S.cfg.tz) || 'America/New_York') + ' (' + (left <= 1 ? 'last day' : left + ' days left') + '). Then it stops by itself: press Start to schedule the next 7 days.';
+  }
   function fmtTz(ms, tz) { try { return new Date(ms).toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return fmtTime(ms); } }
   /* same rules as the sheet: open now? next opening? */
   function winInfo(c, now) {
@@ -956,9 +962,19 @@
     var names = DAYS3.filter(function (n, i) { return BULK[i]; }).join(', ');
     toast('Applied ' + hm(f) + ' to ' + hm(t) + ' on ' + names + '. Press "Save schedule & limits" to keep it.');
   }
+  var MAX_AHEAD = 7 * 864e5; // a campaign can be scheduled at most one week ahead
+  function startBounds() { // the date picker only offers today .. 7 days from now
+    var el = $('startAt'), tz = ($('tz') && $('tz').value) || (S.cfg && S.cfg.tz) || 'America/New_York'; if (!el) return;
+    el.min = msToZoned(Date.now(), tz); el.max = msToZoned(Date.now() + MAX_AHEAD, tz);
+  }
+  function checkStart() { // typed or picked further than a week: bring it back to the last day allowed
+    var el = $('startAt'); if (!el || !el.value) return;
+    var tz = $('tz').value, ms = zonedToMs(el.value, tz), lim = Date.now() + MAX_AHEAD;
+    if (ms > lim) { el.value = msToZoned(lim, tz); toast('You can schedule up to 7 days ahead. The start was moved to the latest day allowed.'); }
+  }
   function wireSched() {
     document.querySelectorAll('#schPresets .chip').forEach(function (b) { b.onclick = function () { var p = PRESETS[b.getAttribute('data-p')]; drawSched(p[0].map(function (on) { return { on: !!on, from: p[1], to: p[2] }; })); schedSummary(); }; });
-    $('tz').addEventListener('change', schedChanged); $('startAt').addEventListener('change', schedSummary); $('limit').addEventListener('input', schedSummary);
+    $('tz').addEventListener('change', function () { startBounds(); schedChanged(); }); $('startAt').addEventListener('change', function () { checkStart(); schedSummary(); }); $('startAt').addEventListener('focus', startBounds); $('limit').addEventListener('input', schedSummary);
     if ($('bulkApply')) $('bulkApply').onclick = applyBulk;
     setInterval(function () { if ($('v-limits') && $('v-limits').classList.contains('on')) { paintBars(); schedSummary(); } }, 60000);
   }
@@ -968,7 +984,7 @@
     $('ramp').checked = !!c.ramp;
     var sel = $('tz'); if (!sel.options.length) TZ.forEach(function (t) { var o = document.createElement('option'); o.value = t[0]; o.textContent = t[1]; sel.appendChild(o); });
     if (!Array.prototype.some.call(sel.options, function (o) { return o.value === c.tz; })) { var o = document.createElement('option'); o.value = c.tz; o.textContent = c.tz; sel.appendChild(o); }
-    sel.value = c.tz; sigFill(c.sig); paintLogo(); loadLogo(); S.skip = (c.skipDates || []).slice(); drawSched(schedOf(c)); drawBulk(); $('startAt').value = msToZoned(+c.startAt || 0, c.tz); drawSkip(); schedSummary(); renderSteps(); rampHint();
+    sel.value = c.tz; sigFill(c.sig); paintLogo(); loadLogo(); S.skip = (c.skipDates || []).slice(); drawSched(schedOf(c)); drawBulk(); $('startAt').value = msToZoned(+c.startAt || 0, c.tz); startBounds(); drawSkip(); schedSummary(); renderSteps(); rampHint();
   }
   function gather() {
     var c = S.cfg, num = function (id, d) { var v = parseFloat($(id).value); return isFinite(v) ? v : d; };
@@ -976,7 +992,7 @@
     c.sig = sigRead();
     c.limit = Math.max(1, Math.floor(num('limit', 50))); c.delayMin = Math.max(0, num('delayMin', 40)); c.delayMax = Math.max(c.delayMin, num('delayMax', 120));
     c.ramp = $('ramp').checked; c.rampStart = Math.max(1, Math.floor(num('rampStart', 10))); c.rampStep = Math.max(0, Math.floor(num('rampStep', 5)));
-    c.tz = $('tz').value; c.days = readSched(); c.startAt = zonedToMs($('startAt').value, c.tz); c.skipDates = (S.skip || []).slice();
+    c.tz = $('tz').value; c.days = readSched(); c.startAt = zonedToMs($('startAt').value, c.tz); if (c.startAt > Date.now() + MAX_AHEAD) c.startAt = Date.now() + MAX_AHEAD; c.skipDates = (S.skip || []).slice();
     var onD = c.days.filter(function (d) { return d.on && d.to > d.from; }); // keep the old fields filled for older pages / sheets
     c.winFrom = onD.length ? Math.floor(Math.min.apply(null, onD.map(function (d) { return d.from; })) / 60) : 9; c.winTo = onD.length ? Math.ceil(Math.max.apply(null, onD.map(function (d) { return d.to; })) / 60) : 17;
     c.weekdays = !(c.days[5].on || c.days[6].on); c.maxBouncePct = Math.min(50, Math.max(1, num('maxBouncePct', 5)));
@@ -1066,7 +1082,7 @@
     var run = st ? st.run || {} : {}, c = st ? st.counts || {} : {};
     var on = !!run.running, paused = !!run.paused;
     $('runTag').textContent = on ? (paused ? 'Paused' : 'Running') : 'Stopped'; $('runTag').className = 'tag ' + (on && !paused ? 'queued' : (paused ? 'paused' : 'removed'));
-    $('runReason').textContent = run.reason || '';
+    $('runReason').textContent = run.reason || weekText(run);
     $('bStart').hidden = on; $('bPause').hidden = !on || paused; $('bResume').hidden = !paused; $('bStop').hidden = !on;
     var sent = run.sentToday || 0, lim = st ? st.effLimit : 0;
     $('todayBar').style.width = lim ? Math.min(100, Math.round(sent * 100 / lim)) + '%' : '0';

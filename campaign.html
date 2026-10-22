@@ -161,6 +161,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 .logo-up{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 14px}
 .logo-prev{width:52px;height:52px;border-radius:12px;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--input);color:var(--mut);font:700 20px Arial,sans-serif;flex:none}
 .logo-prev{width:auto;min-width:52px;max-width:160px;padding:3px}.logo-prev img{max-width:150px;height:46px;width:auto;object-fit:contain;display:block}
+.sch-dates>div>label.gl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -432,10 +433,10 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
             <div class="sch-row sch-top"><span></span><span>Day</span><span>From</span><span></span><span>Until</span><span class="sch-scale c-bar"><i>12 AM</i><i>6 AM</i><i>12 PM</i><i>6 PM</i><i>12 AM</i></span><span></span></div>
             <div id="schRows"></div>
           </div>
-          <div class="grid2" style="margin-top:18px">
-            <div><label class="gl" for="startAt">Start sending on <span class="opt">(optional, in the schedule's time zone)</span></label>
+          <div class="grid2 sch-dates" style="margin-top:18px">
+            <div><label class="gl" for="startAt">Start sending on <span class="opt">(optional, max 7 days ahead)</span></label>
               <div class="row" style="flex-wrap:nowrap"><input id="startAt" class="gi" type="datetime-local" style="margin:0"><button type="button" class="btn sm" style="flex:none;height:42px" onclick="CMP.clearStart()">Clear</button></div></div>
-            <div><label class="gl" for="skipAdd">Days off <span class="opt">(holidays: nothing is sent on these dates)</span></label>
+            <div><label class="gl" for="skipAdd">Days off <span class="opt">(no emails on these dates)</span></label>
               <div class="row" style="flex-wrap:nowrap"><input id="skipAdd" class="gi" type="date" style="margin:0"><button type="button" class="btn sm" style="flex:none;height:42px" onclick="CMP.addSkip()">Add</button></div>
               <div class="chips" id="skipList" style="margin:10px 0 0"></div></div>
           </div>
@@ -495,8 +496,8 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
   </section>
 </div>
 <script src="auth.js"></script>
-<script src="campaign-code.js?v=2"></script>
+<script src="campaign-code.js?v=3"></script>
 <script src="mailer-files.js"></script>
-<script src="campaign.js?v=5"></script>
+<script src="campaign.js?v=7"></script>
 </body>
 </html>
