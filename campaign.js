@@ -755,10 +755,31 @@
     var head = ['Email', 'Owner name', 'Company', 'Phone', 'MC', 'Result', 'Why'];
     dl('emails-' + kind + '.csv', [head].concat(rows.map(function (r) { return [r.email, r.name, r.company, r.phone, r.mc, r.status, r.reason]; })).map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'));
   }
+  var MAILER_LOCAL = 'http://127.0.0.1:47321';
+  function addToMailer(rows) { // a Mailer campaign: the list goes to the Mailer on THIS computer, never into the Google Sheet
+    var list = rows.map(function (r) { return { email: r.email, name: r.name, company: r.company, phone: r.phone, mc: r.mc }; });
+    setMsg('addMsg', 'Handing ' + list.length + ' emails to the Mailer on this computer...', true);
+    fetch(MAILER_LOCAL + '/add', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ url: S.url, box: S.box || '', kh: S.kh, rows: list }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.ok) {
+          setMsg('addMsg', 'Added ' + j.added + ' to the Mailer on this computer' + (j.skipped ? ' (' + j.skipped + ' were already waiting there)' : '') + '. Waiting to send: ' + j.left + '. Each lead is deleted from the Mailer as soon as its email is sent.', true);
+          toast('Added ' + j.added + ' to the Mailer.'); loadState(true); return;
+        }
+        var e = j && j.error;
+        setMsg('addMsg', e === 'NOT_HERE' ? 'This mailbox is not set up in the Mailer on this computer. Add it with add-mailbox.bat (step 1), restart start.bat, then press Add to campaign again.'
+          : e === 'BAD_KEY' ? 'The Mailer on this computer has another secret key for this mailbox. Run add-mailbox.bat again with the key from step 1.'
+          : 'The Mailer did not accept the list (' + (e || 'unknown answer') + ').');
+      })
+      .catch(function () {
+        setMsg('addMsg', 'The Mailer is not running on this computer. Open the Mailer folder, double-click start.bat, leave it open, then press Add to campaign again. (If Chrome asks to let this site reach apps on this device, press Allow.)');
+      });
+  }
   function addToCampaign() {
     if (!S.connected) { setMsg('addMsg', 'Connect first (step 1).'); return; }
     var inc = $('addRisky').checked, rows = S.items.filter(function (r) { return r.status === 'ready' || (inc && r.status === 'risky'); });
     if (!rows.length) { setMsg('addMsg', 'There are no Ready emails to add.'); return; }
+    if (S.cfg && S.cfg.sender === 'smtp') return addToMailer(rows);
     var added = 0, skipped = 0, blocked = 0, before = 0, i = 0;
     setMsg('addMsg', 'Adding...', true);
     (function next() {
@@ -770,7 +791,8 @@
   }
 
   /* ================= 3. message ================= */
-  function renderSteps() {
+  function renderSteps() { // one email per lead (no follow-ups): the lead is deleted once it is sent
+    if (S.cfg.steps.length > 1) S.cfg.steps = S.cfg.steps.slice(0, 1);
     var steps = S.cfg.steps;
     $('stepList').innerHTML = steps.map(function (st, i) {
       return '<div class="step" data-i="' + i + '"><h3><span>' + (i === 0 ? 'First email' : 'Follow-up ' + i) + '</span>' + (i > 0 ? '<button class="btn sm del" data-del="' + i + '">Remove</button>' : '') + '</h3>' +
