@@ -184,7 +184,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 <div class="layout">
   <aside class="sidebar" id="appSidebar">
     <div class="brand"><div class="brand-logo"><img src="https://cdn.jsdelivr.net/gh/mrartist048/fmcsa-control@main/favicon.png" alt="Dispatch Link" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'logo-fallback',textContent:'DL'}))"></div><div><div class="brand-name">Dispatch Link</div><div class="brand-sub">Email campaigns</div></div></div>
-    <div class="cmp-pick"><label for="cmpSel">Campaign (mailbox)</label><select id="cmpSel"></select><small>Each mailbox has its own campaign: own list, emails and limits.</small></div>
+    <div class="cmp-pick"><label for="cmpSel">Campaign (mailbox)</label><select id="cmpSel"></select><small>Each mailbox in the Mailer has its own campaign: own list, emails and limits.</small></div>
     <nav aria-label="Campaign steps">
       <button class="nav-btn" data-v="all"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>All campaigns</button>
       <button class="nav-btn active" data-v="connect"><svg class="ico"><use href="#i-link"/></svg>1. Connect</button>
@@ -206,49 +206,25 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 
       <!-- 1 CONNECT -->
       <div class="view" id="v-all">
-        <div class="hello"><h1>All campaigns</h1><p>Every mailbox in one place. Press Open to work on one.</p></div>
+        <div class="hello"><h1>All campaigns</h1><p>Every mailbox in the Mailer on this computer. Press Open to work on one.</p></div>
         <div class="kpis" id="allKpis"></div>
         <div class="panel">
           <div class="row" style="justify-content:space-between"><h2 style="margin:0">Mailboxes</h2><button class="btn" onclick="CMP.overview()"><svg class="ico"><use href="#i-refresh"/></svg>Refresh</button></div>
-          <div class="tw" style="margin-top:12px"><table><thead><tr><th>Mailbox</th><th>Sends with</th><th>Status</th><th>Sent today</th><th>Waiting</th><th>Replies</th><th>Bounces</th><th>Health</th><th>Next email</th><th class="r"></th></tr></thead><tbody id="allTbl"></tbody></table></div>
+          <div class="tw" style="margin-top:12px"><table><thead><tr><th>Mailbox</th><th>Mailer</th><th>Status</th><th>Sent today</th><th>Waiting</th><th>Replies</th><th>Bounces</th><th>Health</th><th>Next email</th><th class="r"></th></tr></thead><tbody id="allTbl"></tbody></table></div>
           <p class="sub" id="allNote" style="margin:12px 0 0"></p>
-        </div>
-        <div class="panel">
-          <h2>Saved in this browser</h2>
-          <p class="sub"><b>Hide</b> removes the shortcut from this browser only (nothing in your Google Sheet changes). <b>Delete mailbox</b> removes a mailbox you no longer use: its campaign stops and its tabs are deleted from the sheet. The main campaign of a sheet can only be hidden or stopped.</p>
-          <div class="tw"><table><thead><tr><th>Name</th><th>Tabs in the sheet</th><th>Link</th><th class="r"></th></tr></thead><tbody id="savedRows"></tbody></table></div>
         </div>
       </div>
       <div class="view on" id="v-connect">
-        <div class="hello"><h1>Send campaigns from your own email</h1><p>Your emails go out one by one, at the pace you choose, even when this page is closed. Send with Gmail / Google Workspace, or with Zoho, Outlook, hosting (cPanel) or any other email account. Contacts and settings stay in your own Google Sheet.</p></div>
-        <div class="panel">
-          <h2>Send with</h2>
-          <div class="grid2" id="senderPick">
-            <button type="button" class="pick" data-s="gmail"><b>Gmail / Google Workspace</b><span>Easiest. No extra program. Google limits you to about 100 per day (personal Gmail) or 1,500 per day (Workspace).</span></button>
-            <button type="button" class="pick" data-s="smtp"><b>Other email (Zoho, Outlook, cPanel, Thunderbird accounts)</b><span>Uses a small helper program ("Mailer") that you run on a computer that stays on. Works with any email account that has SMTP.</span></button>
-          </div>
-          <div id="asBox" hidden style="margin-top:16px">
-            <label class="gl" for="sendAs">Send as (the From address people see)</label>
-            <div class="row" style="flex-wrap:nowrap"><select id="sendAs" class="gi" style="margin-bottom:0"></select><button class="btn" style="flex:none" onclick="CMP.loadAliases()">Reload</button></div>
-            <p class="sub" id="asHint" style="margin:8px 0 0">Your domain email (for example sales@yourdomain.com) can send from Google too, 24/7, with your computer off and no Mailer. Add it once in Gmail: Settings, Accounts and Import, Send mail as, Add another email address (untick "Treat as an alias", enter your host's SMTP server). Then press Reload and pick it here. Replies arrive in that mailbox; forward them to this Gmail so a reply stops the follow-ups.</p>
-          </div>
-        </div>
+        <div class="hello"><h1>Send campaigns from your business email</h1><p>The Mailer program on your computer sends the emails one by one from your own mailbox (Hostinger, Zoho, cPanel, Outlook and others), at the pace you choose. Your list, emails, settings and results are kept in the Mailer folder on that computer. No Google Sheet is needed.</p></div>
         <div class="panel" id="connBox">
-          <h2>Connect</h2>
-          <p class="sub" id="connSub">Follow the 5 steps below once, then paste your Web app URL here.</p>
-          <label class="gl" for="cUrl">Apps Script Web app URL</label>
-          <input id="cUrl" class="gi" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
-          <label class="gl" for="cKey">Secret key <span style="font-weight:400;color:var(--mut)">(protects your campaign page; keep a copy)</span></label>
-          <div class="row" style="flex-wrap:nowrap"><input id="cKey" class="gi" autocomplete="off" style="margin-bottom:14px"><button class="btn" style="margin-bottom:14px;flex:none" onclick="CMP.copyKey()">Copy</button></div>
-          <label class="gl" for="cBox">Mailbox for this campaign <span style="font-weight:400;color:var(--mut)">(leave empty for your main campaign; for another mailbox type it, e.g. info@yourdomain.com, and it gets its own tabs in the SAME sheet with the SAME link)</span></label>
-          <input id="cBox" class="gi" autocomplete="off" placeholder="Main campaign">
-          <div class="row"><button class="btn primary" id="cGo" onclick="CMP.connect()">Connect</button><button class="btn del" id="cOff" onclick="CMP.disconnect()" hidden>Remove from this device</button></div>
+          <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Mailboxes on this computer</h2><button class="btn" id="cGo" onclick="CMP.connect()"><svg class="ico"><use href="#i-refresh"/></svg>Find my Mailer</button></div>
+          <p class="sub" id="connSub" style="margin:8px 0 12px">Start the Mailer (double-click start.bat) and this page finds it by itself.</p>
+          <div id="boxList"></div>
           <div class="msg" id="cMsg" role="status"></div>
-          <div id="cInfo" hidden></div>
         </div>
-        <div class="panel" id="mailerBox" hidden>
-          <h2>Connect your mailbox in 3 steps</h2>
-          <p class="sub">Do this once for each mailbox. The Mailer is a small free program that sends this campaign from your own email account (the same account you use in Thunderbird or webmail).</p>
+        <div class="panel" id="mailerBox">
+          <h2>Add a mailbox in 3 steps</h2>
+          <p class="sub">Do this once for each mailbox. The Mailer is a small free program that sends your campaign from your own email account (the same account you use in Thunderbird or webmail).</p>
           <div class="wiz">
             <div class="wiz-step"><span class="wn">1</span><div class="wb"><b>Type your mailbox</b>
               <input id="mbEmail" class="gi" autocomplete="off" placeholder="sales@yourcompany.com" style="margin:8px 0 8px">
@@ -260,36 +236,22 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
             <div class="wiz-step"><span class="wn">2</span><div class="wb"><b>Get the Mailer</b> <span class="wiz-note">(once per computer)</span>
               <ol class="wiz-ol"><li>Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (free, choose LTS). Next, next, finish.</li>
               <li><button class="btn sm primary" onclick="CMP.downloadMailer()"><svg class="ico"><use href="#i-download"/></svg>Download Mailer</button> and unzip it into a folder you keep (for example Documents).</li></ol>
-              <span class="wiz-note">Already have it? Skip this step.</span>
+              <span class="wiz-note">Already have an older Mailer? Unzip the new one into the same folder: your mailboxes and passwords stay.</span>
             </div></div>
             <div class="wiz-step"><span class="wn">3</span><div class="wb"><b>Copy your setup code and paste it in the Mailer</b>
               <div class="row" style="flex-wrap:nowrap;margin:8px 0"><input id="mbCode" class="gi" readonly style="margin:0;font-family:ui-monospace,Consolas,monospace;font-size:12px"><button class="btn primary" style="flex:none" onclick="CMP.copySetup()">Copy setup code</button></div>
               <ol class="wiz-ol"><li>In the Mailer folder double-click <code>add-mailbox.bat</code> (very first mailbox: <code>start.bat</code>).</li>
               <li>Paste the code (right-click in the black window) and press Enter.</li>
               <li>Type the password of this mailbox and press Enter. <span id="mbPassTip" class="wiz-note"></span></li>
-              <li>Double-click <code>start.bat</code> and leave the window open.</li></ol>
+              <li>Double-click <code>start.bat</code> and leave the window open. The mailbox appears above by itself.</li></ol>
             </div></div>
           </div>
           <div id="mailerStatus" class="note" style="margin-top:14px"></div>
-          <details class="wiz-adv"><summary>Manual setup and help</summary>
-            <p class="sub" style="margin-top:10px">If you prefer, start the Mailer and answer its questions yourself with these:</p>
-            <div class="row"><button class="btn" onclick="CMP.copyUrl()">Copy Web app URL</button><button class="btn" onclick="CMP.copyKey()">Copy Secret key</button></div>
-            <div class="note"><b>Passwords:</b> Zoho, Outlook and Yahoo usually need an <i>app password</i> (always when two-factor login is on). Hosting mail (Hostinger, cPanel, GoDaddy) uses the normal mailbox password. Emails go out only while the Mailer is running, so use a computer that stays on, or a small server (VPS).</div>
+          <details class="wiz-adv"><summary>Good to know</summary>
+            <div class="note" style="margin-top:10px"><b>Passwords:</b> Zoho, Outlook and Yahoo usually need an <i>app password</i> (always when two-factor login is on). Hosting mail (Hostinger, cPanel, GoDaddy) uses the normal mailbox password.</div>
+            <div class="note"><b>Keep it running:</b> emails go out only while the Mailer window is open, so use a computer that stays on, or a small server (VPS). Open this page on that same computer to see and control your campaigns.</div>
+            <div class="note"><b>Unsubscribe:</b> every email ends with "reply STOP". The Mailer reads the mailbox (IMAP) every few minutes; anyone who replies STOP, or whose email bounces, is blocked for good.</div>
           </details>
-        </div>
-        <div class="panel">
-          <h2>How to set it up (5 minutes, once)</h2>
-          <p class="sub" id="setupSub">Create the Google Sheet that stores your campaign (in Gmail mode it also sends the emails).</p>
-          <ol class="steps">
-            <li><b>Create a new Google Sheet.</b> Open <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> and name it "Dispatch Link Campaign". It is only for campaigns.</li>
-            <li><b>Open Apps Script.</b> In that sheet click <i>Extensions</i>, then <i>Apps Script</i>. Delete everything in <code>Code.gs</code>.</li>
-            <li><b>Paste the code.</b> Press <i>Copy Apps Script code</i> below, paste it in <code>Code.gs</code> and press Save (Ctrl+S).</li>
-            <li><b>Allow it once.</b> In the toolbar choose the function <code>authorize</code> and press <i>Run</i>. Google asks for permission to send and read Gmail (Gmail mode uses it to send and to notice bounces and replies; in "Other email" mode it is not used, but you still allow it). If it says "not verified" choose <i>Advanced</i>, then <i>Go to project</i>, then <i>Allow</i>.</li>
-            <li><b>Deploy it.</b> Click <i>Deploy</i>, <i>New deployment</i>, type <i>Web app</i>, <i>Execute as: Me</i>, <i>Who has access: Anyone</i>, press Deploy. Copy the Web app URL (it ends with <code>/exec</code>) into the box above and press Connect.</li>
-          </ol>
-          <div class="note"><b>Changed the code later?</b> Deploy, Manage deployments, pencil icon, Version: New version, Deploy. The URL stays the same.</div>
-          <div class="row"><button class="btn primary" onclick="CMP.copyCode()">Copy Apps Script code</button><button class="btn" id="cShow" onclick="CMP.toggleCode()">Show code</button></div>
-          <pre class="code" id="gsCode" hidden></pre>
         </div>
       </div>
 
@@ -332,21 +294,21 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 
       <!-- 3 MESSAGE -->
       <div class="view" id="v-message">
-        <div class="hello"><h1>Write the emails</h1><p>One first email and up to 4 follow-ups. A follow-up is sent only if the person has not replied, bounced or unsubscribed.</p></div>
+        <div class="hello"><h1>Write the emails</h1><p>One email per lead. It is sent once; anyone who replies STOP is never emailed again.</p></div>
         <div class="split">
           <div>
             <div id="stepList"></div>
             <p class="hint" style="margin:0 0 18px;color:var(--mut);font-size:13px">One email per lead. As soon as it is sent the lead is deleted; only the address is kept so it is never emailed twice.</p>
             <div class="panel">
               <h2>Sender details</h2>
-              <p class="sub">The business address and the unsubscribe line are added to the bottom of every email. This is required by US law (CAN-SPAM).</p>
+              <p class="sub">The business address and the STOP line are added to the bottom of every email (required by US law, CAN-SPAM). When someone replies STOP, the Mailer reads it in your mailbox and never emails them again.</p>
               <div class="grid2">
                 <div><label class="gl" for="fromName">Sender name</label><input id="fromName" class="gi" placeholder="Ali from Dispatch Link"></div>
-                <div><label class="gl" for="replyTo">Reply-to email <span style="font-weight:400;color:var(--mut)">(optional)</span></label><input id="replyTo" class="gi" placeholder="you@yourcompany.com"></div>
+                <div><label class="gl" for="replyTo">Reply-to email <span style="font-weight:400;color:var(--mut)">(optional; leave empty so STOP replies reach this mailbox)</span></label><input id="replyTo" class="gi" placeholder="you@yourcompany.com"></div>
               </div>
               <label class="gl" for="address">Business mailing address *</label>
               <input id="address" class="gi" placeholder="Dispatch Link LLC, 123 Main St, Dallas, TX 75001">
-              <label class="gl" for="unsubText">Unsubscribe line</label>
+              <label class="gl" for="unsubText">Unsubscribe line <span style="font-weight:400;color:var(--mut)">(must ask people to reply STOP)</span></label>
               <input id="unsubText" class="gi">
               <div class="sig-box">
                 <div class="sig-head"><div><h3>Email signature</h3><p>A small professional card under every email: logo, name, contact and a green WhatsApp button. The email text stays plain, so it still lands in the inbox.</p></div>
@@ -360,7 +322,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
                     <div><label class="gl" for="sigWa">WhatsApp number <span class="opt">(for the button, with country code)</span></label><input id="sigWa" class="gi" inputmode="tel" placeholder="+1 555 123 4567"></div>
                     <div><label class="gl" for="sigSite">Website <span class="opt">(optional)</span></label><input id="sigSite" class="gi" placeholder="yourcompany.com"></div>
                   </div>
-                  <label class="gl">Logo <span class="opt">(optional: PNG or JPG. It is made into a small square and saved in your Google Sheet. No logo = first letter of the company)</span></label>
+                  <label class="gl">Logo <span class="opt">(optional: PNG or JPG. It is made into a small square and saved in the Mailer. No logo = first letter of the company)</span></label>
                   <div class="logo-up">
                     <div class="logo-prev" id="logoPrev"></div>
                     <div class="row" style="gap:8px"><label class="btn sm" for="logoFile" style="cursor:pointer">Upload logo</label><input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp" hidden>
@@ -459,7 +421,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
         <div class="hello"><h1>Run &amp; results</h1><p id="runSub">Start the campaign and it sends by itself within your limits.</p></div>
         <div class="panel">
           <div class="row" style="justify-content:space-between"><div><span class="tag paused" id="runTag">Stopped</span> <span id="runReason" style="color:var(--mut);font-size:13px"></span></div>
-          <div class="row"><button class="btn success" id="bStart" onclick="CMP.ctl('start')">Start campaign</button><button class="btn" id="bPause" onclick="CMP.ctl('pause')" hidden>Pause</button><button class="btn success" id="bResume" onclick="CMP.ctl('resume')" hidden>Resume</button><button class="btn del" id="bStop" onclick="CMP.ctl('stop')" hidden>Stop</button><button class="btn" id="bNow" onclick="CMP.sendNow()" title="Sends up to 10 emails right now (still respects your daily limit)">Send a batch now</button><button class="btn" onclick="CMP.refresh()"><svg class="ico"><use href="#i-refresh"/></svg>Refresh</button></div></div>
+          <div class="row"><button class="btn success" id="bStart" onclick="CMP.ctl('start')">Start campaign</button><button class="btn" id="bPause" onclick="CMP.ctl('pause')" hidden>Pause</button><button class="btn success" id="bResume" onclick="CMP.ctl('resume')" hidden>Resume</button><button class="btn del" id="bStop" onclick="CMP.ctl('stop')" hidden>Stop</button><button class="btn" onclick="CMP.refresh()"><svg class="ico"><use href="#i-refresh"/></svg>Refresh</button></div></div>
           <div class="bar"><i id="todayBar" style="width:0"></i></div>
           <div id="runUpd" style="margin-top:8px;font-size:12px;color:var(--mut)"></div>
           <div id="runNext" class="run-next" hidden></div>
@@ -479,13 +441,13 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
             <div class="chips" id="stChips" style="margin:0"></div><span style="flex:1"></span>
             <input id="qSearch" class="gi" placeholder="Search email or company" style="max-width:240px;margin:0;height:34px" oninput="CMP.searchSoon()">
           </div>
-          <div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="CMP.bulk('promote')">Release all Risky</button><button class="btn sm del" onclick="CMP.bulk('del-risky')">Delete Risky</button><button class="btn sm del" onclick="CMP.bulk('del-done')">Delete finished</button><button class="btn sm del" onclick="CMP.bulk('del-bounced')">Delete bounced</button><button class="btn sm del" onclick="CMP.bulk('del-all')">Empty list</button></div>
-          <div class="tw"><table><thead><tr><th>Email</th><th>Company</th><th>Status</th><th>Sent</th><th>Next email</th><th>Note</th></tr></thead><tbody id="ctRows"></tbody></table></div>
+          <div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="CMP.bulk('promote')">Release all Risky</button><button class="btn sm del" onclick="CMP.bulk('del-risky')">Delete Risky</button><button class="btn sm del" onclick="CMP.bulk('del-all')">Empty list</button></div>
+          <div class="tw"><table><thead><tr><th>Email</th><th>Company</th><th>Status</th><th>Sent</th><th>Retry at</th><th>Note</th></tr></thead><tbody id="ctRows"></tbody></table></div>
           <div class="pager"><span id="ctCount"></span><button class="btn sm" onclick="CMP.ctPage(-1)">Previous</button><button class="btn sm" onclick="CMP.ctPage(1)">Next</button></div>
         </div>
         <div class="panel">
           <h2>Block list</h2>
-          <p class="sub">Anyone here is never emailed, now or in future campaigns. Unsubscribes and bounces are added automatically. <span id="blkCount"></span></p>
+          <p class="sub">Anyone here is never emailed, now or in future campaigns. People who reply STOP and addresses that bounce are added automatically. It is shared by every mailbox in the Mailer. <span id="blkCount"></span></p>
           <textarea class="ta" id="blkAdd" style="min-height:70px" placeholder="emails or @domains, one per line"></textarea>
           <button class="btn" onclick="CMP.blockAdd()">Add to block list</button>
         </div>
@@ -496,8 +458,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
   </section>
 </div>
 <script src="auth.js"></script>
-<script src="campaign-code.js?v=6"></script>
-<script src="mailer-files.js?v=4"></script>
-<script src="campaign.js?v=12"></script>
+<script src="mailer-files.js?v=5"></script>
+<script src="campaign.js?v=13"></script>
 </body>
 </html>

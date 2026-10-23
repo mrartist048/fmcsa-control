@@ -1,4 +1,4 @@
-/* Dispatch Link | Email campaigns (admin page). Talks to the company's own Google Apps Script (campaign.gs). */
+/* Dispatch Link | Email campaigns (admin page). Talks only to the Dispatch Link Mailer running on this computer (http://127.0.0.1:47321). No Google Sheet. */
 (function () {
   'use strict';
   try { if (typeof DL !== 'undefined' && DL.session && !DL.session()) { location.replace('index.html'); return; } } catch (e) {}
@@ -17,41 +17,19 @@
   }
   function setMsg(id, text, ok) { var e = $(id); if (!e) return; e.textContent = text || ''; e.className = 'msg' + (ok ? ' ok' : ''); }
 
+  var STOP_TEXT = 'To stop receiving our emails, just reply with the word STOP.';
   var DEFAULT_CFG = {
-    sender: 'gmail', limit: 50, ramp: true, rampStart: 10, rampStep: 5, delayMin: 40, delayMax: 120,
+    sender: 'smtp', limit: 50, ramp: true, rampStart: 10, rampStep: 5, delayMin: 40, delayMax: 120,
     winFrom: 9, winTo: 17, tz: 'America/New_York', weekdays: true, days: null, startAt: 0, skipDates: [], maxBouncePct: 5,
-    fromName: '', replyTo: '', address: '', unsubText: 'If you do not want to hear from us again, click here:',
+    fromName: '', replyTo: '', address: '', unsubText: STOP_TEXT,
     steps: [{ subject: 'Dispatch services for {company}', body: 'Hello {firstname},\n\nI saw that {company} is an active carrier. We help carriers find good paying loads, negotiate rates and handle the paperwork so you can focus on driving.\n\nWould you be open to a quick chat?\n\nBest regards', waitDays: 0 }]
   };
   var TZ = [['America/New_York', 'US Eastern (New York)'], ['America/Chicago', 'US Central (Chicago)'], ['America/Denver', 'US Mountain (Denver)'], ['America/Los_Angeles', 'US Pacific (Los Angeles)'], ['America/Phoenix', 'US Arizona (Phoenix)'], ['Asia/Karachi', 'Pakistan (Karachi)'], ['Europe/London', 'UK (London)'], ['UTC', 'UTC']];
 
-  /* ---- several campaigns (one per mailbox), each with its own sheet ---- */
-  var CL = {
-    list: function () {
-      var l; try { l = JSON.parse(LS.get('dl_cmp_list') || '[]'); } catch (e) { l = []; }
-      if (!Array.isArray(l)) l = [];
-      var seen = {}, dup = false; // the same link + mailbox saved twice: keep one
-      l = l.filter(function (c) { if (!c || !c.url) return true; var k = c.url + '|' + (c.box || ''); if (seen[k]) { dup = true; if (LS.get('dl_cmp_active') === c.id) LS.set('dl_cmp_active', seen[k]); return false; } seen[k] = c.id; return true; });
-      if (dup) LS.set('dl_cmp_list', JSON.stringify(l));
-      if (!l.length && LS.get('dl_cmp_url')) { l = [{ id: 'c' + Date.now().toString(36), name: '', url: LS.get('dl_cmp_url'), key: LS.get('dl_cmp_key') || '' }]; LS.set('dl_cmp_list', JSON.stringify(l)); LS.set('dl_cmp_active', l[0].id); }
-      return l;
-    },
-    save: function (l) { LS.set('dl_cmp_list', JSON.stringify(l)); },
-    hidden: function () { try { var h = JSON.parse(LS.get('dl_cmp_hidden') || '[]'); return Array.isArray(h) ? h : []; } catch (e) { return []; } },
-    isHidden: function (url, box) { return CL.hidden().indexOf(url + '|' + (box || '')) >= 0; },
-    hide: function (url, box) { var h = CL.hidden(), k = url + '|' + (box || ''); if (h.indexOf(k) < 0) h.push(k); LS.set('dl_cmp_hidden', JSON.stringify(h)); },
-    unhide: function (url, box) { var k = url + '|' + (box || ''); LS.set('dl_cmp_hidden', JSON.stringify(CL.hidden().filter(function (x) { return x !== k; }))); },
-    activeId: function () { var id = LS.get('dl_cmp_active'); return id === null ? ((CL.list()[0] || {}).id || '') : id; },
-    active: function () { var id = CL.activeId(); return CL.list().filter(function (c) { return c.id === id; })[0] || null; },
-    setActive: function (id) {
-      LS.set('dl_cmp_active', id || '');
-      var c = CL.list().filter(function (x) { return x.id === id; })[0];
-      if (c) { LS.set('dl_cmp_url', c.url); LS.set('dl_cmp_key', c.key); } else { LS.del('dl_cmp_url'); LS.del('dl_cmp_key'); }
-    }
-  };
-  function cleanBox(b) { return String(b || '').trim().toLowerCase().replace(/[^a-z0-9@._+\-]/g, '').slice(0, 60); }
-  var ACT = CL.active();
-  var S = { box: ACT ? (ACT.box || '') : '', url: ACT ? ACT.url : '', key: ACT ? ACT.key : '', kh: '', connected: false, state: null,
+  /* ---- the mailboxes come from the Mailer on this computer (one campaign per mailbox) ---- */
+  var MAILER = 'http://127.0.0.1:47321';
+  var BOXES = []; // [{email, left, held, running, paused, sentToday}] reported by the Mailer
+  var S = { box: LS.get('dl_cmp_box') || '', connected: false, online: false, state: null,
     cfg: JSON.parse(JSON.stringify(DEFAULT_CFG)), items: [], filter: 'all', page: 0,
     ct: { status: '', q: '', offset: 0, total: 0 }, prevStep: 0, timer: null, searchT: null };
   var PAGE = 100, CT_PAGE = 50;
@@ -69,16 +47,14 @@
     return o.slice(0, 6) + '-' + o.slice(6, 12) + '-' + o.slice(12);
   }
   var ERR = {
-    BAD_KEY: 'The secret key does not match this sheet. Use the key you created when you first connected.',
-    NOT_CLAIMED: 'This sheet is not set up yet. Press Connect again.',
-    ALREADY_CLAIMED: 'This sheet already belongs to another key. Enter the key you created the first time. (Lost it? Delete the row "kh" in the Settings sheet and connect again.)',
     NO_DAYS: 'Your schedule has no sending days. Turn on at least one day in step 4 and save.',
     ADDRESS_REQUIRED: 'Enter your business mailing address first (step 3, Sender details) and save. It is required in every email.',
     BAD_LIMIT: 'Set a daily limit of at least 1 (step 4).',
-    BOX_REMOVED: 'This mailbox was deleted from your sheet. Connect it again in 1. Connect to start fresh.',
-    MAIN_BOX: 'The main campaign of a sheet cannot be deleted. Stop it, or remove its shortcut.'
+    NO_BOX: 'This mailbox is not in the Mailer on this computer. Add it with add-mailbox.bat (1. Connect), then restart start.bat.',
+    NOT_FOUND: 'The Mailer on this computer is an older version. Download the new Mailer (1. Connect, step 2), unzip it into the same folder (your mailboxes stay), then start it again.',
+    NOT_HERE: 'This mailbox is not in the Mailer on this computer. Add it with add-mailbox.bat (1. Connect), then restart start.bat.'
   };
-  /* ---- button feedback: a clicked button shows a spinner while it talks to the sheet, then a tick (or a cross on error) ---- */
+  /* ---- button feedback: a clicked button shows a spinner while it talks to the Mailer, then a tick (or a cross on error) ---- */
   var BTN = { cur: null };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('button.btn'); if (!b || b.disabled || b.classList.contains('is-busy')) return;
@@ -105,90 +81,24 @@
     var html = b._html; b._html = null; if (BTN.cur === tk) BTN.cur = null;
     setTimeout(function () { if (!b.isConnected) return; b.classList.remove('is-ok', 'is-err'); b.innerHTML = html; b.style.minWidth = ''; }, tk.err ? 2200 : 1600);
   }
-  /* ---- talking to Google: a normal POST first; if the browser cannot reach Google that way (it says "Failed to fetch"),
-     the same request goes as a script tag, which works through the same Web app link. Remembered per browser. ---- */
-  var NET = { tag: false }; try { NET.tag = localStorage.getItem('dl_cmp_net') === 'tag'; } catch (e) {}
-  function viaTag(url, obj) {
-    return new Promise(function (res, rej) {
-      var q = 'p=' + encodeURIComponent(JSON.stringify(obj));
-      if (q.length > 7000) return rej(new Error('NET'));
-      var cb = 'dlc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), s = document.createElement('script'), done = false, t;
-      function end() { done = true; clearTimeout(t); try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); }
-      window[cb] = function (j) { if (done) return; end(); res(j); };
-      s.onerror = function () { if (done) return; end(); rej(new Error('NET')); };
-      s.onload = function () { setTimeout(function () { if (done) return; end(); var er = new Error('OLD_CODE'); er.nojs = true; rej(er); }, 400); }; // an answer that is not ours: old code, or a Google error page
-      t = setTimeout(function () { if (done) return; end(); rej(new Error('NET')); }, 60000);
-      s.src = url + (url.indexOf('?') < 0 ? '?' : '&') + q + '&callback=' + cb;
-      document.head.appendChild(s);
-    });
+  /* ---- talking to the Mailer on this computer (it keeps the list, the emails, the settings and the results) ---- */
+  var NOMAILER = 'The Mailer is not running on this computer. Open the Mailer folder, double-click start.bat and leave the window open. (If Chrome asks to let this site reach apps on this device, press Allow.)';
+  function mpost(path, obj, ms) {
+    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ctl ? setTimeout(function () { ctl.abort(); }, ms || 30000) : 0;
+    return fetch(MAILER + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(obj || {}), signal: ctl ? ctl.signal : undefined, cache: 'no-store' })
+      .then(function (r) { clearTimeout(t); return r.json(); }, function () { clearTimeout(t); S.online = false; throw new Error(NOMAILER); })
+      .then(function (j) { S.online = true; if (j && j.error) throw new Error(ERR[j.error] || String(j.error)); return j; });
   }
-  function byParts(url, obj) { // a big request through the script tag: sent in small parts, Google runs it when the last part arrives
-    var body = JSON.stringify(obj), id = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), parts = [], pos = 0;
-    while (pos < body.length) {
-      var len = Math.min(2400, body.length - pos);
-      while (len > 200 && encodeURIComponent(JSON.stringify({ action: 'part', id: id, i: 999, n: 999, data: body.substr(pos, len) })).length > 6200) len = Math.floor(len * 0.8);
-      parts.push(body.substr(pos, len)); pos += len;
-    }
-    var n = parts.length, i = 0, proven = false; // proven: this Apps Script already took a part, so later odd answers are Google hiccups
-    function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-    function one(tries) { // Google sometimes drops a request: each part is tried up to 5 times
-      return viaTag(url, { action: 'part', id: id, i: i, n: n, data: parts[i] }).then(function (j) {
-        if (i < n - 1 && j && j.error && !j.ok && j.error !== 'PARTS_MISSING') throw new Error('OLD_CODE'); // an older Apps Script does not know "part"
-        if (j && j.error === 'PARTS_MISSING') throw new Error('NET');
-        if (j && j.ok) proven = true;
-        return j;
-      }).catch(function (e) {
-        if ((e.message === 'OLD_CODE' && !(e.nojs && (proven || NET.tag))) || tries >= 4) throw e; // Google sometimes answers with its own error page: try again
-        if (e.message === 'OLD_CODE') e = new Error('NET');
-        return wait([2000, 5000, 10000, 20000][tries]).then(function () { return one(tries + 1); });
-      });
-    }
-    function send() {
-      if (typeof byParts.onPart === 'function') try { byParts.onPart(i, n); } catch (e) {}
-      return one(0).then(function (j) {
-        if (i < n - 1) { if (!j || !j.ok || j.part !== i) throw new Error('OLD_CODE'); i++; return send(); }
-        return j;
-      });
-    }
-    return send();
+  function mailerStatus() {
+    return fetch(MAILER + '/status', { cache: 'no-store' }).then(function (r) { return r.json(); }, function () { S.online = false; throw new Error(NOMAILER); });
   }
-  function gpost(url, obj) {
-    var small = JSON.stringify(obj).length < 5000;
-    function byFetch() { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(obj) }).then(function (r) { return r.json(); }); }
-    function remember() { if (!NET.tag) { NET.tag = true; try { localStorage.setItem('dl_cmp_net', 'tag'); } catch (e) {} } }
-    function byTag() {
-      var go = small ? function () { return viaTag(url, obj); } : function () { return byParts(url, obj); };
-      return go().catch(function (e) { if (e.message === 'OLD_CODE' || !small) throw e; return new Promise(function (r) { setTimeout(r, 3000); }).then(go); })
-        .then(function (j) { remember(); return j; });
-    }
-    if (NET.tag) return byTag().catch(function (e) { // this browser cannot POST to Google: always the script-tag way
-      if (e.message === 'OLD_CODE' && small) { NET.tag = false; try { localStorage.removeItem('dl_cmp_net'); } catch (x) {} }
-      if (e.message === 'OLD_CODE') return byFetch().catch(function () { throw new Error('OLD_CODE'); });
-      return byFetch();
-    });
-    return byFetch().catch(function (e) {
-      return byTag().catch(function (e2) { throw e2.message === 'OLD_CODE' ? new Error('OLD_CODE') : e; });
-    });
-  }
-  var OLDMSG = 'Your Apps Script needs the new code: step 1, copy the code, paste it in Apps Script, then Deploy, Manage deployments, Edit, New version.';
   function api(action, data) {
-    var tk = data && data.__retry ? null : btnTrack();
+    var tk = btnTrack();
     return api0(action, data).then(function (j) { btnDone(tk, true); return j; }, function (e) { btnDone(tk, false); throw e; });
   }
   function api0(action, data) {
-    if (!S.url) return Promise.reject(new Error('Connect your Apps Script first (step 1).'));
-    var data_retry = data && data.__retry; if (data_retry) { data = Object.assign({}, data); delete data.__retry; }
-    var body = JSON.stringify(Object.assign({ action: action, k: S.kh, box: S.box || '' }, data || {}));
-    return gpost(S.url, JSON.parse(body))
-      .then(null, function (e) { throw new Error(e && e.message === 'OLD_CODE' ? OLDMSG : 'Could not reach your Web app. Check the URL, and that "Who has access" is set to Anyone.'); })
-      .then(function (j) {
-        if (j && j.error) throw new Error(ERR[j.error] || String(j.error));
-        if (j && j.info && action !== 'ping' && !data_retry) { // Google sometimes hands back the plain "hello" answer: ask again once
-          return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return api0(action, Object.assign({}, data || {}, { __retry: 1 })); });
-        }
-        if (j && j.info && action !== 'ping') throw new Error('Google sent an incomplete answer. Press Refresh. If it keeps happening: Apps Script > Deploy > Manage deployments > New version.');
-        return j;
-      });
+    if (!S.box) return Promise.reject(new Error('Add your mailbox to the Mailer first (1. Connect).'));
+    return mpost('/api', Object.assign({ action: action, box: S.box }, data || {}), action === 'test' ? 120000 : 30000);
   }
   function dl(name, text) {
     var b = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }), a = document.createElement('a');
@@ -207,79 +117,62 @@
     });
     $('appSidebar').classList.remove('open'); $('sidebarOverlay').classList.remove('active');
     clearInterval(S.timer); S.view = v;
-    if (v === 'all') { drawSaved(); overview(); S.timer = setInterval(function () { if (!document.hidden) overview(true); }, LIVE_MS); }
+    if (v === 'all') { overview(); S.timer = setInterval(function () { if (!document.hidden) overview(true); }, LIVE_MS); }
     if (v === 'run') { CMP.refresh(); S.timer = setInterval(function () { if (!document.hidden) CMP.refresh(true); }, LIVE_MS); }
     window.scrollTo(0, 0);
   }
 
-  /* ================= 1. connect ================= */
+  /* ================= 1. connect: find the Mailer on this computer ================= */
   function pill(txt, cls) { var p = $('connPill'); p.textContent = txt; p.className = 'pill ' + cls; }
-  function showInfo() {
-    var st = S.state; if (!st) { $('cInfo').hidden = true; return; }
-    $('cInfo').hidden = false;
-    var smtp = S.cfg.sender === 'smtp';
-    $('cInfo').innerHTML = '<div class="note ok" style="margin-top:14px"><b>Connected.</b> ' + (smtp ? (st.sender ? 'Emails will be sent from <b>' + esc(st.sender) + '</b> by the Mailer program. ' : 'Now install and start the Mailer (below). ') : 'Emails will be sent from <b>' + esc(st.sender || 'your account') + '</b>. Gmail allows ' + esc(st.quota == null ? 'a limited number of' : st.quota) + ' more emails today. ') +
-      (st.url ? 'Unsubscribe links are active.' : '<b>Warning:</b> the Web app is not deployed yet, so unsubscribe links will not work (emails will ask people to reply STOP).') + '</div>';
-  }
   function setConnected(st) {
-    if (!st || !st.cfg) throw new Error('Google sent an incomplete answer. Press Refresh.');
-    S.connected = true; S.state = st; S.cfg = st.cfg;
-    var pk = S.pick; S.pick = null; if (pk && pk !== S.cfg.sender) { S.cfg.sender = pk; api('save_cfg', { cfg: S.cfg }).catch(function () {}); }
-    var nm = S.box || (st.worker && st.worker.from) || st.sender || '';
-    discoverBoxes(st);
-    if (nm) { var l = CL.list(), a = l.filter(function (x) { return x.id === CL.activeId(); })[0]; if (a && a.name !== nm) { a.name = nm; CL.save(l); } }
-    renderCmpSel();
-    pill('Connected', 'green'); $('cOff').hidden = false; $('cGo').textContent = 'Reconnect';
-    $('connSub').textContent = 'Connected. You can go to step 2.';
-    showInfo(); fillForms(); renderSender();
+    if (!st || !st.cfg) throw new Error('The Mailer sent an incomplete answer. Press Refresh.');
+    S.connected = true; S.state = st; S.cfg = st.cfg; S.cfg.sender = 'smtp';
+    pill(S.online ? 'Connected' : 'Mailer offline', S.online ? 'green' : 'gray');
+    fillForms(); renderSender();
   }
-  function mailerOnline() { var w = S.state && S.state.worker; return !!(w && S.state.now && S.state.now - w.seen < 6 * 60000); }
+  function mailerOnline() { return !!S.online; }
   function renderSender() {
-    var smtp = S.cfg.sender === 'smtp';
-    document.querySelectorAll('#senderPick .pick').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-s') === (smtp ? 'smtp' : 'gmail')); });
-    $('mailerBox').hidden = !smtp;
-    $('setupSub').textContent = smtp ? 'Create the Google Sheet that stores your campaign and schedules the sending. (The emails themselves are sent by the Mailer from your own email account.)' : 'Use the Gmail or Google Workspace account that will send the emails.';
-    $('limitSub').textContent = smtp ? 'Set any number you like, but keep it below what your email provider allows (Zoho free about 50 per day, paid 250 to 1,500; Outlook.com about 300; Yahoo about 500; hosting mail often 100 to 500 per hour, ask your host). Going over gets the account blocked.'
-      : 'Set any number you like. Google lets a script send about 100 emails per day from a personal Gmail and about 1,500 per day from Google Workspace, so the campaign never goes above the quota Google reports (shown on the Run page).';
-    $('limitHint').textContent = smtp ? 'The Mailer spreads the emails through your sending hours automatically. The gap is the minimum wait between two emails.'
-      : 'Emails already go out spread through the day (a run every 5 minutes). The gap is only used when several emails are sent in the same run, and is shortened automatically because Google limits how long a script may run each day.';
-    var ms = $('mailerStatus'), st = S.state;
-    if (ms) {
-      if (!S.connected) ms.innerHTML = 'Connect first (box above), then start the Mailer.';
-      else if (mailerOnline()) ms.innerHTML = '<b>Mailer is online.</b> Sending as ' + esc(st.worker.from || '?') + '. Last contact ' + Math.max(0, Math.round((st.now - st.worker.seen) / 1000)) + ' seconds ago.';
-      else ms.innerHTML = '<b>Mailer not seen yet.</b> ' + (st.worker ? 'Last seen ' + fmtTime(st.worker.seen) + '. ' : '') + 'Start it on your computer or server (steps above). This line turns green when it connects.';
-    }
-    var nb = $('bNow'); if (nb) nb.hidden = smtp;
-    if (smtp) renderSetup();
-    renderAs();
+    $('limitSub').textContent = 'Set any number you like, but keep it below what your email provider allows (Zoho free about 50 per day, paid 250 to 1,500; Outlook.com about 300; Yahoo about 500; hosting mail often 100 to 500 per hour, ask your host). Going over gets the account blocked.';
+    $('limitHint').textContent = 'The Mailer spreads the emails through your sending hours automatically. The gap is the minimum wait between two emails.';
+    var ms = $('mailerStatus');
+    if (ms) ms.innerHTML = S.online ? '<b>The Mailer is running on this computer.</b> ' + (BOXES.length ? 'Mailboxes: ' + BOXES.map(function (b) { return esc(b.email); }).join(', ') + '.' : 'No mailbox added yet: do step 3.')
+      : '<b>Mailer not found on this computer.</b> Start it (double-click start.bat in the Mailer folder). This line turns green when it runs.';
+    if (ms) ms.className = 'note' + (S.online ? ' ok' : '');
+    renderSetup();
   }
-  /* ---- Gmail mode: send as a "Send mail as" address (e.g. a domain mailbox), runs on Google's servers ---- */
-  function renderAs() {
-    var box = $('asBox'), sel = $('sendAs'); if (!box || !sel) return;
-    var show = S.connected && S.cfg.sender !== 'smtp'; box.hidden = !show; if (!show) return;
-    if (S.aliases == null && !S.aliasLoading) { loadAliases(); }
-    var me = S.aliasMe || (S.state && S.state.cfg && !S.state.cfg.sendAs ? S.state.sender : '') || 'this Gmail';
-    var list = (S.aliases || []).filter(function (a) { return a && a !== String(S.aliasMe || '').toLowerCase(); }), cur = S.cfg.sendAs || '';
-    if (cur && list.indexOf(cur) < 0) list.push(cur);
-    sel.innerHTML = '<option value="">' + esc(me) + ' (the Gmail itself)</option>' + list.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + ((S.aliases || []).indexOf(a) < 0 && S.aliases ? '  (not found in Gmail!)' : '') + '</option>'; }).join('');
-    sel.value = cur;
+  function drawBoxes() {
+    var el = $('boxList'); if (!el) return;
+    if (!S.online) { el.innerHTML = '<div class="note">' + esc(NOMAILER) + ' Then press <b>Find my Mailer</b>.<br><small style="color:var(--mut)">This page works on the computer where the Mailer runs.</small></div>'; return; }
+    if (!BOXES.length) { el.innerHTML = '<div class="note">The Mailer is running, but no mailbox is added yet. Do the 3 steps below.</div>'; return; }
+    el.innerHTML = '<div class="tw"><table><thead><tr><th>Mailbox</th><th>Status</th><th>Waiting</th><th>Sent today</th><th class="r"></th></tr></thead><tbody>' + BOXES.map(function (b) {
+      var tag = b.running ? (b.paused ? '<span class="tag paused">Paused</span>' : '<span class="tag queued">Running</span>') : '<span class="tag removed">Stopped</span>', me = b.email === S.box;
+      return '<tr><td><b>' + esc(b.email) + '</b>' + (me ? ' <small style="color:var(--accent)">(open)</small>' : '') + '</td><td>' + tag + '</td><td>' + (b.left || 0) + (b.held ? ' <small style="color:var(--mut)">+ ' + b.held + ' held</small>' : '') + '</td><td>' + (b.sentToday || 0) + '</td><td class="r">' + (me ? '' : '<button class="btn sm" data-open="' + esc(b.email) + '">Open</button>') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+    el.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { pickCampaign(b.getAttribute('data-open')); }; });
   }
-  function loadAliases() {
-    S.aliasLoading = true;
-    return api('aliases').then(function (j) { S.aliases = j.aliases || []; S.aliasMe = j.me || ''; })
-      .catch(function (e) { S.aliases = []; setMsg('cMsg', /unknown|action/i.test(e.message) ? 'To use "Send as", update the Apps Script code first (Copy Apps Script code, paste, Deploy > Manage deployments > New version).' : e.message); })
-      .then(function () { S.aliasLoading = false; renderAs(); });
-  }
-  function setSender(v) {
-    var want = v === 'smtp' ? 'smtp' : 'gmail';
-    if (S.connected && S.cfg.sender !== want) {
-      var who = (CL.active() && (CL.active().box || CL.active().name)) || 'this campaign';
-      var msg = want === 'gmail' ? 'Switch ' + who + ' to send with Gmail?\n\nEmails will then be sent by Google (your computer can be off) and the Mailer stops sending for it. Next, pick the From address under "Send as": a domain address works if it is added in Gmail settings (Send mail as).\n\nTo add a Gmail account as its own campaign, pick "+ New campaign" instead.'
-        : 'Switch ' + who + ' to send with the Mailer program (your own email account)?';
-      if (!window.confirm(msg)) { renderSender(); return; }
-    }
-    S.cfg.sender = v === 'smtp' ? 'smtp' : 'gmail'; S.pick = S.connected ? null : S.cfg.sender; renderSender(); if (S.state) showInfo();
-    if (S.connected) saveCfg(v === 'smtp' ? 'Saved: sending with the Mailer.' : 'Saved: sending with Gmail.', 'cMsg').catch(function () {});
+  function findMailer(quiet) {
+    if (!quiet) setMsg('cMsg', 'Looking for the Mailer on this computer...', true);
+    return mailerStatus().then(function (j) {
+      S.online = true; S.mailerV = String(j.v || '');
+      if (!(parseFloat(j.v) >= 4)) {
+        BOXES = []; drawBoxes(); renderSender(); pill('Update the Mailer', 'gray');
+        setMsg('cMsg', 'The Mailer on this computer is version ' + (j.v || '?') + '. Download the new Mailer (step 2 below), unzip it into the SAME folder (your mailboxes and passwords stay), close the old Mailer window and double-click start.bat again.');
+        return null;
+      }
+      BOXES = j.boxes || [];
+      if (BOXES.length && !BOXES.some(function (b) { return b.email === S.box; })) { S.box = BOXES[0].email; LS.set('dl_cmp_box', S.box); S.connected = false; S.state = null; }
+      if (!BOXES.length) S.box = '';
+      renderCmpSel(); drawBoxes(); renderSender(); renderAll();
+      setMsg('cMsg', BOXES.length ? '' : 'Mailer found. Now add your mailbox with the 3 steps below.', true);
+      $('connSub').textContent = BOXES.length ? 'These mailboxes are in the Mailer on this computer. Everything you change on this page is saved in the Mailer folder.' : 'Add your first mailbox with the 3 steps below.';
+      if (!S.box) { pill('No mailbox yet', 'gray'); return null; }
+      return loadState(true);
+    }).catch(function (e) {
+      S.online = false; drawBoxes(); renderSender();
+      pill(S.state ? 'Mailer offline' : 'Mailer not found', 'gray');
+      if (!quiet) setMsg('cMsg', e.message);
+      return null;
+    });
   }
   /* ---- business mailbox: find server settings from the domain, make a one-paste setup code for the Mailer ---- */
   var PROV = [
@@ -287,7 +180,7 @@
     [/zoho\.eu/, 'Zoho (EU)', 'smtp.zoho.eu', 465, 'imap.zoho.eu', 993, 'Turn on IMAP in Zoho Mail settings. With two-factor login, make an app password in Zoho Accounts > Security.'],
     [/zoho\.in/, 'Zoho (India)', 'smtp.zoho.in', 465, 'imap.zoho.in', 993, 'Turn on IMAP in Zoho Mail settings. With two-factor login, make an app password in Zoho Accounts > Security.'],
     [/zoho/, 'Zoho', 'smtp.zoho.com', 465, 'imap.zoho.com', 993, 'Turn on IMAP in Zoho Mail settings. With two-factor login, make an app password in Zoho Accounts > Security.'],
-    [/google|googlemail/, 'Google Workspace', 'smtp.gmail.com', 465, 'imap.gmail.com', 993, 'Use an App Password (myaccount.google.com/apppasswords, needs 2-step verification). Or simply choose Gmail / Google Workspace above, no Mailer needed.'],
+    [/google|googlemail/, 'Google Workspace', 'smtp.gmail.com', 465, 'imap.gmail.com', 993, 'Use an App Password (myaccount.google.com/apppasswords, needs 2-step verification).'],
     [/outlook|office365|microsoft/, 'Microsoft 365', 'smtp.office365.com', 587, 'outlook.office365.com', 993, 'Your admin must allow "Authenticated SMTP" for this mailbox. If the login is refused, Microsoft blocks it.'],
     [/secureserver/, 'GoDaddy', 'smtpout.secureserver.net', 465, 'imap.secureserver.net', 993, 'Use the normal password of this mailbox.'],
     [/privateemail/, 'Namecheap Private Email', 'mail.privateemail.com', 465, 'mail.privateemail.com', 993, 'Use the normal password of this mailbox.'],
@@ -313,15 +206,14 @@
   function b64u(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function makeCode() {
     var e = ($('mbEmail').value || '').trim().toLowerCase(), el = $('mbCode'); if (!el) return;
-    if (!S.url || !e || !$('mbSH').value) { el.value = ''; el.placeholder = 'Type your mailbox in step 1'; return; }
-    el.value = 'DL1.' + b64u(JSON.stringify({ u: S.url, k: S.key, b: S.box || '', e: e, s: [$('mbSH').value.trim(), Number($('mbSP').value) || 465], i: $('mbIH').value.trim() ? [$('mbIH').value.trim(), Number($('mbIP').value) || 993] : null }));
+    if (!e || !$('mbSH').value) { el.value = ''; el.placeholder = 'Type your mailbox above first'; return; }
+    el.value = 'DL2.' + b64u(JSON.stringify({ e: e, s: [$('mbSH').value.trim(), Number($('mbSP').value) || 465], i: $('mbIH').value.trim() ? [$('mbIH').value.trim(), Number($('mbIP').value) || 993] : null }));
   }
   function renderSetup() {
     var em = $('mbEmail'); if (!em) return;
-    if (!em.value) { var guess = S.box || (S.state && S.state.worker && S.state.worker.from) || ''; if (guess) { em.value = guess; detectMailbox(guess); } }
+    if (!em.value && !BOXES.length && S.box) { em.value = S.box; detectMailbox(S.box); }
     makeCode();
   }
-  function copyUrl() { copyText(S.url, 'Web app URL copied.'); }
   /* tiny ZIP writer (stored, no compression) so the Mailer downloads as one file */
   var CRC = (function () { var t = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   function crc32(b) { var c = 0xFFFFFFFF; for (var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
@@ -347,73 +239,24 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
   }
   window.__makeZip = makeZip;
-  /* mailboxes added elsewhere (other device, or the Mailer) show up here by themselves */
-  function discoverBoxes(st) {
-    if (!st || !Array.isArray(st.boxes) || !S.url) return;
-    var l = CL.list(), changed = false;
-    st.boxes.forEach(function (b) {
-      if (!CL.isHidden(S.url, b) && !l.some(function (x) { return x.url === S.url && (x.box || '') === b; })) { l.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: b, url: S.url, key: S.key, box: b }); changed = true; }
-    });
-    if (changed) { CL.save(l); renderCmpSel(); }
-  }
-  function linkTail(u) { var m = String(u || '').match(/\/s\/([^/]+)\//); return m ? m[1].slice(-4) : ''; }
-  function cmpName(c, i) {
-    var l = CL.list(), nameOf = function (x, j) { return x.box || x.name || (j === 0 ? 'Main campaign' : 'Campaign ' + (j + 1)); }, base = nameOf(c, i);
-    var same = l.filter(function (x, j) { return nameOf(x, j) === base; });
-    if (same.length < 2) return base;
-    var twin = same.filter(function (x) { return (x.box || '') === (c.box || ''); }).length > 1; // same kind in two different sheets
-    return (c.box ? base : base + ' (main tabs)') + (twin ? '  · sheet ...' + linkTail(c.url) : '');
-  }
-  /* list of campaigns saved in this browser, with Remove (All campaigns page) */
-  function drawSaved() {
-    var el = $('savedRows'); if (!el) return;
-    var l = CL.list(), id = CL.activeId(), cur = (CL.active() || {}).url || S.url;
-    el.innerHTML = l.map(function (c, i) {
-      return '<tr><td><b>' + esc(cmpName(c, i)) + '</b>' + (c.id === id ? ' <small style="color:var(--accent)">(open)</small>' : '') + '</td><td>' + (c.box ? 'Own tabs: ' + esc(c.box) : 'Main tabs') + '</td><td><code>...' + esc(linkTail(c.url)) + '</code>' + (cur && c.url !== cur ? ' <small style="color:var(--mut)">(different link)</small>' : '') + '</td><td class="r"><span class="rowbtns"><button class="btn sm" data-rm="' + esc(c.id) + '" title="Hide it in this browser only">Hide</button>' + (c.box ? '<button class="btn sm del" data-del="' + esc(c.id) + '" title="Delete this mailbox and its tabs from the sheet">Delete mailbox</button>' : '') + '</span></td></tr>';
-    }).join('') || '<tr><td colspan="4" style="color:var(--mut)">Nothing saved yet.</td></tr>';
-    el.querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = function () {
-      var rid = b.getAttribute('data-rm'), c = CL.list().filter(function (x) { return x.id === rid; })[0]; if (!c) return;
-      if (!window.confirm('Hide "' + (c.box || c.name || 'this campaign') + '" in this browser?\n\nOnly the shortcut is removed. The Google Sheet, its tabs, contacts and emails stay untouched, and you can connect it again any time.')) return;
-      CL.hide(c.url, c.box); CL.save(CL.list().filter(function (x) { return x.id !== rid; })); LS.del('dl_cmp_c_' + rid); LS.del('dl_cmp_ov');
-      if (rid === id) { var first = CL.list()[0]; CL.setActive(first ? first.id : ''); try { sessionStorage.setItem('dl_cmp_view', 'all'); } catch (e) {} location.reload(); return; }
-      renderCmpSel(); drawSaved(); overview(true);
-    }; });
-    el.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function () {
-      var rid = b.getAttribute('data-del'), c = CL.list().filter(function (x) { return x.id === rid; })[0]; if (!c || !c.box) return;
-      var typed = window.prompt('Delete the mailbox ' + c.box + '?\n\nThis stops its campaign and deletes its tabs (Contacts, Settings, Log) from your Google Sheet. Its emails and list are gone for good. The Mailer stops sending for it.\nYour other mailboxes and the shared block list are not touched.\n\nType DELETE to confirm:');
-      if (String(typed || '').trim().toUpperCase() !== 'DELETE') { if (typed !== null) toast('Not deleted: you did not type DELETE.'); return; }
-      b.disabled = true; b.textContent = 'Deleting...';
-      apiFor(c, 'remove_box').then(function () {
-        CL.save(CL.list().filter(function (x) { return !(x.url === c.url && (x.box || '') === c.box); })); LS.del('dl_cmp_c_' + rid); LS.del('dl_cmp_ov');
-        toast(c.box + ' deleted. Also remove it from the Mailer: node mailer.js remove');
-        if (rid === CL.activeId()) { var first = CL.list()[0]; CL.setActive(first ? first.id : ''); try { sessionStorage.setItem('dl_cmp_view', 'all'); } catch (e) {} location.reload(); return; }
-        renderCmpSel(); drawSaved(); overview(true);
-      }).catch(function (e) { b.disabled = false; b.textContent = 'Delete mailbox'; toast(/bad action/i.test(e.message) ? 'This sheet still has the old Apps Script code. Update it (Copy Apps Script code, paste, Deploy > Manage deployments > New version) and try again.' : 'Could not delete: ' + e.message); });
-    }; });
-  }
   function renderCmpSel() {
     var sel = $('cmpSel'); if (!sel) return;
-    var l = CL.list(), id = CL.activeId(), html = '';
-    l.forEach(function (c, i) { html += '<option value="' + esc(c.id) + '"' + (c.id === id ? ' selected' : '') + '>' + esc(cmpName(c, i)) + '</option>'; });
-    if (!l.some(function (c) { return c.id === id; })) html += '<option value="" selected>New campaign (not connected)</option>';
-    html += '<option value="__new">+ New campaign</option>';
+    var html = BOXES.map(function (b) { return '<option value="' + esc(b.email) + '"' + (b.email === S.box ? ' selected' : '') + '>' + esc(b.email) + '</option>'; }).join('');
+    if (!BOXES.length) html += '<option value="" selected>' + (S.box ? esc(S.box) : 'No mailbox yet') + '</option>';
+    html += '<option value="__new">+ Add a mailbox</option>';
     sel.innerHTML = html;
   }
   function pickCampaign(v, keepView) {
-    if (v === '__new') { var cur = CL.active(); if (cur) LS.set('dl_cmp_prefill', JSON.stringify({ url: cur.url, key: cur.key })); CL.setActive(''); } else CL.setActive(v);
-    if (!keepView) try { sessionStorage.setItem('dl_cmp_view', v === '__new' ? 'connect' : (S.view || 'connect')); } catch (e) {}
+    if (v === '__new') { renderCmpSel(); show('connect'); setTimeout(function () { var m = $('mbEmail'); if (m) { m.value = ''; m.focus(); makeCode(); } }, 0); return; }
+    if (!v) return;
+    LS.set('dl_cmp_box', v);
+    if (!keepView) try { sessionStorage.setItem('dl_cmp_view', S.view || 'connect'); } catch (e) {}
     location.reload();
   }
-  /* overview of every campaign on this device (Run page) */
-  function apiFor(c, action, retried) {
-    return sha256(c.key).then(function (kh) {
-      return gpost(c.url, { action: action, k: kh, box: c.box || '' }).then(null, function (e) { throw new Error(e && e.message === 'OLD_CODE' ? OLDMSG : 'Could not reach this Web app. Press Refresh in a minute.'); });
-    }).then(function (j) { if (j && j.error) throw new Error(ERR[j.error] || String(j.error)); if (j && j.info && !retried) return new Promise(function (r) { setTimeout(r, 1500); }).then(function () { return apiFor(c, action, true); }); if (j && j.info) throw new Error('Google sent an incomplete answer. Press Refresh.'); return j; });
-  }
   function renderAll() { // Run page: small line that links to the All campaigns page
-    var box = $('allCmp'), l = CL.list(); if (!box) return;
-    box.hidden = l.length < 2;
-    if (l.length > 1) $('allMini').textContent = 'You have ' + l.length + ' campaigns. See them all with their health on one page.';
+    var box = $('allCmp'); if (!box) return;
+    box.hidden = BOXES.length < 2;
+    if (BOXES.length > 1) $('allMini').textContent = 'You have ' + BOXES.length + ' mailboxes. See them all with their health on one page.';
   }
   /* ---- live status: the numbers stay on screen; a small line says when they were last updated or that new ones are on the way ---- */
   var LIVE_MS = 60000, FR = { all: { at: 0, busy: false, err: '' }, run: { at: 0, busy: false, err: '' } };
@@ -439,71 +282,47 @@
     if (S.view === 'all' && Date.now() - FR.all.at > 10000) overview(true);
     if (S.view === 'run' && Date.now() - FR.run.at > 10000) refresh(true);
   });
-  /* ---- All campaigns: ONE request per sheet, cached so the page shows at once ---- */
+  /* ---- All campaigns: ONE request to the Mailer, cached so the page shows at once ---- */
   function overview(quiet) {
     if (FR.all.busy) return Promise.resolve();
-    var l = CL.list(), byUrl = {};
-    l.forEach(function (c) { if (c.url && !byUrl[c.url]) byUrl[c.url] = c; });
     var cached; try { cached = JSON.parse(LS.get('dl_cmp_ov') || 'null'); } catch (e) { cached = null; }
     if (cached && cached.rows) { if (!FR.all.at) FR.all.at = cached.at || 0; drawOverview(cached.rows, true); }
-    else $('allTbl').innerHTML = '<tr><td colspan="10" style="color:var(--mut)">' + (l.length ? 'Loading...' : 'No campaigns yet. Go to 1. Connect.') + '</td></tr>';
+    else $('allTbl').innerHTML = '<tr><td colspan="10" style="color:var(--mut)">Loading...</td></tr>';
     FR.all.busy = true; FR.all.err = ''; paintLive('all');
-    var jobs = Object.keys(byUrl).map(function (u) {
-      var c = byUrl[u];
-      return apiFor(c, 'overview').then(function (j) {
-        return j.list.map(function (s) { s.url = u; s.key = c.key; s.now = j.now; return s; });
-      }, function (e) { // older Apps Script without "overview": ask each campaign
-        return Promise.all(l.filter(function (x) { return x.url === u; }).map(function (x) {
-          return apiFor(x, 'state').then(function (st) { st.box = x.box || ''; st.url = u; st.key = x.key; return st; }, function (er) { return { box: x.box || '', url: u, key: x.key, error: er.message }; });
-        }));
-      });
-    });
-    return Promise.all(jobs).then(function (parts) {
-      var rows = [].concat.apply([], parts).filter(function (s) { return !CL.isHidden(s.url, s.box); }), list = CL.list(), changed = false;
-      rows.forEach(function (s) {
-        var c = list.filter(function (x) { return x.url === s.url && (x.box || '') === (s.box || ''); })[0];
-        var who = (s.worker && s.worker.from) || s.sender || '';
-        if (!c) { c = { id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: s.box || who, url: s.url, key: s.key, box: s.box || '' }; list.push(c); changed = true; }
-        else if (!c.box && !c.name && who) { c.name = who; changed = true; }
-        s.id = c.id; s.label = c.box || who || c.name || 'Main campaign'; s.mailbox = s.label;
-      });
-      var seenL = {}; rows.forEach(function (s) { seenL[s.label] = (seenL[s.label] || 0) + 1; });
-      rows.forEach(function (s) { // same name twice (two sheets or main + own tabs): say which one
-        if (seenL[s.label] > 1 && !s.box) s.label += ' (main tabs)';
-      });
-      if (changed) { CL.save(list); renderCmpSel(); }
+    return mpost('/api', { action: 'overview' }).then(function (j) {
+      var rows = (j.list || []).map(function (s) { s.now = j.now; s.id = s.box; s.label = s.box; s.mailbox = s.box; return s; });
       try { LS.set('dl_cmp_ov', JSON.stringify({ at: Date.now(), rows: rows })); } catch (e) {}
       FR.all.busy = false; FR.all.at = Date.now();
       drawOverview(rows, false);
-    }).catch(function (e) { FR.all.busy = false; FR.all.err = e.message; paintLive('all'); });
+    }).catch(function (e) { FR.all.busy = false; FR.all.err = e.message; paintLive('all'); if (!FR.all.at) $('allTbl').innerHTML = '<tr><td colspan="10" style="color:var(--bad)">' + esc(e.message) + '</td></tr>'; });
   }
   /* Start / Pause / Resume / Stop straight from the All campaigns table */
   function ctlBtns(s) {
-    var run = s.run || {}, b = function (act, txt, cls) { return '<button class="btn sm' + (cls ? ' ' + cls : '') + '" data-act="' + act + '" data-k="' + esc(s.url + '|' + (s.box || '')) + '">' + txt + '</button>'; };
+    var run = s.run || {}, b = function (act, txt, cls) { return '<button class="btn sm' + (cls ? ' ' + cls : '') + '" data-act="' + act + '" data-k="' + esc(s.box) + '">' + txt + '</button>'; };
     if (run.running && !run.paused) return b('stop', 'Stop', 'del');
     return run.running ? b('resume', 'Start', 'success') : b('start', 'Start', 'success'); // paused counts as stopped here: Start continues it
   }
   function rowCtl(btn, rows) {
     var k = btn.getAttribute('data-k'), act = btn.getAttribute('data-act');
-    var s = rows.filter(function (x) { return x.url + '|' + (x.box || '') === k; })[0]; if (!s) return;
-    var name = s.label || s.box || 'this campaign';
-    if (act === 'stop' && !confirm('Stop the campaign of ' + name + '?\n\nContacts keep their progress. Press Start to continue later.')) return;
+    var s = rows.filter(function (x) { return x.box === k; })[0]; if (!s) return;
+    var name = s.box;
+    if (act === 'stop' && !confirm('Stop the campaign of ' + name + '?\n\nThe waiting list is kept. Press Start to continue later.')) return;
     if (act === 'start' && !confirm('Start the campaign of ' + name + ' with its saved settings?')) return;
     var all = btn.parentNode.querySelectorAll('button'); all.forEach(function (x) { x.disabled = true; });
-    var old = btn.textContent; btn.textContent = act === 'stop' ? 'Stopping...' : act === 'pause' ? 'Pausing...' : 'Starting...';
-    apiFor({ url: s.url, key: s.key, box: s.box || '' }, act).then(function () {
-      toast(name + ': ' + (act === 'stop' ? 'stopped.' : act === 'pause' ? 'paused.' : act === 'resume' ? 'started again.' : 'started.' + ((s.cfg && s.cfg.sender === 'smtp') ? ' Keep the Mailer running.' : '')));
+    var old = btn.textContent; btn.textContent = act === 'stop' ? 'Stopping...' : 'Starting...';
+    mpost('/api', { action: act, box: s.box }).then(function () {
+      toast(name + ': ' + (act === 'stop' ? 'stopped.' : 'started. Keep the Mailer running.'));
       try { LS.del('dl_cmp_ov'); } catch (e) {}
       var again = function (n) { if (FR.all.busy && n < 20) return setTimeout(function () { again(n + 1); }, 500); overview(true); };
       again(0);
-      if (S.url === s.url && (S.box || '') === (s.box || '')) loadState(true).catch(function () {});
+      if (S.box === s.box) loadState(true).catch(function () {});
     }).catch(function (e) {
       all.forEach(function (x) { x.disabled = false; }); btn.textContent = old;
       toast('Could not ' + act + ' ' + name + ': ' + e.message);
     });
   }
   function drawOverview(rows, stale) {
-    var t = { sent: 0, lim: 0, wait: 0, rep: 0, bnc: 0, run: 0, on: 0 }, id = CL.activeId();
+    var t = { sent: 0, lim: 0, wait: 0, rep: 0, bnc: 0, run: 0, on: 0 }, id = S.box;
     var html = rows.map(function (s) {
       if (s.error) return '<tr><td><b>' + esc(s.label || s.box || 'Campaign') + '</b></td><td colspan="8" style="color:var(--bad)">' + esc(s.error) + '</td><td class="r"><button class="btn sm" data-open="' + esc(s.id || '') + '">Open</button></td></tr>';
       var run = s.run || {}, c = s.counts || {}, w = s.worker, now = s.now || Date.now(), online = !!(w && now - w.seen < 6 * 60000), smtp = s.cfg && s.cfg.sender === 'smtp';
@@ -543,37 +362,8 @@
 
   function loadState(silent) {
     var first = S.ct.status === '' && S.ct.q === '' && S.ct.offset === 0;
-    return api('state', { withContacts: first ? CT_PAGE : 0 }).then(function (st) { if (st && st.now) S.clockSkew = Date.now() - st.now; saveCache(st); setConnected(st); return st; }).catch(function (e) { if (!silent) throw e; });
-  }
-  function connect() {
-    var url = $('cUrl').value.trim(), key = $('cKey').value.trim(), box = cleanBox($('cBox') ? $('cBox').value : '');
-    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) { setMsg('cMsg', 'Paste the Web app URL from Apps Script. It starts with https://script.google.com and ends with /exec.'); return; }
-    if (key.length < 8) { setMsg('cMsg', 'The secret key must be at least 8 characters.'); return; }
-    setMsg('cMsg', 'Connecting...', true); $('cGo').disabled = true;
-    S.url = url; S.key = key; S.box = box;
-    sha256(key).then(function (h) { S.kh = h; return api('ping'); })
-      .then(function (p) { return p.claimed ? null : api('claim'); })
-      .then(function () { return S.box ? api('restore_box') : null; })
-      .then(function () { return api('state'); })
-      .then(function (st) {
-        var l = CL.list(), id = CL.activeId(), c = l.filter(function (x) { return x.url === S.url && (x.box || '') === S.box; })[0] || l.filter(function (x) { return x.id === id && !x.url; })[0];
-        if (!c) { c = { id: 'c' + Date.now().toString(36), name: '' }; l.push(c); }
-        c.url = S.url; c.key = S.key; c.box = S.box; CL.save(l); LS.set('dl_cmp_lastkey', JSON.stringify(S.key)); CL.unhide(S.url, S.box); CL.setActive(c.id);
-        setConnected(st); setMsg('cMsg', 'Connected.', true); toast('Connected to your campaign sheet.');
-      })
-      .catch(function (e) { S.connected = false; setMsg('cMsg', e.message); })
-      .then(function () { $('cGo').disabled = false; });
-  }
-  function disconnect() {
-    var cur0 = CL.active(); if (cur0 && cur0.url) CL.hide(cur0.url, cur0.box);
-    var rest = CL.list().filter(function (x) { return x.id !== CL.activeId(); }); CL.save(rest); CL.setActive(''); renderCmpSel();
-    S.url = ''; S.key = ''; S.kh = ''; S.connected = false; S.state = null;
-    $('cUrl').value = ''; $('cKey').value = randomKey(); S.box = ''; if ($('cBox')) { $('cBox').value = ''; $('cBox').disabled = false; } $('cOff').hidden = true; $('cGo').textContent = 'Connect'; $('cInfo').hidden = true;
-    pill('Not connected', 'gray'); setMsg('cMsg', 'Removed from this device. The sheet and its campaign are untouched' + (CL.list().length ? '. Pick another campaign at the top left.' : '.'), true);
-  }
-  function toggleCode() {
-    var p = $('gsCode'); if (p.hidden && !p.textContent) p.textContent = window.CAMPAIGN_GS || 'Code not available.';
-    p.hidden = !p.hidden; $('cShow').textContent = p.hidden ? 'Show code' : 'Hide code';
+    return api('state', { withContacts: first ? CT_PAGE : 0 }).then(function (st) { if (st && st.now) S.clockSkew = Date.now() - st.now; saveCache(st); setConnected(st); return st; })
+      .catch(function (e) { if (S.state) pill('Mailer offline', 'gray'); if (!silent) throw e; });
   }
   function copyText(t, okMsg) {
     var done = function () { toast(okMsg); };
@@ -757,44 +547,20 @@
     var head = ['Email', 'Owner name', 'Company', 'Phone', 'MC', 'Result', 'Why'];
     dl('emails-' + kind + '.csv', [head].concat(rows.map(function (r) { return [r.email, r.name, r.company, r.phone, r.mc, r.status, r.reason]; })).map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'));
   }
-  var MAILER_LOCAL = 'http://127.0.0.1:47321';
-  function addToMailer(rows) { // a Mailer campaign: the list goes to the Mailer on THIS computer, never into the Google Sheet
-    var list = rows.map(function (r) { return { email: r.email, name: r.name, company: r.company, phone: r.phone, mc: r.mc }; });
-    setMsg('addMsg', 'Handing ' + list.length + ' emails to the Mailer on this computer...', true);
-    fetch(MAILER_LOCAL + '/add', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ url: S.url, box: S.box || '', kh: S.kh, rows: list }) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (j && j.ok) {
-          setMsg('addMsg', 'Added ' + j.added + ' to the Mailer on this computer' + (j.skipped ? ' (' + j.skipped + ' were already waiting there)' : '') + '. Waiting to send: ' + j.left + '. Each lead is deleted from the Mailer as soon as its email is sent.', true);
-          toast('Added ' + j.added + ' to the Mailer.'); loadState(true); return;
-        }
-        var e = j && j.error;
-        setMsg('addMsg', e === 'NOT_HERE' ? 'This mailbox is not set up in the Mailer on this computer. Add it with add-mailbox.bat (step 1), restart start.bat, then press Add to campaign again.'
-          : e === 'BAD_KEY' ? 'The Mailer on this computer has another secret key for this mailbox. Run add-mailbox.bat again with the key from step 1.'
-          : 'The Mailer did not accept the list (' + (e || 'unknown answer') + ').');
-      })
-      .catch(function () {
-        setMsg('addMsg', 'The Mailer is not running on this computer. Open the Mailer folder, double-click start.bat, leave it open, then press Add to campaign again. (If Chrome asks to let this site reach apps on this device, press Allow.)');
-      });
-  }
-  function addToCampaign() {
-    if (!S.connected) { setMsg('addMsg', 'Connect first (step 1).'); return; }
+  function addToCampaign() { // the list goes to the Mailer on THIS computer; each lead is deleted there once it is emailed
+    if (!S.box) { setMsg('addMsg', 'Add your mailbox to the Mailer first (1. Connect).'); return; }
     var inc = $('addRisky').checked, rows = S.items.filter(function (r) { return r.status === 'ready' || (inc && r.status === 'risky'); });
     if (!rows.length) { setMsg('addMsg', 'There are no Ready emails to add.'); return; }
-    if (S.cfg && S.cfg.sender === 'smtp') return addToMailer(rows);
-    var added = 0, skipped = 0, blocked = 0, before = 0, i = 0;
-    setMsg('addMsg', 'Adding...', true);
+    var t = { added: 0, skipped: 0, blocked: 0, before: 0, left: 0 }, i = 0, step = 2000;
+    setMsg('addMsg', 'Handing ' + rows.length + ' emails to the Mailer on this computer...', true);
     (function next() {
-      if (i >= rows.length) { setMsg('addMsg', 'Added ' + added + ' to the campaign. ' + skipped + ' were already in it, ' + blocked + ' were on your block list' + (before ? ', ' + before + ' were emailed before (History)' : '') + '.', true); toast('Added ' + added + ' contacts.'); loadState(true); return; }
-      var step = NET.tag ? 50 : 500, chunk = rows.slice(i, i + step).map(function (r) { return { email: r.email, name: r.name, company: r.company, phone: r.phone, mc: r.mc, status: r.status, reason: r.reason }; });
-      var tries = 0;
-      (function go() {
-        api('add', { rows: chunk }).then(function (j) { added += j.added; skipped += j.skipped; blocked += j.blocked; before += j.before || 0; i += step; setMsg('addMsg', 'Adding... ' + Math.min(i, rows.length) + ' of ' + rows.length, true); next(); })
-          .catch(function (e) {
-            if (++tries <= 3) { setMsg('addMsg', 'Google is slow, trying again... (' + Math.min(i, rows.length) + ' of ' + rows.length + ' added)', true); setTimeout(go, 8000 * tries); return; } // emails already added are skipped, never doubled
-            setMsg('addMsg', e.message + ' (added so far: ' + added + '). Press Add to campaign again to continue: the ones already added are skipped.');
-          });
-      })();
+      if (i >= rows.length) {
+        setMsg('addMsg', 'Added ' + t.added + ' to ' + S.box + ' in the Mailer.' + (t.skipped ? ' ' + t.skipped + ' were already waiting.' : '') + (t.blocked ? ' ' + t.blocked + ' are on the block list.' : '') + (t.before ? ' ' + t.before + ' were emailed before (nobody is emailed twice).' : '') + ' Waiting to send: ' + t.left + '. Each lead is deleted as soon as its email is sent.', true);
+        toast('Added ' + t.added + ' to the Mailer.'); loadState(true); return;
+      }
+      var chunk = rows.slice(i, i + step).map(function (r) { return { email: r.email, name: r.name, company: r.company, phone: r.phone, mc: r.mc, status: r.status, reason: r.reason }; });
+      api('add', { rows: chunk }).then(function (j) { t.added += j.added || 0; t.skipped += j.skipped || 0; t.blocked += j.blocked || 0; t.before += j.before || 0; t.left = j.left || 0; i += step; if (i < rows.length) setMsg('addMsg', 'Adding... ' + i + ' of ' + rows.length, true); next(); })
+        .catch(function (e) { setMsg('addMsg', e.message + (t.added ? ' (added so far: ' + t.added + ')' : '')); });
     })();
   }
 
@@ -833,7 +599,7 @@
   var SIGF = ['name', 'title', 'company', 'phone', 'wa', 'site', 'logo'];
   function sigRead() { var g = { on: $('sigOn').checked }; SIGF.forEach(function (k) { g[k] = $('sig' + k.charAt(0).toUpperCase() + k.slice(1)).value.trim(); }); g.wa = g.wa.replace(/[^0-9]/g, ''); return g; }
   function sigFill(g) { g = g || {}; $('sigOn').checked = !!g.on; SIGF.forEach(function (k) { $('sig' + k.charAt(0).toUpperCase() + k.slice(1)).value = g[k] || ''; }); $('sigOn').closest('.sig-box').classList.toggle('off', !g.on); }
-  function sigHtml(g) { // same card as the sheet sends (keep in sync with sigHtml_ in the Apps Script)
+  function sigHtml(g) { // same card the Mailer sends (keep in sync with sigHtml in mailer.js)
     if (!g || !g.on || !(g.name || g.company)) return '';
     var wa = String(g.wa || '').replace(/[^0-9]/g, ''), site = String(g.site || '').trim(), href = site && !/^https?:\/\//i.test(site) ? 'https://' + site : site;
     var init = esc(String(g.company || g.name || '?').trim().charAt(0).toUpperCase());
@@ -847,7 +613,7 @@
     return '<div class="sig" style="margin-top:18px;padding-top:14px;border-top:1px solid #E5E7EB"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="vertical-align:top;padding-right:12px">' + logo + '</td><td style="vertical-align:top;font-family:Arial,Helvetica,sans-serif;line-height:1.45">' +
       (g.name ? '<div style="font-size:15px;font-weight:bold;color:#111827">' + esc(g.name) + '</div>' : '') + (l2 ? '<div style="font-size:13px;color:#4B5563">' + l2 + '</div>' : '') + (l3 ? '<div style="font-size:13px;color:#4B5563">' + l3 + '</div>' : '') + btn + '</td></tr></table></div>';
   }
-  /* logo upload: resize to a small square in the browser, store it in the sheet (Settings tab of this mailbox) */
+  /* logo upload: resize to a small square in the browser, store it in the Mailer (campaign file of this mailbox) */
   function paintLogo() {
     var box = $('logoPrev'); if (!box) return;
     var co = ($('sigCompany').value || $('sigName').value || '?').trim().charAt(0).toUpperCase();
@@ -879,8 +645,8 @@
     if (!file) return; if (!S.connected) { setMsg('logoMsg', 'Connect first (step 1).'); return; }
     setMsg('logoMsg', 'Uploading...', true);
     squareImage(file).then(function (data) { var dm = S.logoNewDim.split('x'); return api('set_logo', { data: data, w: +dm[0], h: +dm[1] }).then(function () { S.logo = data; S.logoDim = S.logoNewDim; }); })
-      .then(function () { paintLogo(); preview(); setMsg('logoMsg', 'Logo saved in your sheet.', true); toast('Logo saved.'); })
-      .catch(function (e) { setMsg('logoMsg', /bad action/i.test(e.message) ? 'Update the Apps Script code first (step 1, Copy Apps Script code, then Deploy > New version).' : e.message); })
+      .then(function () { paintLogo(); preview(); setMsg('logoMsg', 'Logo saved in the Mailer.', true); toast('Logo saved.'); })
+      .catch(function (e) { setMsg('logoMsg', e.message); })
       .then(function () { $('logoFile').value = ''; });
   }
   function preview() {
@@ -888,7 +654,7 @@
     $('prevTabs').innerHTML = steps.map(function (s, i) { return '<button class="chip' + (i === S.prevStep ? ' active' : '') + '" data-p="' + i + '">' + (i === 0 ? 'First email' : 'Follow-up ' + i) + '</button>'; }).join('');
     $('prevTabs').querySelectorAll('.chip').forEach(function (b) { b.onclick = function () { S.prevStep = +b.getAttribute('data-p'); preview(); }; });
     var st = steps[S.prevStep] || steps[0], addr = $('address').value.trim() || '(your business address)', un = $('unsubText').value.trim();
-    $('prev').innerHTML = '<div class="s">' + esc(sample(st.subject)) + '</div>' + esc(sample(st.body)) + sigHtml(sigRead()) + '<div class="f">--<br>' + esc(addr) + '<br>' + esc(un) + ' <u>unsubscribe</u></div>';
+    $('prev').innerHTML = '<div class="s">' + esc(sample(st.subject)) + '</div>' + esc(sample(st.body)) + sigHtml(sigRead()) + '<div class="f">--<br>' + esc(addr) + '<br>' + esc(/\bstop\b/i.test(un) ? un : STOP_TEXT) + '</div>';
   }
   function addStep() {
     if (S.cfg.steps.length >= 5) { toast('Up to 5 emails (1 first email + 4 follow-ups).'); return; }
@@ -922,7 +688,7 @@
     return 'This schedule runs until ' + fmtTz(run.endAt, (S.cfg && S.cfg.tz) || 'America/New_York') + ' (' + (left <= 1 ? 'last day' : left + ' days left') + '). Then it stops by itself: press Start to schedule the next 7 days.';
   }
   function fmtTz(ms, tz) { try { return new Date(ms).toLocaleString('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return fmtTime(ms); } }
-  /* same rules as the sheet: open now? next opening? */
+  /* same rules as the Mailer: open now? next opening? */
   function winInfo(c, now) {
     var days = schedOf(c), skip = c.skipDates || [], startAt = +c.startAt || 0, tz = c.tz;
     var at = function (t) { if (startAt && t < startAt) return null; var p = tzParts(t, tz), dow = DAYS3.indexOf(p.weekday), mi = (+p.hour % 24) * 60 + +p.minute, d = days[dow], key = p.year + '-' + p.month + '-' + p.day; return d.on && d.to > d.from && skip.indexOf(key) < 0 && mi >= d.from && mi < d.to ? { left: d.to - mi } : null; };
@@ -1118,20 +884,20 @@
   }
 
   /* ================= 5. run ================= */
-  var STATUS_ORDER = [['', 'All'], ['queued', 'Waiting'], ['done', 'Finished'], ['replied', 'Replied'], ['bounced', 'Bounced'], ['unsub', 'Unsubscribed'], ['risky', 'Held'], ['error', 'Errors']];
+  var STATUS_ORDER = [['', 'All'], ['queued', 'Waiting'], ['risky', 'Held']];
   function refresh(quiet) {
-    if (!S.connected && S.url && S.key) { // still starting up (or the first load failed): wait / retry instead of saying "Connect first"
-      var upd0 = $('runUpd'); if (upd0) upd0.textContent = 'Connecting to your Google Sheet...';
+    if (!S.connected && S.box) { // still starting up (or the first load failed): wait / retry instead of saying "Connect first"
+      var upd0 = $('runUpd'); if (upd0) upd0.textContent = 'Connecting to the Mailer on this computer...';
       return (S.boot || Promise.resolve()).then(function () { if (!S.connected) return loadState(false); })
         .then(function () { return S.connected ? refresh(quiet) : null; })
-        .catch(function (e) { if (upd0) upd0.textContent = 'Could not reach your Google Sheet (' + e.message + '). Trying again in 20 sec.'; });
+        .catch(function (e) { if (upd0) upd0.textContent = 'Could not reach the Mailer (' + e.message + '). Trying again in 20 sec.'; });
     }
     if (!S.connected) { if (!quiet) setMsg('rMsg', 'Connect first (step 1).'); renderRun(null); return Promise.resolve(); }
     setMsg('rMsg', '');
     renderAll();
     var first = function () { return S.ct.offset === 0 && !S.ct.status && !S.ct.q; };
     if (S.state) { renderRun(S.state); if (S.state.page && first()) renderContacts(S.state.page); loadLog(); } // show what we have at once
-    var loadingRow = function (id, n) { var el = $(id); if (el && !el.children.length) el.innerHTML = '<tr><td colspan="' + n + '" style="color:var(--mut)">Loading from your Google Sheet...</td></tr>'; };
+    var loadingRow = function (id, n) { var el = $(id); if (el && !el.children.length) el.innerHTML = '<tr><td colspan="' + n + '" style="color:var(--mut)">Loading from the Mailer...</td></tr>'; };
     loadingRow('ctRows', 6); loadingRow('logRows', 5);
     if (FR.run.busy && quiet) return Promise.resolve();
     var upd = $('runUpd'); FR.run.busy = true; FR.run.err = ''; paintLive('run');
@@ -1237,21 +1003,13 @@
     var hhmm = function (ms) { return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); };
     var nowS = Date.now() - (S.clockSkew || 0), html = '';
     var nxtOpen = function () { var w = winInfo(S.cfg, nowS); return w.open ? 0 : (run.nextAt && run.idleWhy === 'outside the sending window' ? run.nextAt : w.next); };
-    if (S.cfg.sender !== 'smtp' && st.triggers === 0) {
-      html = '<span><b>Not scheduled yet.</b> <small>Press Pause and then Resume once: that turns on the 5-minute Gmail schedule.</small></span>';
-    } else if (S.cfg.sender !== 'smtp' && nxtOpen()) {
-      html = '<span>Outside your schedule. <b>Next email: ' + esc(fmtTz(nxtOpen(), S.cfg.tz)) + '</b> <small>(' + esc(S.cfg.tz) + '; ' + esc(fmtTime(nxtOpen())) + ' your time)</small></span>';
-    } else if (limitHit(run, st.effLimit || 0)) {
+    if (limitHit(run, st.effLimit || 0)) {
       var ndl = nextDayOpen(S.cfg, nowS);
       html = '<span>Today\'s limit is used up (' + (run.sentToday || 0) + ' / ' + (st.effLimit || 0) + '). <b>Next email: ' + esc(ndl ? fmtTz(ndl, S.cfg.tz) : 'next sending day') + '</b> <small>(' + esc(S.cfg.tz) + (ndl ? '; ' + esc(fmtTime(ndl)) + ' your time' : '') + ')</small></span>';
-    } else if (S.cfg.sender !== 'smtp' && run.idleWhy && run.idleWhy !== 'outside the sending window') {
-      html = '<span>Waiting: <b>' + esc(run.idleWhy) + '</b></span>';
-    } else if (S.cfg.sender !== 'smtp') {
-      html = '<span>Next round of emails: <b>within 5 minutes</b> <small>(Gmail mode sends a few emails every 5 minutes)</small></span>';
     } else if (!mailerOnline()) {
       html = '<span>Next email: <b>waiting for the Mailer</b> <small>(start the Mailer program on your computer)</small></span>';
     } else if (!('nextAt' in run) && !('idleWhy' in run)) {
-      html = '<span>Next email time is not available yet. <small>Update the Apps Script code (step 1, Copy Apps Script code, then Deploy &gt; Manage deployments &gt; New version).</small></span>';
+      html = '<span>Next email: <b>any moment now</b></span>';
     } else if (run.idleWhy === 'outside the sending window') {
       html = '<span>Outside your schedule. <b>Next email: ' + esc(nxtOpen() ? fmtTz(nxtOpen(), S.cfg.tz) : 'when your schedule opens') + '</b> <small>(' + esc(S.cfg.tz) + (nxtOpen() ? '; ' + esc(fmtTime(nxtOpen())) + ' your time' : '') + ')</small></span>';
     } else if (run.idleWhy === 'daily limit reached' || run.idleWhy === 'daily limit reached at the provider') {
@@ -1280,15 +1038,15 @@
     {
       S.ct.total = j.total; var n = S.cfg.steps.length, now = Date.now();
       $('ctRows').innerHTML = j.rows.map(function (r) {
-        var nxt = r.status === 'queued' ? (r.next_due <= now ? 'Due now' : fmtTime(r.next_due)) : '';
-        return '<tr><td>' + esc(r.email) + '</td><td class="wrap">' + esc(r.company) + '</td><td><span class="tag ' + r.status + '">' + esc(r.status) + '</span></td><td>' + r.step + ' / ' + n + '</td><td>' + nxt + '</td><td class="wrap">' + esc(r.reason || r.note) + '</td></tr>';
+        var nxt = r.next_due > now ? fmtTime(r.next_due) : '';
+        return '<tr><td>' + esc(r.email) + '</td><td class="wrap">' + esc(r.company) + '</td><td><span class="tag ' + r.status + '">' + esc(r.status === 'risky' ? 'held' : 'waiting') + '</span></td><td>' + (r.status === 'risky' ? 'Held' : 'Not yet') + '</td><td>' + nxt + '</td><td class="wrap">' + esc(r.reason || r.note) + '</td></tr>';
       }).join('') || '<tr><td colspan="6" style="color:var(--mut)">No contacts here yet. Clean a list in step 2 and add it.</td></tr>';
       $('ctCount').textContent = j.total ? 'Rows ' + (S.ct.offset + 1) + ' to ' + (S.ct.offset + j.rows.length) + ' of ' + j.total : '';
     }
   }
   /* last known numbers of each campaign, shown at once while fresh ones load */
-  function saveCache(st) { try { var id = CL.activeId(); if (id && st && st.cfg) LS.set('dl_cmp_c_' + id, JSON.stringify(st)); } catch (e) {} }
-  function readCache() { try { var c = JSON.parse(LS.get('dl_cmp_c_' + CL.activeId()) || 'null'); return c && c.cfg ? c : null; } catch (e) { return null; } }
+  function saveCache(st) { try { if (S.box && st && st.cfg) LS.set('dl_cmp_c_' + S.box, JSON.stringify(st)); } catch (e) {} }
+  function readCache() { try { var c = JSON.parse(LS.get('dl_cmp_c_' + S.box) || 'null'); return c && c.cfg ? c : null; } catch (e) { return null; } }
   function loadLog() {
     var lg = (S.state && S.state.log) || [];
     $('logRows').innerHTML = lg.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td><span class="tag ' + (r[3] === 'sent' ? 'queued' : (r[3] === 'replied' ? 'replied' : 'bounced')) + '">' + esc(r[3]) + '</span></td><td class="wrap">' + esc(r[4]) + '</td></tr>'; }).join('') || '<tr><td colspan="5" style="color:var(--mut)">Nothing sent yet.</td></tr>';
@@ -1303,24 +1061,12 @@
     if (action === 'stop' && !confirm('Stop the campaign? Contacts keep their progress; press Start to continue later.')) return;
     return go();
   }
-  function sendNow() {
-    if (!S.connected) { setMsg('rMsg', 'Connect first (step 1).'); return; }
-    if (!confirm('Send up to 10 emails right now? (Your daily limit still applies. The campaign must be running.)')) return;
-    setMsg('rMsg', 'Sending a batch... this can take a few minutes.', true);
-    api('send_now').then(function (j) { var r = j.result || {}; setMsg('rMsg', r.sent != null ? 'Sent ' + r.sent + ' emails.' : (r.skipped ? 'Nothing sent: ' + r.skipped + '.' : (r.paused || 'Done.')), true); return refresh(true); }).catch(function (e) { setMsg('rMsg', e.message); });
-  }
   function bulk(kind) {
-    var map = { promote: ['Release all held (risky) contacts so they get emailed?', function () { return api('set_status', { all: true, from: 'risky', status: 'queued' }); }],
-      'del-risky': ['Delete all held (risky) contacts?', function () { return api('delete', { status: 'risky' }); }],
-      'del-bounced': ['Delete all bounced contacts? (They stay on the block list.)', function () { return api('delete', { status: 'bounced' }); }],
-      'del-done': ['Delete every contact that has received all emails (Finished)? Replied contacts are kept.', function () {
-        var keep = confirm('Keep only their email address in a small "History" tab?\n\nOK = yes: if they appear in a new list they are NOT emailed again (1 cell per contact, very light).\nCancel = no: delete them completely.');
-        return api('delete', { status: 'done', history: keep }); }],
-      'del-all': ['Delete EVERY contact from the campaign list? This cannot be undone.', function () {
-        var keep = confirm('Keep only the email addresses of people you already emailed in a small "History" tab?\n\nOK = yes: they are never emailed again if they appear in a new list.\nCancel = no: delete everything completely.');
-        return api('delete', { status: 'all', history: keep }); }] }[kind];
-    if (!S.connected || !confirm(map[0])) return;
-    map[1]().then(function () { toast('Done.'); return refresh(true); }).catch(function (e) { setMsg('rMsg', e.message); });
+    var map = { promote: ['Release all held (risky) leads so they get emailed?', function () { return api('set_status', { all: true, from: 'risky', status: 'queued' }); }],
+      'del-risky': ['Delete all held (risky) leads?', function () { return api('delete', { status: 'risky' }); }],
+      'del-all': ['Delete EVERY lead still waiting in the Mailer for ' + S.box + '? This cannot be undone.\n\nAddresses already emailed stay remembered, so they are never emailed twice.', function () { return api('delete', { status: 'all' }); }] }[kind];
+    if (!map || !S.connected || !confirm(map[0])) return;
+    map[1]().then(function (j) { toast('Done' + (j && j.removed != null ? ': ' + j.removed + ' removed.' : '.')); return refresh(true); }).catch(function (e) { setMsg('rMsg', e.message); });
   }
   function blockAdd() {
     var list = $('blkAdd').value.split(/[\r\n,;]+/).map(function (x) { return x.trim(); }).filter(Boolean);
@@ -1331,21 +1077,18 @@
   /* ================= wire up ================= */
   window.CMP = {
     show: show, overview: function () { return overview(false); }, copySetup: function () { makeCode(); if (!$('mbCode').value) { toast('Type your mailbox first (step 1).'); return; } copyText($('mbCode').value, 'Setup code copied. Paste it in the Mailer window.'); },
-    connect: connect, disconnect: disconnect, setSender: setSender, copyUrl: copyUrl, downloadMailer: downloadMailer, copyKey: function () { copyText($('cKey').value, 'Secret key copied. Keep it somewhere safe.'); },
-    loadAliases: function () { S.aliases = null; loadAliases(); },
+    connect: function () { return findMailer(false); }, downloadMailer: downloadMailer,
     delLogo: function () { if (!confirm('Remove the logo from the signature?')) return; api('set_logo', { data: '' }).then(function () { S.logo = ''; paintLogo(); preview(); setMsg('logoMsg', 'Logo removed.', true); }).catch(function (e) { setMsg('logoMsg', e.message); }); },
     clearStart: function () { $('startAt').value = ''; schedSummary(); },
     addSkip: function () { var v = $('skipAdd').value; if (!v) return; S.skip = S.skip || []; if (S.skip.indexOf(v) < 0) S.skip.push(v); $('skipAdd').value = ''; drawSkip(); schedSummary(); },
-    copyCode: function () { copyText(window.CAMPAIGN_GS || '', 'Apps Script code copied.'); }, toggleCode: toggleCode,
     scan: scan, download: download, addToCampaign: addToCampaign, page: function (d) { S.page = Math.max(0, S.page + d); renderClean(); },
     addStep: addStep, saveCfg: function (t, m) { return saveCfg(t, m).catch(function () {}); }, test: test, health: health,
-    refresh: refresh, ctl: ctl, sendNow: sendNow, bulk: bulk, blockAdd: blockAdd,
+    refresh: refresh, ctl: ctl, bulk: bulk, blockAdd: blockAdd,
     ctPage: function (d) { var o = S.ct.offset + d * CT_PAGE; if (o < 0 || o >= S.ct.total) return; S.ct.offset = o; loadContacts(); },
     searchSoon: function () { clearTimeout(S.searchT); S.searchT = setTimeout(function () { S.ct.q = $('qSearch').value.trim(); S.ct.offset = 0; loadContacts(); }, 350); },
     _test: { parseCSV: parseCSV, toItems: toItems, clean: clean, items: function () { return S.items; } }
   };
 
-  document.querySelectorAll('#senderPick .pick').forEach(function (b) { b.addEventListener('click', function () { setSender(b.getAttribute('data-s')); }); });
   document.querySelectorAll('.nav-btn[data-v]').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-v')); }); });
   var drop = $('drop'), file = $('file');
   file.addEventListener('change', function () { if (file.files[0]) { drop.querySelector('b').textContent = file.files[0].name; drop.querySelector('span').textContent = 'Ready. Press Scan & clean.'; } });
@@ -1358,21 +1101,17 @@
   ['sigCompany', 'sigName'].forEach(function (id) { $(id).addEventListener('input', paintLogo); });
   $('sigOn').addEventListener('change', function () { this.closest('.sig-box').classList.toggle('off', !this.checked); preview(); });
 
-  $('cUrl').value = S.url; $('cKey').value = S.key || randomKey(); if ($('cBox')) { $('cBox').value = S.box || ''; $('cBox').disabled = !!S.url; }
-  if (!S.url) { var known = CL.list().filter(function (c) { return c.key; })[0] || null; try { var hk = JSON.parse(LS.get('dl_cmp_lastkey') || 'null'); if (!known && hk) known = { key: hk }; } catch (e) {} if (known && known.key) $('cKey').value = known.key; }
-  if (!S.url) { try { var pf = JSON.parse(LS.get('dl_cmp_prefill') || 'null'); LS.del('dl_cmp_prefill'); if (pf && pf.url) { $('cUrl').value = pf.url; $('cKey').value = pf.key || ''; setTimeout(function () { setMsg('cMsg', 'Same sheet, same link: type the new mailbox below and press Connect. It gets its own tabs in your sheet.', true); if ($('cBox')) $('cBox').focus(); }, 0); } } catch (e) {} }
   renderCmpSel();
   (function () { var t; var go = function () { clearTimeout(t); t = setTimeout(function () { detectMailbox(($('mbEmail').value || '').trim()); }, 450); }; $('mbEmail').addEventListener('input', go); ['mbSH', 'mbSP', 'mbIH', 'mbIP'].forEach(function (i) { $(i).addEventListener('input', makeCode); }); })();
   $('cmpSel').addEventListener('change', function () { pickCampaign(this.value); });
-  if ($('sendAs')) $('sendAs').addEventListener('change', function () { var v = this.value; S.cfg.sendAs = v; saveCfg(v ? 'Saved: emails go out as ' + v + ' (sent by Google, your computer can be off).' : 'Saved: emails go out as the Gmail itself.', 'cMsg').catch(function () {}); });
   try { var sv = sessionStorage.getItem('dl_cmp_view'); if (sv) { sessionStorage.removeItem('dl_cmp_view'); setTimeout(function () { show(sv); }, 0); } } catch (e) {}
   var sel = $('tz'); TZ.forEach(function (t) { var o = document.createElement('option'); o.value = t[0]; o.textContent = t[1]; sel.appendChild(o); });
   fillForms(); wireSched();
-  if (S.url && S.key) S.boot = sha256(S.key).then(function (h) {
-    S.kh = h;
-    var c = readCache();
-    if (c) { setConnected(c); pill('Updating...', 'gray'); if ($('v-run').classList.contains('on')) { renderRun(c); if (c.page) renderContacts(c.page); loadLog(); } }
-    S.bootLoad = loadState(true).then(function (st) { if (st) { pill('Connected', 'green'); if ($('v-run').classList.contains('on')) renderRun(st); } return st; });
-    return S.bootLoad;
-  }).catch(function () {});
+  (function () { // last known numbers at once, fresh ones from the Mailer right after
+    var c0 = S.box && readCache();
+    if (c0) { setConnected(c0); pill('Updating...', 'gray'); if ($('v-run').classList.contains('on')) { renderRun(c0); if (c0.page) renderContacts(c0.page); loadLog(); } }
+  })();
+  renderCmpSel(); drawBoxes();
+  S.boot = findMailer(true).then(function (st) { if (st && $('v-run').classList.contains('on')) renderRun(st); return st; });
+  setInterval(function () { if (!document.hidden && (!S.view || S.view === 'connect')) findMailer(true); }, 30000);
 })();
