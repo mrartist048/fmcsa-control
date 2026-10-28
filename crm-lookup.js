@@ -236,4 +236,47 @@
 
   var inp0 = $('universalSearchInput');
   if (inp0) inp0.placeholder = 'Search MC, USDOT, phone, email or company';
+
+  /* ---------------- 3. MC age filter (from the BI&PD insurance date shown in the MC AGE column) ---------------- */
+  function monthsOf(rec) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String((rec && rec.effDate) || ''));
+    if (!m) return null;
+    return Math.max(0, Math.floor((Date.now() - Date.UTC(+m[1], +m[2] - 1, +m[3])) / 864e5 / 30.4375));
+  }
+  function ageOk(rec, v) { // unknown age is hidden while a filter is on (it cannot be checked)
+    if (!v) return true;
+    var mo = monthsOf(rec); if (mo === null) return false;
+    return v === 'u3' ? mo < 3 : mo >= +v;
+  }
+  function ageVal() { var el = $('ageFilterSelect'); return el ? el.value : ''; }
+  function ageApply() {
+    var v = ageVal(); if (!v) return;
+    var data = G('scrapedData') || [];
+    document.querySelectorAll('#resultsTable tr').forEach(function (tr, i) {
+      if (tr.style.display === 'none' || tr.cells.length < 3) return;
+      var rec = data[i]; if (!rec || isOnline(rec)) return; // carriers found online by the search always show
+      if (!ageOk(rec, v)) tr.style.display = 'none';
+    });
+    try { if (typeof updateVisibleRecordCount === 'function') updateVisibleRecordCount(); } catch (e) {}
+  }
+  var withSearch = window.applyAdvancedFilters;
+  window.applyAdvancedFilters = function () { var r = withSearch.apply(this, arguments); ageApply(); return r; };
+  var sel0 = $('ageFilterSelect');
+  if (sel0) sel0.addEventListener('change', function () { sel0.classList.toggle('on', !!sel0.value); });
+  document.addEventListener('click', function (e) { // Reset also clears the MC age filter
+    var b = e.target && e.target.closest && e.target.closest('[onclick*="resetAdvancedFilters"]');
+    if (b && sel0) { sel0.value = ''; sel0.classList.remove('on'); }
+  }, true);
+  var SIG = '';
+  setInterval(function () { // new rows and MC ages arrive while a scan runs: filter them too
+    if (!ageVal() || document.hidden) { SIG = ''; return; }
+    var inp = $('universalSearchInput'); if (inp && clean(inp.value)) return; // a search is typed: it re-filters on its own
+    var data = G('scrapedData') || [], known = 0;
+    for (var i = 0; i < data.length; i++) if (data[i] && data[i].effDate) known++;
+    var sig = data.length + ':' + known + ':' + ageVal();
+    if (sig !== SIG) { SIG = sig; window.applyAdvancedFilters(); }
+  }, 3000);
+  var css2 = document.createElement('style');
+  css2.textContent = '#ageFilterSelect{min-width:170px}#ageFilterSelect.on{border-color:var(--accent);color:var(--accent)}';
+  document.head.appendChild(css2);
 })();
