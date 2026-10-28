@@ -279,4 +279,13 @@
   var css2 = document.createElement('style');
   css2.textContent = '#ageFilterSelect{min-width:170px}#ageFilterSelect.on{border-color:var(--accent);color:var(--accent)}';
   document.head.appendChild(css2);
+
+  /* ---------------- 4. Download button also for a sheet opened from History ----------------
+     The button used to appear only when a scan finished. Download already exports only the rows the filters show. */
+  setInterval(function () {
+    var b = $('downloadBtn'), d = G('scrapedData') || [];
+    if (!b) return;
+    var want = d.length > 0 && !G('scraping');
+    if (want && b.style.display === 'none') b.style.display = 'inline-flex';
+  }, 1500);
 })();
