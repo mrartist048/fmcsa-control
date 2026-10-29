@@ -288,4 +288,48 @@
     var want = d.length > 0 && !G('scraping');
     if (want && b.style.display === 'none') b.style.display = 'inline-flex';
   }, 1500);
+
+  /* ---------------- 5. the whole MC range from FMCSA open data in a few requests ----------------
+     The scanner used to ask FMCSA open data about every MC (or every 50 MC). In an office where many people share one
+     internet connection that quickly gives "HTTP 429 Too many requests". Now, when a scan starts, the whole range is asked
+     for in blocks of 1,000 MC (2 requests per block) and kept in the scanner's own memory, so the scanner does not ask again.
+     If FMCSA does not answer, nothing changes: the scanner asks per MC as before. */
+  var BULK_DONE = {}, BULK_BUSY = false, BULK_PAUSE = 0;
+  function bulkBlock(a, b) {
+    var cache = G('_censusMcCache'); if (!cache || typeof cache !== 'object') return Promise.resolve(false);
+    var got = {}, wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    function one(n, tries) {
+      var where = 'docket' + n + "prefix='MC' AND docket" + n + " between '" + a + "' and '" + b + "'";
+      return fetch(CENSUS + '?$where=' + encodeURIComponent(where) + '&$limit=50000', { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (rows) {
+          (Array.isArray(rows) ? rows : []).forEach(function (c) { var m = parseInt(c['docket' + n], 10); if (m >= a && m <= b) (got[m] = got[m] || []).push(c); });
+        })
+        .catch(function (e) { if (tries >= 3 || !G('scraping')) throw e; return wait([5000, 15000, 30000][tries]).then(function () { return one(n, tries + 1); }); });
+    }
+    return one(1, 0).then(function () { return one(2, 0); }).then(function () {
+      for (var m = a; m <= b; m++) {
+        if (m in cache) continue;
+        var l = got[m] || [];
+        cache[m] = l.filter(function (x) { return x.status_code === 'A'; })[0] || l[0] || {}; // {} = not in FMCSA open data (same as the scanner's own prefetch)
+      }
+      return true;
+    }, function () { return false; });
+  }
+  function bulkRun() {
+    if (BULK_BUSY || !G('scraping') || Date.now() < BULK_PAUSE) return;
+    if (G('dataSource') === 'fast') return; // FMCSA Fast loads its own data (fmcsa-fast.js)
+    if (/^USDOT/i.test(String(window.activeScrapeRange || ''))) return; // USDOT PDF scans work by USDOT, not MC
+    var a = parseInt(($('startMc') || {}).value, 10), b = parseInt(($('endMc') || {}).value, 10);
+    if (!(a > 0) || !(b >= a)) return;
+    var from = Math.max(a, parseInt(window._scanNextMc, 10) || a);
+    for (var s0 = from; s0 <= b; s0 += 1000) {
+      var e0 = Math.min(b, s0 + 999), key = s0 + '-' + e0;
+      if (BULK_DONE[key]) continue;
+      BULK_BUSY = true; BULK_DONE[key] = 1;
+      bulkBlock(s0, e0).then(function (ok) { BULK_BUSY = false; if (!ok) { delete BULK_DONE[key]; BULK_PAUSE = Date.now() + 60000; } });
+      return; // one block at a time; the next one is asked for a second later
+    }
+  }
+  setInterval(bulkRun, 1000);
 })();
