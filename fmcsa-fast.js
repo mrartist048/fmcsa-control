@@ -170,9 +170,13 @@
     var list = D.census[n] || [], c = list.filter(function (x) { return x.status_code === 'A'; })[0] || list[0] || null;
     var lic = (D.mLic[n] || [])[0] || (D.oLic[n] || [])[0] || null, auth = authState(n);
     if (!(c && c.dot_number) && !lic) return { status: 'not_found' };
-    if (!auth) return DATE ? { status: 'filtered_out' } : origVia(mc, el); // not in the authority files: ask CarrierChk / MOTUS like before
     if (c && c.dot_number && c.carship && !/C/.test(c.carship)) return { status: 'filtered_out' };
-    if (auth !== 'yes') return { status: 'filtered_out' }; // no active operating authority
+    if (auth !== 'yes') {
+      // No MOTUS record and the older file (frozen in May 2026) says "no authority" or has nothing: the authority may have
+      // been granted since. Such MC are checked quietly after the list is shown and added to it when they are active.
+      if (!(D.mLic[n] && D.mLic[n].length) && c && c.dot_number && c.status_code !== 'I' && dateOkLocal(c)) BG.add(mc);
+      return { status: 'filtered_out' };
+    }
     if (DATE) { var dd = DATE.type === 'auth' ? grantDate(n) : DATE.type === 'reg' ? regDate(c) : insDate(n); if (!dd || dd < DATE.from || dd > DATE.to) return { status: 'filtered_out' }; }
     var rec = { owner: '', effDate: '', mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'CARRIER', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A',
       powerUnits: 'N/A', vehicleType: 'N/A', carrierDetails: '', remarks: '', followUpDate: '', followUpTime: '', sharedBy: G('dispatcherNickname'), src: SRC };
@@ -193,6 +197,52 @@
     if (LISTMODE) LISTMODE.found++;
     return { status: 'success', data: rec };
   }
+  function dateOkLocal(c) { // can the date filter be checked without the MOTUS/CarrierChk page?
+    if (!DATE) return true;
+    if (DATE.type === 'reg') { var r = regDate(c); return !!r && r >= DATE.from && r <= DATE.to; }
+    return !!LISTMODE; // a date scan list already has the right dates
+  }
+
+  /* ---------------- quiet check after the list is shown ----------------
+     MC the files are not sure about are checked one by one on CarrierChk / MOTUS (the normal way), without any message.
+     Active ones are added to the table and to the History sheet like any other lead. Stops when another sheet is opened. */
+  var BG = { q: [], seen: {}, tries: {}, running: false, sheet: null, followed: null,
+    add: function (mc) { var k = String(mc); if (this.seen[k]) return; this.seen[k] = 1; this.q.push(mc); },
+    reset: function () { this.q = []; this.seen = {}; this.tries = {}; } };
+  function bgAddRow(data) {
+    var sd = G('scrapedData'), tb = $('resultsTable'), rowHTML = G('rowHTML');
+    if (!Array.isArray(sd) || !tb || typeof rowHTML !== 'function') return;
+    if (sd.some(function (x) { return String(x.mc) === String(data.mc); })) return;
+    sd.push(data);
+    var call = function (n) { var f = G(n); if (typeof f === 'function') try { f(); } catch (e) {} };
+    call('updateCategoryCheckboxes');
+    var empty = tb.querySelector('.empty'); if (empty && empty.closest('tr')) empty.closest('tr').remove();
+    tb.insertAdjacentHTML('beforeend', rowHTML(data, sd.length - 1, !!(BG.followed && BG.followed.has(data.mc))));
+    call('populateStateDropdown'); call('populateVehicleTypeCheckboxes'); call('applyAdvancedFilters');
+    if (!data.effDate) { var qa = G('_queueAge'); if (typeof qa === 'function') try { qa(data); } catch (e) {} }
+    var ss = G('_saveSoon'); if (typeof ss === 'function') try { ss(); } catch (e) {}
+  }
+  async function bgRun() {
+    if (BG.running || !BG.q.length) return;
+    BG.running = true; BG.sheet = G('currentHistoryId');
+    try {
+      if (!BG.followed) BG.followed = await new Promise(function (res) {
+        var f = G('getAllAppDataFromIndexedDB');
+        try { f('followups', function (l) { res(new Set((l || []).map(function (x) { return x.mc; }))); }); } catch (e) { res(new Set()); }
+      });
+      while (BG.q.length) {
+        if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; } // another sheet was opened or a new scan started
+        if (G('scraping')) { await wait(3000); continue; }
+        var mc = BG.q.shift(), r = null;
+        try { r = await origVia(mc, null); } catch (e) { r = null; }
+        if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; }
+        if (r && r.status === 'success' && r.data) bgAddRow(r.data);
+        else if (!r || r.status === 'error') { var t = BG.tries[mc] || 0; if (t < 3) { BG.tries[mc] = t + 1; BG.q.push(mc); await wait(15000); } }
+        await wait(400);
+      }
+    } finally { BG.running = false; }
+  }
+
   window.processSingleMCWithDetailedError = async function (mc, el) {
     if (G('dataSource') !== SRC) return origPS.apply(this, arguments);
     var gate = G('_licenseGateCached');
@@ -248,12 +298,13 @@
   }
   window.startScraping = async function (a, b) {
     if (G('dataSource') !== SRC || (a != null) || (b != null)) return origStart.apply(this, arguments);
-    var d = readDates();
-    if (!d) return origStart.apply(this, arguments); // MC range only, as before
     if (G('scraping')) return;
+    BG.reset();
+    var d = readDates();
+    if (!d) { try { return await origStart.apply(this, arguments); } finally { setTimeout(bgRun, 500); } } // MC range only
     if (daysBetween(d.from, d.to) > MAX_DAYS) { origStatus('Please pick up to ' + MAX_DAYS + ' days at a time.', 'error'); return; }
     var sEl = $('startMc'), eEl = $('endMc'), s0 = sEl ? sEl.value.trim() : '', e0 = eEl ? eEl.value.trim() : '';
-    if (s0 && e0) { DATE = d; try { return await origStart.apply(this, arguments); } finally { DATE = null; } } // MC range AND dates
+    if (s0 && e0) { DATE = d; try { return await origStart.apply(this, arguments); } finally { DATE = null; setTimeout(bgRun, 500); } } // MC range AND dates
     if (s0 || e0) { origStatus('Fill both MC numbers, or leave both empty to scan by date only.', 'error'); return; }
     var label = 'Date (' + typeName(d.type) + ') ' + nice(d.fromIso) + ' to ' + nice(d.toIso);
     origStatus('Turbo Scan: finding every carrier with ' + typeName(d.type).toLowerCase() + ' from ' + nice(d.fromIso) + ' to ' + nice(d.toIso) + '…', 'running');
@@ -274,6 +325,7 @@
       renameSheet(label);
       sEl.value = ''; eEl.value = ''; try { sEl.dispatchEvent(new Event('input')); } catch (e) {}
       DATE = null; LISTMODE = null;
+      setTimeout(bgRun, 500);
     }
   };
 
@@ -282,10 +334,19 @@
   window.setStatus = function (html) {
     var args = Array.prototype.slice.call(arguments);
     if (G('dataSource') === SRC && typeof html === 'string') {
-      if (LISTMODE && /^Scanning MC|^Connecting to|^Loading FMCSA/.test(html.replace(/<[^>]+>/g, ''))) return; // the date scan shows its own progress
+      var plain = html.replace(/<[^>]+>/g, '');
+      if (LISTMODE && /^Scanning MC|^Connecting to|^Loading FMCSA/.test(plain)) return; // the date scan shows its own progress
+      if (/not answering|blocking|is busy|trying again|try again|Waiting \d+\s*s|did not answer|HTTP \d{3}/i.test(plain) && !/^(Completed|Scan paused)/.test(plain)) return; // no "blocked / not answering" lines in Turbo Scan
       args[0] = html.replace(/FMCSA open data/g, 'Turbo Scan data').replace(/FMCSA SAFER/g, 'the backup check');
     }
     return origStatus.apply(this, args);
+  };
+
+  var origNote = window.showPremiumNotification;
+  if (typeof origNote === 'function') window.showPremiumNotification = function (msg) {
+    if (BG.running && !G('scraping')) return; // the quiet check never shows messages
+    if (G('dataSource') === SRC && /block|bot check|not answering|busy|VPN|403|429/i.test(String(msg || ''))) return;
+    return origNote.apply(this, arguments);
   };
 
   /* ---------------- no 0.3 s pause between MC in this mode: the data is already here ---------------- */
