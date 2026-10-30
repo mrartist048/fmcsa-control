@@ -152,6 +152,17 @@
     cur.sort(); all.sort();
     return cur[0] || all[all.length - 1] || '';
   }
+  function insLapsed(n) { // authority taken from the older file, but every BI&PD policy there was cancelled and no newer one is on file:
+    // FMCSA revokes the authority about 30 days after the insurance ends, so SAFER shows NOT AUTHORIZED
+    if ((D.mLic[n] || []).length || (D.mIns[n] || []).length) return false;
+    if ((D.mAuth[n] || []).some(function (r) { return /GRANT/i.test(r.reason || ''); })) return false;
+    var today = new Date().toISOString().slice(0, 10).replace(/-/g, ''), seen = 0, live = 0;
+    (D.oIns[n] || []).forEach(function (r) {
+      if (!/BIPD/i.test(r.mod_col_1 || 'BIPD')) return;
+      seen++; var cancel = usDate(r.cancl_effective_date); if (!cancel || cancel > today) live++;
+    });
+    return seen > 0 && live === 0;
+  }
   function grantDate(n) { // the latest time the authority was granted
     var m = (D.mAuth[n] || []).filter(function (r) { return /GRANT/i.test(r.reason || ''); }).map(function (r) { return ymd(r.status_change_date); }).filter(Boolean).sort();
     if (m.length) return m[m.length - 1];
@@ -177,6 +188,7 @@
       if (!(D.mLic[n] && D.mLic[n].length) && c && c.dot_number && c.status_code !== 'I' && dateOkLocal(c)) BG.add(mc);
       return { status: 'filtered_out' };
     }
+    if (insLapsed(n)) return { status: 'filtered_out' }; // insurance cancelled: not authorized any more
     if (DATE) { var dd = DATE.type === 'auth' ? grantDate(n) : DATE.type === 'reg' ? regDate(c) : insDate(n); if (!dd || dd < DATE.from || dd > DATE.to) return { status: 'filtered_out' }; }
     var rec = { owner: '', effDate: '', mc: mc, usdot: 'N/A', name: 'N/A', entityType: 'CARRIER', status: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A',
       powerUnits: 'N/A', vehicleType: 'N/A', carrierDetails: '', remarks: '', followUpDate: '', followUpTime: '', sharedBy: G('dispatcherNickname'), src: SRC };
@@ -288,12 +300,24 @@
   /* a sheet opened again from History is checked again the same way (out-of-service leads leave the list) */
   var origLoadSheet = window.loadHistorySheetToTable;
   if (typeof origLoadSheet === 'function') window.loadHistorySheetToTable = function (id) {
+    var before = G('scrapedData');
     var r = origLoadSheet.apply(this, arguments);
     var t0 = Date.now();
-    (async function () {
-      while (Date.now() - t0 < 20000 && (G('currentHistoryId') !== id || BG.running)) await wait(300);
-      if (G('currentHistoryId') !== id || G('scraping')) return;
+    (async function () { // wait until the sheet is really in the table (the same sheet may be opened again)
+      while (Date.now() - t0 < 20000 && (G('currentHistoryId') !== id || G('scrapedData') === before || BG.running)) await wait(300);
+      if (G('currentHistoryId') !== id || G('scrapedData') === before || G('scraping')) return;
+      await wait(500);
       BG.reset(); BG.followed = null;
+      try { // leads whose insurance was cancelled since the sheet was made leave the list too
+        var sd = G('scrapedData') || [], mcs = sd.map(function (r) { return parseInt(r.mc, 10); }).filter(function (m) { return m > 0; });
+        if (mcs.length) {
+          await loadList(mcs);
+          if (G('currentHistoryId') !== id || G('scraping')) return;
+          var gone = 0;
+          sd.forEach(function (r) { var m = parseInt(r.mc, 10); if (m > 0 && (((D.mLic[m] || []).length && authState(m) === 'no') || insLapsed(m))) { BG.drop[String(r.mc)] = 1; gone++; } });
+          if (gone) dropRows();
+        }
+      } catch (e) {}
       setTimeout(bgRun, 800);
     })();
     return r;
