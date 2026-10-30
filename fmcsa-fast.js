@@ -206,9 +206,40 @@
   /* ---------------- quiet check after the list is shown ----------------
      MC the files are not sure about are checked one by one on CarrierChk / MOTUS (the normal way), without any message.
      Active ones are added to the table and to the History sheet like any other lead. Stops when another sheet is opened. */
-  var BG = { q: [], seen: {}, tries: {}, running: false, sheet: null, followed: null,
+  var BG = { q: [], seen: {}, tries: {}, oq: [], oseen: {}, drop: {}, running: false, sheet: null, followed: null,
     add: function (mc) { var k = String(mc); if (this.seen[k]) return; this.seen[k] = 1; this.q.push(mc); },
-    reset: function () { this.q = []; this.seen = {}; this.tries = {}; } };
+    addOos: function (rec) { // every lead in the list is checked once for an FMCSA out-of-service order (CarrierChk shows it)
+      var dot = String(rec && rec.usdot || '').replace(/\D/g, ''), k = String(rec && rec.mc);
+      if (!dot || this.oseen[k]) return; this.oseen[k] = 1; this.oq.push({ mc: k, dot: dot.replace(/^0+/, '') });
+    },
+    reset: function () { this.q = []; this.seen = {}; this.tries = {}; this.oq = []; this.oseen = {}; this.drop = {}; } };
+
+  async function isOutOfService(dot) { // true / false, or null when CarrierChk did not answer
+    var pf = G('_politeFetch'), res;
+    try { res = typeof pf === 'function' ? await pf('https://carrierchk.com/carrier/' + dot, {}, 2) : null; } catch (e) { res = null; }
+    if (!res) return null;
+    if (res.status === 404) return false;
+    if (!res.html) return null;
+    var d = new DOMParser().parseFromString(res.html, 'text/html'), v = d.querySelector('.profile-verdict-value');
+    if (v) return /out[\s-]*of[\s-]*service/i.test(v.textContent || '');
+    return /OUT[\s-]*OF[\s-]*SERVICE\s+since/i.test(res.html);
+  }
+  function fixCount() { // keep "Found N valid records" equal to the rows in the list
+    var st = $('status'), sd = G('scrapedData'); if (!st || !Array.isArray(sd)) return;
+    var w = document.createTreeWalker(st, NodeFilter.SHOW_TEXT), t;
+    while ((t = w.nextNode())) if (/Found \d+ valid record/.test(t.nodeValue)) t.nodeValue = t.nodeValue.replace(/Found \d+ valid records?/, 'Found ' + sd.length + ' valid record' + (sd.length === 1 ? '' : 's'));
+  }
+  function dropRows() { // remove out-of-service leads from the table and the History sheet (waits while someone is typing a remark)
+    var keys = Object.keys(BG.drop); if (!keys.length) return;
+    var a = document.activeElement; if (a && a.closest && a.closest('#resultsTable')) { setTimeout(dropRows, 2000); return; }
+    var sd = G('scrapedData'); if (!Array.isArray(sd)) return;
+    var n = sd.length;
+    for (var i = sd.length - 1; i >= 0; i--) if (BG.drop[String(sd[i].mc)]) sd.splice(i, 1);
+    BG.drop = {};
+    if (sd.length === n) return;
+    var paint = G('paintTable'); if (typeof paint === 'function') try { paint(); } catch (e) {}
+    var ss = G('_saveSoon'); if (typeof ss === 'function') try { ss(); } catch (e) {}    fixCount();
+  }
   function bgAddRow(data) {
     var sd = G('scrapedData'), tb = $('resultsTable'), rowHTML = G('rowHTML');
     if (!Array.isArray(sd) || !tb || typeof rowHTML !== 'function') return;
@@ -221,18 +252,29 @@
     call('populateStateDropdown'); call('populateVehicleTypeCheckboxes'); call('applyAdvancedFilters');
     if (!data.effDate) { var qa = G('_queueAge'); if (typeof qa === 'function') try { qa(data); } catch (e) {} }
     var ss = G('_saveSoon'); if (typeof ss === 'function') try { ss(); } catch (e) {}
+    BG.addOos(data); fixCount();
   }
   async function bgRun() {
-    if (BG.running || !BG.q.length) return;
+    if (BG.running) return;
+    var sd0 = G('scrapedData'); if (Array.isArray(sd0)) sd0.forEach(function (r) { BG.addOos(r); });
+    if (!BG.q.length && !BG.oq.length) return;
     BG.running = true; BG.sheet = G('currentHistoryId');
     try {
       if (!BG.followed) BG.followed = await new Promise(function (res) {
         var f = G('getAllAppDataFromIndexedDB');
         try { f('followups', function (l) { res(new Set((l || []).map(function (x) { return x.mc; }))); }); } catch (e) { res(new Set()); }
       });
-      while (BG.q.length) {
+      while (BG.q.length || BG.oq.length) {
         if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; } // another sheet was opened or a new scan started
         if (G('scraping')) { await wait(3000); continue; }
+        if (BG.oq.length) {
+          var it = BG.oq.shift(), o = await isOutOfService(it.dot);
+          if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; }
+          if (o === true) { BG.drop[it.mc] = 1; dropRows(); }
+          else if (o === null) { var tk = 'o' + it.mc, tt = BG.tries[tk] || 0; if (tt < 3) { BG.tries[tk] = tt + 1; BG.oq.push(it); await wait(15000); } }
+          await wait(300);
+          continue;
+        }
         var mc = BG.q.shift(), r = null;
         try { r = await origVia(mc, null); } catch (e) { r = null; }
         if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; }
@@ -242,6 +284,20 @@
       }
     } finally { BG.running = false; }
   }
+
+  /* a sheet opened again from History is checked again the same way (out-of-service leads leave the list) */
+  var origLoadSheet = window.loadHistorySheetToTable;
+  if (typeof origLoadSheet === 'function') window.loadHistorySheetToTable = function (id) {
+    var r = origLoadSheet.apply(this, arguments);
+    var t0 = Date.now();
+    (async function () {
+      while (Date.now() - t0 < 20000 && (G('currentHistoryId') !== id || BG.running)) await wait(300);
+      if (G('currentHistoryId') !== id || G('scraping')) return;
+      BG.reset(); BG.followed = null;
+      setTimeout(bgRun, 800);
+    })();
+    return r;
+  };
 
   window.processSingleMCWithDetailedError = async function (mc, el) {
     if (G('dataSource') !== SRC) return origPS.apply(this, arguments);
