@@ -135,36 +135,111 @@
     $('limitSub').textContent = 'Set any number you like, but keep it below what your email provider allows (Zoho free about 50 per day, paid 250 to 1,500; Outlook.com about 300; Yahoo about 500; hosting mail often 100 to 500 per hour, ask your host). Going over gets the account blocked.';
     $('limitHint').textContent = 'The Mailer spreads the emails through your sending hours automatically. The gap is the minimum wait between two emails.';
     var ms = $('mailerStatus');
-    if (ms) ms.innerHTML = S.online ? '<b>The Mailer is running on this computer.</b> ' + (BOXES.length ? 'Mailboxes: ' + BOXES.map(function (b) { return esc(b.email); }).join(', ') + '.' : 'No mailbox added yet: do step 3.')
-      : '<b>Mailer not found on this computer.</b> Start it (double-click start.bat in the Mailer folder). This line turns green when it runs.';
+    if (ms) ms.innerHTML = S.online ? '<b>The Mailer is running on this computer.</b> ' + (BOXES.length ? 'Mailboxes: ' + BOXES.map(function (b) { return esc(b.email); }).join(', ') + '.' : 'No mailbox added yet: do step 2.')
+      : '<b>Mailer not found on this computer.</b> First time: do step 1. Already installed: double-click restart-mailer.bat in the Mailer folder. This line turns green when it runs.';
     if (ms) ms.className = 'note' + (S.online ? ' ok' : '');
     renderSetup();
   }
   function drawBoxes() {
     var el = $('boxList'); if (!el) return;
     if (!S.online) { el.innerHTML = '<div class="note">' + esc(NOMAILER) + ' Then press <b>Find my Mailer</b>.<br><small style="color:var(--mut)">This page works on the computer where the Mailer runs.</small></div>'; return; }
-    if (!BOXES.length) { el.innerHTML = '<div class="note">The Mailer is running, but no mailbox is added yet. Do the 3 steps below.</div>'; return; }
+    var pages = canPageAdd(), parts = (S.mbList || []).filter(function (m) { return m.role === 'partner'; });
+    var partHtml = parts.length ? '<div class="note" style="margin-top:10px"><b>Warm-up partners:</b> ' + parts.map(function (m) { return esc(m.email) + (pages ? ' <button class="btn sm del" data-rm="' + esc(m.email) + '">Remove</button>' : ''); }).join(' &nbsp; ') + '</div>' : '';
+    if (!BOXES.length) { el.innerHTML = '<div class="note">The Mailer is running, but no mailbox is added yet. Add one below (step 2).</div>' + partHtml; wireBoxes(el); return; }
     el.innerHTML = '<div class="tw"><table><thead><tr><th>Mailbox</th><th>Status</th><th>Waiting</th><th>Sent today</th><th class="r"></th></tr></thead><tbody>' + BOXES.map(function (b) {
       var tag = b.running ? (b.paused ? '<span class="tag paused">Paused</span>' : '<span class="tag queued">Running</span>') : '<span class="tag removed">Stopped</span>', me = b.email === S.box;
-      return '<tr><td><b>' + esc(b.email) + '</b>' + (me ? ' <small style="color:var(--accent)">(open)</small>' : '') + '</td><td>' + tag + '</td><td>' + (b.left || 0) + (b.held ? ' <small style="color:var(--mut)">+ ' + b.held + ' held</small>' : '') + '</td><td>' + (b.sentToday || 0) + '</td><td class="r">' + (me ? '' : '<button class="btn sm" data-open="' + esc(b.email) + '">Open</button>') + '</td></tr>';
-    }).join('') + '</tbody></table></div>';
-    el.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { pickCampaign(b.getAttribute('data-open')); }; });
+      return '<tr><td><b>' + esc(b.email) + '</b>' + (me ? ' <small style="color:var(--accent)">(open)</small>' : '') + '</td><td>' + tag + '</td><td>' + (b.left || 0) + (b.held ? ' <small style="color:var(--mut)">+ ' + b.held + ' held</small>' : '') + '</td><td>' + (b.sentToday || 0) + '</td><td class="r">' + (me ? '' : '<button class="btn sm" data-open="' + esc(b.email) + '">Open</button>') + (pages ? ' <button class="btn sm" data-edit="' + esc(b.email) + '" title="Change the password or server">Change login</button> <button class="btn sm del" data-rm="' + esc(b.email) + '">Remove</button>' : '') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' + partHtml;
+    wireBoxes(el);
   }
+  function wireBoxes(el) {
+    el.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { pickCampaign(b.getAttribute('data-open')); }; });
+    el.querySelectorAll('[data-edit]').forEach(function (b) { b.onclick = function () { var e = b.getAttribute('data-edit'); $('mbEmail').value = e; detectMailbox(e); $('mbPass').value = ''; $('mbAddBtn').textContent = 'Save login'; $('mbPass').focus(); $('mbPass').scrollIntoView({ block: 'center' }); setMsg('mbMsg', 'Type the new password (and check the server settings), then press Save login.', true); }; });
+    el.querySelectorAll('[data-rm]').forEach(function (b) { b.onclick = function () { mbRemove(b.getAttribute('data-rm')); }; });
+  }
+  /* ---------- add / change / remove mailboxes here, without the black window (Mailer 4.1 and newer) ---------- */
+  function canPageAdd() { return S.online && parseFloat(S.mailerV) >= 4.1; }
+  function mraw(obj, ms) {
+    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ctl ? setTimeout(function () { ctl.abort(); }, ms || 90000) : 0;
+    return fetch(MAILER + '/api', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(obj), signal: ctl ? ctl.signal : undefined, cache: 'no-store' })
+      .then(function (r) { clearTimeout(t); return r.json(); }, function () { clearTimeout(t); S.online = false; throw new Error(NOMAILER); });
+  }
+  function loginText(j) {
+    var s = j.smtp === 'ok' ? 'Sending login works.' : 'Sending login failed: ' + j.smtp + '.';
+    s += j.imap === 'ok' ? ' Mailbox login (IMAP) works, so STOP replies and bounces are noticed.' : j.imap === 'none' ? ' No incoming (IMAP) server: STOP replies and bounces will not be noticed.' : ' Mailbox login (IMAP) failed: ' + j.imap + '. Emails still go out, but STOP replies and bounces are not noticed.';
+    if (j.smtp !== 'ok') s += ' Check the password (many providers need an app password) and the server settings.';
+    return s;
+  }
+  function mbForm() {
+    return { email: ($('mbEmail').value || '').trim().toLowerCase(), password: $('mbPass').value, smtp: { host: $('mbSH').value.trim(), port: Number($('mbSP').value) || 465 },
+      imap: $('mbIH').value.trim() ? { host: $('mbIH').value.trim(), port: Number($('mbIP').value) || 993 } : null, warmup: $('mbWarm').checked };
+  }
+  function mbNeed() {
+    if (!S.online) { setMsg('mbMsg', NOMAILER); return false; }
+    if (!canPageAdd()) { setMsg('mbMsg', 'The Mailer on this computer is an older version. Download the new Mailer (step 1), unzip it into the same folder and double-click restart-mailer.bat. Or use the setup code below.'); $('oldWay').open = true; return false; }
+    return true;
+  }
+  function mbTest() {
+    if (!mbNeed()) return;
+    var m = mbForm(); if (!m.email || !m.smtp.host) { setMsg('mbMsg', 'Type your mailbox first.'); return; }
+    setMsg('mbMsg', 'Testing the login...', true);
+    mraw({ action: 'mb_test', mailbox: m }).then(function (j) { if (j.error && !j.smtp) throw new Error(ERR[j.error] || j.error); setMsg('mbMsg', loginText(j), j.smtp === 'ok'); }).catch(function (e) { setMsg('mbMsg', e.message); });
+  }
+  function mbSave() {
+    if (!mbNeed()) return;
+    var m = mbForm(), known = (S.mbList || []).some(function (x) { return x.email === m.email; });
+    if (!m.email || !m.smtp.host) { setMsg('mbMsg', 'Type your mailbox first.'); return; }
+    if (!m.password && !known) { setMsg('mbMsg', 'Type the password of this mailbox.'); return; }
+    var btn = $('mbAddBtn'); btn.disabled = true; setMsg('mbMsg', 'Checking the login and adding the mailbox...', true);
+    mraw({ action: 'mb_save', mailbox: m }).then(function (j) {
+      if (j.error) throw new Error(j.error === 'LOGIN' ? loginText(j) : (ERR[j.error] || j.error));
+      $('mbPass').value = ''; btn.textContent = 'Add mailbox'; S.mbList = j.list || S.mbList;
+      setMsg('mbMsg', (known ? 'Saved. ' : 'Added. ') + loginText(j) + ' It is working now, no restart needed.', true);
+      S.box = m.email; LS.set('dl_cmp_box', S.box); S.connected = false; S.state = null;
+      return findMailer(true);
+    }).catch(function (e) { setMsg('mbMsg', e.message); }).then(function () { btn.disabled = false; });
+  }
+  function ptSave() {
+    if (!S.online) { setMsg('ptMsg', NOMAILER); return; }
+    if (!canPageAdd()) { setMsg('ptMsg', 'Update the Mailer first (step 1), or use add-warmup-partner.bat in the Mailer folder.'); return; }
+    var e = ($('ptEmail').value || '').trim().toLowerCase(), pw = ($('ptPass').value || '').replace(/\s+/g, ''), k = $('ptKind').value;
+    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(e) || !pw) { setMsg('ptMsg', 'Type the partner email and its app password.'); return; }
+    var sv = k === 'gmail' ? { smtp: { host: 'smtp.gmail.com', port: 465 }, imap: { host: 'imap.gmail.com', port: 993 } } : { smtp: { host: 'smtp-mail.outlook.com', port: 587 }, imap: { host: 'outlook.office365.com', port: 993 } };
+    setMsg('ptMsg', 'Checking the login...', true);
+    mraw({ action: 'mb_save', mailbox: { email: e, password: pw, role: 'partner', smtp: sv.smtp, imap: sv.imap } }).then(function (j) {
+      if (j.error) throw new Error(j.error === 'LOGIN' ? (j.detail || 'Login failed') + '. Use an App Password (not the normal password); for Gmail turn on 2-step verification first.' : (ERR[j.error] || j.error));
+      $('ptEmail').value = ''; $('ptPass').value = ''; S.mbList = j.list || S.mbList; drawBoxes();
+      setMsg('ptMsg', 'Added ' + e + ' as a warm-up partner. It joins the warm-up by itself.', true);
+    }).catch(function (er) { setMsg('ptMsg', er.message); });
+  }
+  function mbRemove(email) {
+    if (!canPageAdd()) return;
+    if (!confirm('Remove ' + email + ' from the Mailer?\n\nIts campaign, list and results stay in the Mailer folder, so you can add it again later.')) return;
+    mraw({ action: 'mb_remove', email: email }).then(function (j) {
+      if (j.error) throw new Error(ERR[j.error] || j.error);
+      S.mbList = j.list || []; if (S.box === email) { S.box = ''; LS.set('dl_cmp_box', ''); S.connected = false; S.state = null; }
+      toast('Removed ' + email + '.'); return findMailer(true);
+    }).catch(function (e) { setMsg('cMsg', e.message); });
+  }
+  function loadMbList() { if (!canPageAdd()) { S.mbList = []; return Promise.resolve(); } return mraw({ action: 'mb_list' }, 15000).then(function (j) { S.mbList = j.list || []; }, function () {}); }
   function findMailer(quiet) {
     if (!quiet) setMsg('cMsg', 'Looking for the Mailer on this computer...', true);
     return mailerStatus().then(function (j) {
       S.online = true; S.mailerV = String(j.v || '');
       if (!(parseFloat(j.v) >= 4)) {
         BOXES = []; drawBoxes(); renderSender(); pill('Update the Mailer', 'gray');
-        setMsg('cMsg', 'The Mailer on this computer is version ' + (j.v || '?') + '. Download the new Mailer (step 2 below), unzip it into the SAME folder (your mailboxes and passwords stay), close the old Mailer window and double-click start.bat again.');
+        setMsg('cMsg', 'The Mailer on this computer is version ' + (j.v || '?') + '. Download the new Mailer (step 1 below), unzip it into the SAME folder (your mailboxes and passwords stay), close the old Mailer window and double-click install-autostart.bat.');
         return null;
       }
       BOXES = j.boxes || [];
+      return loadMbList().then(function () { return j; });
+    }).then(function (j) {
+      if (!j) return null;
       if (BOXES.length && !BOXES.some(function (b) { return b.email === S.box; })) { S.box = BOXES[0].email; LS.set('dl_cmp_box', S.box); S.connected = false; S.state = null; }
       if (!BOXES.length) S.box = '';
       renderCmpSel(); drawBoxes(); renderSender(); renderAll();
-      setMsg('cMsg', BOXES.length ? '' : 'Mailer found. Now add your mailbox with the 3 steps below.', true);
-      $('connSub').textContent = BOXES.length ? 'These mailboxes are in the Mailer on this computer. Everything you change on this page is saved in the Mailer folder.' : 'Add your first mailbox with the 3 steps below.';
+      setMsg('cMsg', BOXES.length ? '' : 'Mailer found. Now add your mailbox below (step 2).', true);
+      $('connSub').textContent = BOXES.length ? 'These mailboxes are in the Mailer on this computer. Everything you change on this page is saved in the Mailer folder.' : 'Add your first mailbox below (step 2).';
       if (!S.box) { pill('No mailbox yet', 'gray'); return null; }
       return loadState(true);
     }).catch(function (e) {
@@ -183,6 +258,8 @@
     [/google|googlemail/, 'Google Workspace', 'smtp.gmail.com', 465, 'imap.gmail.com', 993, 'Use an App Password (myaccount.google.com/apppasswords, needs 2-step verification).'],
     [/outlook|office365|microsoft/, 'Microsoft 365', 'smtp.office365.com', 587, 'outlook.office365.com', 993, 'Your admin must allow "Authenticated SMTP" for this mailbox. If the login is refused, Microsoft blocks it.'],
     [/secureserver/, 'GoDaddy', 'smtpout.secureserver.net', 465, 'imap.secureserver.net', 993, 'Use the normal password of this mailbox.'],
+    [/spacemail/, 'Spacemail (Spaceship)', 'mail.spacemail.com', 465, 'mail.spacemail.com', 993, 'Use the normal password of this mailbox.'],
+    [/hostinger/, 'Hostinger', 'smtp.hostinger.com', 465, 'imap.hostinger.com', 993, 'Use the normal password of this mailbox.'],
     [/privateemail/, 'Namecheap Private Email', 'mail.privateemail.com', 465, 'mail.privateemail.com', 993, 'Use the normal password of this mailbox.'],
     [/titan/, 'Titan', 'smtp.titan.email', 465, 'imap.titan.email', 993, 'Use the normal password of this mailbox.'],
     [/ionos|1and1/, 'IONOS', 'smtp.ionos.com', 587, 'imap.ionos.com', 993, 'Use the normal password of this mailbox.'],
@@ -866,7 +943,7 @@
     var out = $('healthOut'); if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) { out.innerHTML = '<div class="warn"><b>Check</b>Type your domain, for example yourcompany.com.</div>'; return; }
     if (FREE.indexOf(d) >= 0) { out.innerHTML = '<div class="ok"><b>OK</b>' + esc(d) + ' is set up by its provider. Nothing to configure. Keep your daily numbers modest.</div>'; return; }
     out.innerHTML = '<div><b>Checking</b>Looking up DNS records...</div>';
-    var sel = ['google', 'default', 'selector1', 'selector2', 'k1', 's1', 's2', 'zmail', 'mail', 'dkim'];
+    var sel = ['google', 'default', 'selector1', 'selector2', 'k1', 's1', 's2', 'zmail', 'mail', 'dkim', 'spacemail', 'hostingermail1', 'hostingermail-a'];
     Promise.all([doh(d, 'TXT'), doh('_dmarc.' + d, 'TXT'), doh(d, 'MX')].concat(sel.map(function (s) { return doh(s + '._domainkey.' + d, 'TXT').then(function (r) { return r && r.Answer && r.Answer.length ? doh(s + '._domainkey.' + d, 'CNAME').then(function () { return r; }) : doh(s + '._domainkey.' + d, 'CNAME'); }); }))).then(function (r) {
       var rows = [], spf = txtOf(r[0]).filter(function (t) { return /^v=spf1/i.test(t); });
       if (!spf.length) rows.push(['bad', 'SPF', 'No SPF record found. Mail from your domain is likely to be treated as suspicious. Your email provider (Google Workspace, Zoho, etc.) shows the exact record to add at your domain host.']);
@@ -934,7 +1011,7 @@
     if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) return Promise.resolve(null);
     if (AUTH[d]) return AUTH[d];
     if (FREE.indexOf(d) >= 0) return (AUTH[d] = Promise.resolve({ spf: true, dkim: true, dmarc: true, mx: true, free: true }));
-    var sel = ['default', 'google', 'selector1', 'selector2', 'k1', 's1', 's2', 'zmail', 'mail', 'dkim', 'hostingermail1', 'hostingermail2', 'hostingermail-a', 'hostingermail-b'];
+    var sel = ['default', 'google', 'selector1', 'selector2', 'k1', 's1', 's2', 'zmail', 'mail', 'dkim', 'spacemail', 'hostingermail1', 'hostingermail2', 'hostingermail-a', 'hostingermail-b'];
     return (AUTH[d] = Promise.all([doh(d, 'TXT'), doh('_dmarc.' + d, 'TXT'), doh(d, 'MX')].concat(sel.map(function (s) { return doh(s + '._domainkey.' + d, 'TXT').then(function (r) { return r && r.Answer && r.Answer.length ? r : doh(s + '._domainkey.' + d, 'CNAME'); }); }))).then(function (r) {
       return { spf: txtOf(r[0]).filter(function (t) { return /^v=spf1/i.test(t); }).length === 1, dmarc: txtOf(r[1]).some(function (t) { return /^v=DMARC1/i.test(t); }),
         mx: !!(r[2] && (r[2].Answer || []).some(function (a) { return a.type === 15; })), dkim: r.slice(3).some(function (x) { return x && x.Answer && x.Answer.length; }) };
@@ -1105,7 +1182,7 @@
     addSkip: function () { var v = $('skipAdd').value; if (!v) return; S.skip = S.skip || []; if (S.skip.indexOf(v) < 0) S.skip.push(v); $('skipAdd').value = ''; drawSkip(); schedSummary(); },
     scan: scan, download: download, addToCampaign: addToCampaign, page: function (d) { S.page = Math.max(0, S.page + d); renderClean(); },
     addStep: addStep, saveCfg: function (t, m) { return saveCfg(t, m).catch(function () {}); }, test: test, health: health,
-    refresh: refresh, ctl: ctl, warm: warm, bulk: bulk, blockAdd: blockAdd,
+    refresh: refresh, ctl: ctl, warm: warm, mbSave: mbSave, mbTest: mbTest, ptSave: ptSave, bulk: bulk, blockAdd: blockAdd,
     ctPage: function (d) { var o = S.ct.offset + d * CT_PAGE; if (o < 0 || o >= S.ct.total) return; S.ct.offset = o; loadContacts(); },
     searchSoon: function () { clearTimeout(S.searchT); S.searchT = setTimeout(function () { S.ct.q = $('qSearch').value.trim(); S.ct.offset = 0; loadContacts(); }, 350); },
     _test: { parseCSV: parseCSV, toItems: toItems, clean: clean, items: function () { return S.items; } }

@@ -218,39 +218,50 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
         <div class="hello"><h1>Send campaigns from your business email</h1><p>The Mailer program on your computer sends the emails one by one from your own mailbox (Hostinger, Zoho, cPanel, Outlook and others), at the pace you choose. Your list, emails, settings and results are kept in the Mailer folder on that computer. No Google Sheet is needed.</p></div>
         <div class="panel" id="connBox">
           <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Mailboxes on this computer</h2><button class="btn" id="cGo" onclick="CMP.connect()"><svg class="ico"><use href="#i-refresh"/></svg>Find my Mailer</button></div>
-          <p class="sub" id="connSub" style="margin:8px 0 12px">Start the Mailer (double-click start.bat, or restart-mailer.bat if it runs in the background) and this page finds it by itself.</p>
+          <p class="sub" id="connSub" style="margin:8px 0 12px">The Mailer runs on this computer and this page finds it by itself (first time: step 1 below).</p>
           <div id="boxList"></div>
           <div class="msg" id="cMsg" role="status"></div>
         </div>
         <div class="panel" id="mailerBox">
-          <h2>Add a mailbox in 3 steps</h2>
-          <p class="sub">Do this once for each mailbox. The Mailer is a small free program that sends your campaign from your own email account (the same account you use in Thunderbird or webmail).</p>
+          <h2>Add a mailbox</h2>
+          <p class="sub">The Mailer is a small free program on this computer that sends your campaign from your own email account (the same account you use in Thunderbird or webmail). You set it up once; after that everything is done on this page.</p>
           <div class="wiz">
-            <div class="wiz-step"><span class="wn">1</span><div class="wb"><b>Type your mailbox</b>
+            <div class="wiz-step"><span class="wn">1</span><div class="wb"><b>Get the Mailer</b> <span class="wiz-note">(once per computer)</span>
+              <ol class="wiz-ol"><li>Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (free, choose LTS). Next, next, finish.</li>
+              <li><button class="btn sm primary" onclick="CMP.downloadMailer()"><svg class="ico"><use href="#i-download"/></svg>Download Mailer</button> and unzip it into a folder you keep (for example Documents).</li>
+              <li>In that folder double-click <code>install-autostart.bat</code> once. The Mailer then runs in the background and starts by itself with the computer. You never need to open it again.</li></ol>
+              <span class="wiz-note">Already have an older Mailer? Unzip the new one into the same folder (your mailboxes and passwords stay), then double-click <code>restart-mailer.bat</code> (or <code>install-autostart.bat</code> the first time).</span>
+            </div></div>
+            <div class="wiz-step"><span class="wn">2</span><div class="wb"><b>Type your mailbox and its password</b>
               <input id="mbEmail" class="gi" autocomplete="off" placeholder="sales@yourcompany.com" style="margin:8px 0 8px">
               <div id="mbDetect" class="wiz-note">We find the right server settings for you.</div>
               <details class="wiz-adv"><summary>Server settings (filled in automatically)</summary>
                 <div class="wiz-grid"><label>Outgoing (SMTP) server<input id="mbSH" class="gi"></label><label>Port<input id="mbSP" class="gi" inputmode="numeric"></label><label>Incoming (IMAP) server<input id="mbIH" class="gi"></label><label>Port<input id="mbIP" class="gi" inputmode="numeric"></label></div>
               </details>
+              <input id="mbPass" class="gi" type="password" autocomplete="new-password" placeholder="Password of this mailbox" style="margin:10px 0 6px">
+              <div id="mbPassTip" class="wiz-note"></div>
+              <label class="wiz-note" style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="mbWarm" checked> Use this mailbox in the warm-up</label>
+              <div class="row" style="margin-top:6px"><button class="btn primary" id="mbAddBtn" onclick="CMP.mbSave()">Add mailbox</button><button class="btn" onclick="CMP.mbTest()">Test login</button></div>
+              <div class="msg" id="mbMsg" role="status"></div>
+              <span class="wiz-note">The password goes only to the Mailer on this computer and is kept in its folder. It is never sent anywhere else and never shown again.</span>
             </div></div>
-            <div class="wiz-step"><span class="wn">2</span><div class="wb"><b>Get the Mailer</b> <span class="wiz-note">(once per computer)</span>
-              <ol class="wiz-ol"><li>Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (free, choose LTS). Next, next, finish.</li>
-              <li><button class="btn sm primary" onclick="CMP.downloadMailer()"><svg class="ico"><use href="#i-download"/></svg>Download Mailer</button> and unzip it into a folder you keep (for example Documents).</li></ol>
-              <span class="wiz-note">Already have an older Mailer? Unzip the new one into the same folder: your mailboxes and passwords stay.</span>
-            </div></div>
-            <div class="wiz-step"><span class="wn">3</span><div class="wb"><b>Copy your setup code and paste it in the Mailer</b>
-              <div class="row" style="flex-wrap:nowrap;margin:8px 0"><input id="mbCode" class="gi" readonly style="margin:0;font-family:ui-monospace,Consolas,monospace;font-size:12px"><button class="btn primary" style="flex:none" onclick="CMP.copySetup()">Copy setup code</button></div>
-              <ol class="wiz-ol"><li>In the Mailer folder double-click <code>add-mailbox.bat</code> (very first mailbox: <code>start.bat</code>).</li>
-              <li>Paste the code (right-click in the black window) and press Enter.</li>
-              <li>Type the password of this mailbox and press Enter. <span id="mbPassTip" class="wiz-note"></span></li>
-              <li>Double-click <code>start.bat</code> and leave the window open. The mailbox appears above by itself.</li>
-              <li><b>No window, starts with the computer (Windows):</b> double-click <code>install-autostart.bat</code> once. After adding a mailbox later, double-click <code>restart-mailer.bat</code>.</li></ol>
+            <div class="wiz-step"><span class="wn">3</span><div class="wb"><b>Warm-up partners</b> <span class="wiz-note">(optional, recommended)</span>
+              <p class="wiz-note" style="margin:6px 0 8px">2 or 3 of your own Gmail or Outlook accounts that exchange a few normal emails with your mailboxes, so Gmail and Outlook trust them. Gmail: turn on 2-step verification and make an <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>, then use it here.</p>
+              <div class="row" style="flex-wrap:wrap;gap:8px"><select id="ptKind" class="gi" style="max-width:150px;margin:0"><option value="gmail">Gmail</option><option value="outlook">Outlook.com</option></select>
+                <input id="ptEmail" class="gi" autocomplete="off" placeholder="yourname@gmail.com" style="flex:1;min-width:200px;margin:0">
+                <input id="ptPass" class="gi" type="password" autocomplete="new-password" placeholder="App password" style="flex:1;min-width:160px;margin:0">
+                <button class="btn" onclick="CMP.ptSave()">Add partner</button></div>
+              <div class="msg" id="ptMsg" role="status"></div>
             </div></div>
           </div>
+          <details class="wiz-adv" id="oldWay"><summary>Older Mailer: add with a setup code instead</summary>
+            <div class="row" style="flex-wrap:nowrap;margin:8px 0"><input id="mbCode" class="gi" readonly style="margin:0;font-family:ui-monospace,Consolas,monospace;font-size:12px"><button class="btn primary" style="flex:none" onclick="CMP.copySetup()">Copy setup code</button></div>
+            <ol class="wiz-ol"><li>In the Mailer folder double-click <code>add-mailbox.bat</code>, paste the code (right-click) and press Enter.</li><li>Type the password and press Enter, then restart the Mailer (<code>restart-mailer.bat</code> or <code>start.bat</code>).</li></ol>
+          </details>
           <div id="mailerStatus" class="note" style="margin-top:14px"></div>
           <details class="wiz-adv"><summary>Good to know</summary>
             <div class="note" style="margin-top:10px"><b>Passwords:</b> Zoho, Outlook and Yahoo usually need an <i>app password</i> (always when two-factor login is on). Hosting mail (Hostinger, cPanel, GoDaddy) uses the normal mailbox password.</div>
-            <div class="note"><b>Keep it running:</b> emails go out only while the Mailer window is open, so use a computer that stays on, or a small server (VPS). Open this page on that same computer to see and control your campaigns.</div>
+            <div class="note"><b>Keep it running:</b> emails go out only while this computer is on (not sleeping) and the Mailer runs. With install-autostart.bat it starts by itself. Open this page on that same computer to see and control your campaigns.</div>
             <div class="note"><b>Unsubscribe:</b> every email ends with "reply STOP". The Mailer reads the mailbox (IMAP) every few minutes; anyone who replies STOP, or whose email bounces, is blocked for good.</div>
           </details>
         </div>
@@ -465,7 +476,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
   </section>
 </div>
 <script src="auth.js"></script>
-<script src="mailer-files.js?v=10"></script>
-<script src="campaign.js?v=15"></script>
+<script src="mailer-files.js?v=12"></script>
+<script src="campaign.js?v=16"></script>
 </body>
 </html>
