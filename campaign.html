@@ -218,7 +218,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
         <div class="hello"><h1>Send campaigns from your business email</h1><p>The Mailer program on your computer sends the emails one by one from your own mailbox (Hostinger, Zoho, cPanel, Outlook and others), at the pace you choose. Your list, emails, settings and results are kept in the Mailer folder on that computer. No Google Sheet is needed.</p></div>
         <div class="panel" id="connBox">
           <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Mailboxes on this computer</h2><button class="btn" id="cGo" onclick="CMP.connect()"><svg class="ico"><use href="#i-refresh"/></svg>Find my Mailer</button></div>
-          <p class="sub" id="connSub" style="margin:8px 0 12px">Start the Mailer (double-click start.bat) and this page finds it by itself.</p>
+          <p class="sub" id="connSub" style="margin:8px 0 12px">Start the Mailer (double-click start.bat, or restart-mailer.bat if it runs in the background) and this page finds it by itself.</p>
           <div id="boxList"></div>
           <div class="msg" id="cMsg" role="status"></div>
         </div>
@@ -243,7 +243,8 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
               <ol class="wiz-ol"><li>In the Mailer folder double-click <code>add-mailbox.bat</code> (very first mailbox: <code>start.bat</code>).</li>
               <li>Paste the code (right-click in the black window) and press Enter.</li>
               <li>Type the password of this mailbox and press Enter. <span id="mbPassTip" class="wiz-note"></span></li>
-              <li>Double-click <code>start.bat</code> and leave the window open. The mailbox appears above by itself.</li></ol>
+              <li>Double-click <code>start.bat</code> and leave the window open. The mailbox appears above by itself.</li>
+              <li><b>No window, starts with the computer (Windows):</b> double-click <code>install-autostart.bat</code> once. After adding a mailbox later, double-click <code>restart-mailer.bat</code>.</li></ol>
             </div></div>
           </div>
           <div id="mailerStatus" class="note" style="margin-top:14px"></div>
@@ -427,6 +428,12 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
           <div id="runNext" class="run-next" hidden></div>
           <div class="msg" id="rMsg" role="status"></div>
         </div>
+        <div class="panel" id="warmBox">
+          <div class="row" style="justify-content:space-between"><div><b>Warm-up</b> <span class="tag removed" id="warmTag">Off</span>
+            <div id="warmInfo" style="color:var(--mut);font-size:13px;margin-top:6px">Your mailboxes send each other a few normal emails every day, during your schedule, so your campaign emails land in Inbox.</div></div>
+          <div class="row"><button class="btn success" id="bWarmOn" onclick="CMP.warm(true)">Start warm-up</button><button class="btn del" id="bWarmOff" onclick="CMP.warm(false)" hidden>Stop warm-up</button></div></div>
+          <div class="msg" id="wMsg" role="status"></div>
+        </div>
         <div class="panel" id="healthBox" hidden>
           <div class="hb-top"><div class="hb-ring" id="hbRing"><b id="hbScore">-</b><small>/100</small></div>
             <div><h2 style="margin:0">Mailbox health <span class="tag" id="hbTag"></span></h2><p class="sub" id="hbSub" style="margin:4px 0 0">How safe this mailbox is to send from.</p></div></div>
@@ -458,7 +465,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
   </section>
 </div>
 <script src="auth.js"></script>
-<script src="mailer-files.js?v=8"></script>
-<script src="campaign.js?v=13"></script>
+<script src="mailer-files.js?v=10"></script>
+<script src="campaign.js?v=15"></script>
 </body>
 </html>

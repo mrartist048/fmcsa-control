@@ -50,9 +50,9 @@
     NO_DAYS: 'Your schedule has no sending days. Turn on at least one day in step 4 and save.',
     ADDRESS_REQUIRED: 'Enter your business mailing address first (step 3, Sender details) and save. It is required in every email.',
     BAD_LIMIT: 'Set a daily limit of at least 1 (step 4).',
-    NO_BOX: 'This mailbox is not in the Mailer on this computer. Add it with add-mailbox.bat (1. Connect), then restart start.bat.',
+    NO_BOX: 'This mailbox is not in the Mailer on this computer. Add it with add-mailbox.bat (1. Connect), then restart the Mailer (restart-mailer.bat, or close the window and run start.bat again).',
     NOT_FOUND: 'The Mailer on this computer is an older version. Download the new Mailer (1. Connect, step 2), unzip it into the same folder (your mailboxes stay), then start it again.',
-    NOT_HERE: 'This mailbox is not in the Mailer on this computer. Add it with add-mailbox.bat (1. Connect), then restart start.bat.'
+    NOT_HERE: 'This mailbox is not in the Mailer on this computer. Add it with add-mailbox.bat (1. Connect), then restart the Mailer (restart-mailer.bat, or close the window and run start.bat again).'
   };
   /* ---- button feedback: a clicked button shows a spinner while it talks to the Mailer, then a tick (or a cross on error) ---- */
   var BTN = { cur: null };
@@ -82,7 +82,7 @@
     setTimeout(function () { if (!b.isConnected) return; b.classList.remove('is-ok', 'is-err'); b.innerHTML = html; b.style.minWidth = ''; }, tk.err ? 2200 : 1600);
   }
   /* ---- talking to the Mailer on this computer (it keeps the list, the emails, the settings and the results) ---- */
-  var NOMAILER = 'The Mailer is not running on this computer. Open the Mailer folder, double-click start.bat and leave the window open. (If Chrome asks to let this site reach apps on this device, press Allow.)';
+  var NOMAILER = 'The Mailer is not running on this computer. Open the Mailer folder and double-click start.bat (leave the window open), or restart-mailer.bat if you use the auto start. (If Chrome asks to let this site reach apps on this device, press Allow.)';
   function mpost(path, obj, ms) {
     var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, t = ctl ? setTimeout(function () { ctl.abort(); }, ms || 30000) : 0;
     return fetch(MAILER + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(obj || {}), signal: ctl ? ctl.signal : undefined, cache: 'no-store' })
@@ -919,6 +919,7 @@
     $('runKpis').innerHTML = st ? k('Sent today', sent + ' / ' + lim) + k('Waiting to send', c.queued || 0) + k('Finished', c.done || 0, 'ok') + k('Replied', c.replied || 0, 'accent') + k('Bounced', c.bounced || 0, 'bad') + k('Unsubscribed', c.unsub || 0) + k('Held (risky)', c.risky || 0) + k('Sent in total', run.sentTotal || 0) + (S.cfg.sender === 'smtp' ? k('Mailer', mailerOnline() ? 'Online' : 'Offline', mailerOnline() ? 'ok' : 'bad') : k('Gmail quota left', st.quota == null ? '-' : st.quota)) : '';
     $('runSub').textContent = st ? 'Today (' + st.today + ') the limit is ' + st.effLimit + ' emails' + (S.cfg.ramp && st.effLimit < S.cfg.limit ? ' because of the slow warm-up (your full limit is ' + S.cfg.limit + ')' : '') + '. Schedule: ' + schedText(S.cfg) + ' (' + S.cfg.tz + ')' + (S.cfg.startAt && S.cfg.startAt > Date.now() ? ', first email ' + fmtTz(S.cfg.startAt, S.cfg.tz) : '') + '.' : 'Start the campaign and it sends by itself within your limits.';
     if (st && S.cfg.sender === 'smtp' && on && !paused && !mailerOnline()) $('runReason').textContent = ((run.reason || '') + ' The Mailer program is not running, so nothing is being sent. Start it (step 1).').trim();
+    renderWarm(st);
     renderNext();
     renderHealth(st);
     renderSender();
@@ -1061,6 +1062,27 @@
     if (action === 'stop' && !confirm('Stop the campaign? Contacts keep their progress; press Start to continue later.')) return;
     return go();
   }
+  function renderWarm(st) {
+    var known = st && typeof st.warmOn === 'boolean', on = known && st.warmOn;
+    $('warmTag').textContent = on ? 'On' : 'Off'; $('warmTag').className = 'tag ' + (on ? 'queued' : 'removed');
+    $('bWarmOn').hidden = on; $('bWarmOff').hidden = !on;
+    var peers = st ? st.warmPeers || 0 : 0, parts = st ? st.warmPartners || 0 : 0;
+    $('warmInfo').textContent = !st ? 'Your mailboxes send each other a few normal emails every day, during your schedule, so your campaign emails land in Inbox.'
+      : !known ? 'Update the Mailer to switch warm-up on and off here (1. Connect, step 2: download it again and unzip it into the same folder).'
+      : on ? (peers ? 'Running during your schedule (' + schedText(S.cfg) + ') with ' + peers + ' other mailbox(es)' + (parts ? ', including ' + parts + ' Gmail / Outlook partner(s)' : '') + '. It keeps running when the campaign is stopped.'
+        : 'On, but it needs one more mailbox: press Start warm-up on another mailbox, or add a Gmail / Outlook warm-up partner in the Mailer (add-warmup-partner.bat).')
+      : 'Off. Start it a week or two before the campaign: your mailboxes send each other a few normal emails every day (3 a day, growing to 25), during your schedule.';
+  }
+  function warm(on) {
+    if (!S.box) { setMsg('wMsg', NOMAILER); return; }
+    if (!on && !confirm('Stop the warm-up for ' + S.box + '?')) return;
+    setMsg('wMsg', '...', true);
+    return api(on ? 'warmup_on' : 'warmup_off').then(function (j) {
+      if (S.state) { S.state.warmOn = j.warmOn; S.state.warmPeers = j.warmPeers; S.state.warmPartners = j.warmPartners; }
+      renderWarm(S.state || j);
+      setMsg('wMsg', on ? 'Warm-up started. It begins within a minute, during your schedule.' : 'Warm-up stopped.', true);
+    }).catch(function (e) { setMsg('wMsg', /bad action/i.test(e.message) ? ERR.NOT_FOUND : e.message); });
+  }
   function bulk(kind) {
     var map = { promote: ['Release all held (risky) leads so they get emailed?', function () { return api('set_status', { all: true, from: 'risky', status: 'queued' }); }],
       'del-risky': ['Delete all held (risky) leads?', function () { return api('delete', { status: 'risky' }); }],
@@ -1083,7 +1105,7 @@
     addSkip: function () { var v = $('skipAdd').value; if (!v) return; S.skip = S.skip || []; if (S.skip.indexOf(v) < 0) S.skip.push(v); $('skipAdd').value = ''; drawSkip(); schedSummary(); },
     scan: scan, download: download, addToCampaign: addToCampaign, page: function (d) { S.page = Math.max(0, S.page + d); renderClean(); },
     addStep: addStep, saveCfg: function (t, m) { return saveCfg(t, m).catch(function () {}); }, test: test, health: health,
-    refresh: refresh, ctl: ctl, bulk: bulk, blockAdd: blockAdd,
+    refresh: refresh, ctl: ctl, warm: warm, bulk: bulk, blockAdd: blockAdd,
     ctPage: function (d) { var o = S.ct.offset + d * CT_PAGE; if (o < 0 || o >= S.ct.total) return; S.ct.offset = o; loadContacts(); },
     searchSoon: function () { clearTimeout(S.searchT); S.searchT = setTimeout(function () { S.ct.q = $('qSearch').value.trim(); S.ct.offset = 0; loadContacts(); }, 350); },
     _test: { parseCSV: parseCSV, toItems: toItems, clean: clean, items: function () { return S.items; } }
