@@ -996,7 +996,7 @@
     $('runKpis').innerHTML = st ? k('Sent today', sent + ' / ' + lim) + k('Waiting to send', c.queued || 0) + k('Finished', c.done || 0, 'ok') + k('Replied', c.replied || 0, 'accent') + k('Bounced', c.bounced || 0, 'bad') + k('Unsubscribed', c.unsub || 0) + k('Held (risky)', c.risky || 0) + k('Sent in total', run.sentTotal || 0) + (S.cfg.sender === 'smtp' ? k('Mailer', mailerOnline() ? 'Online' : 'Offline', mailerOnline() ? 'ok' : 'bad') : k('Gmail quota left', st.quota == null ? '-' : st.quota)) : '';
     $('runSub').textContent = st ? 'Today (' + st.today + ') the limit is ' + st.effLimit + ' emails' + (S.cfg.ramp && st.effLimit < S.cfg.limit ? ' because of the slow warm-up (your full limit is ' + S.cfg.limit + ')' : '') + '. Schedule: ' + schedText(S.cfg) + ' (' + S.cfg.tz + ')' + (S.cfg.startAt && S.cfg.startAt > Date.now() ? ', first email ' + fmtTz(S.cfg.startAt, S.cfg.tz) : '') + '.' : 'Start the campaign and it sends by itself within your limits.';
     if (st && S.cfg.sender === 'smtp' && on && !paused && !mailerOnline()) $('runReason').textContent = ((run.reason || '') + ' The Mailer program is not running, so nothing is being sent. Start it (step 1).').trim();
-    renderWarm(st);
+    renderWarm(st); renderNet(st);
     renderNext();
     renderHealth(st);
     renderSender();
@@ -1147,8 +1147,28 @@
     $('warmInfo').textContent = !st ? 'Your mailboxes send each other a few normal emails every day, during your schedule, so your campaign emails land in Inbox.'
       : !known ? 'Update the Mailer to switch warm-up on and off here (1. Connect, step 2: download it again and unzip it into the same folder).'
       : on ? (peers ? 'Running during your schedule (' + schedText(S.cfg) + ') with ' + peers + ' other mailbox(es)' + (parts ? ', including ' + parts + ' Gmail / Outlook partner(s)' : '') + '. It keeps running when the campaign is stopped.'
-        : 'On, but it needs one more mailbox: press Start warm-up on another mailbox, or add a Gmail / Outlook warm-up partner in the Mailer (add-warmup-partner.bat).')
+        : st.netOn && st.netPeers ? 'Running during your schedule (' + schedText(S.cfg) + ') with ' + st.netPeers + ' mailbox(es) of other companies in the Dispatch Link network.'
+        : 'On, but it needs one more mailbox: press Start warm-up on another mailbox, add a Gmail / Outlook partner (1. Connect, step 3), or join the network below.')
       : 'Off. Start it a week or two before the campaign: your mailboxes send each other a few normal emails every day (3 a day, growing to 25), during your schedule.';
+  }
+  function renderNet(st) {
+    var known = st && typeof st.netOn === 'boolean', on = known && st.netOn, n = st ? st.netPeers || 0 : 0;
+    $('netTag').textContent = on ? 'Joined' : 'Off'; $('netTag').className = 'tag ' + (on ? 'queued' : 'removed');
+    $('bNetOn').hidden = on; $('bNetOff').hidden = !on; $('bNetOn').disabled = !!st && !known;
+    $('netInfo').textContent = !known ? (st ? 'Update the Mailer to join the network (1. Connect, step 1: download it again and unzip it into the same folder, then restart-mailer.bat).' : 'Also warm up with mailboxes of other companies that use Dispatch Link. Different companies and domains make the warm-up much stronger.')
+      : on ? 'Joined. ' + (n ? 'Warming up with ' + n + ' mailbox(es) of other companies too, during your schedule.' : 'No other company has joined yet; it starts by itself when they do.') + ' Only the address of this mailbox is shared, never its password.'
+      : 'Also warm up with mailboxes of other companies that use Dispatch Link' + (n ? ' (' + n + ' in the network now)' : '') + '. Only the address of this mailbox is shared, never its password.';
+  }
+  function net(on) {
+    if (!S.box) { setMsg('nMsg', NOMAILER); return; }
+    if (on && !confirm('Join the Dispatch Link warm-up network with ' + S.box + '?\n\nThe address of this mailbox (not the password) is shared with the other companies in the network, and warm-up emails are exchanged with their mailboxes during your schedule.')) return;
+    var who = ''; try { var ss = (typeof DL !== 'undefined' && DL.session) ? DL.session() : null; who = ss && ss.company || ''; } catch (e) {}
+    setMsg('nMsg', '...', true);
+    return api(on ? 'net_on' : 'net_off', { company: who }).then(function (j) {
+      if (S.state) { ['warmOn', 'warmPeers', 'warmPartners', 'netOn', 'netPeers'].forEach(function (k) { S.state[k] = j[k]; }); }
+      renderWarm(S.state || j); renderNet(S.state || j);
+      setMsg('nMsg', on ? 'Joined the network. Warm-up is on for this mailbox.' : 'Left the network. Your own warm-up keeps running.', true);
+    }).catch(function (e) { setMsg('nMsg', /bad action/i.test(e.message) ? ERR.NOT_FOUND : e.message); });
   }
   function warm(on) {
     if (!S.box) { setMsg('wMsg', NOMAILER); return; }
@@ -1182,7 +1202,7 @@
     addSkip: function () { var v = $('skipAdd').value; if (!v) return; S.skip = S.skip || []; if (S.skip.indexOf(v) < 0) S.skip.push(v); $('skipAdd').value = ''; drawSkip(); schedSummary(); },
     scan: scan, download: download, addToCampaign: addToCampaign, page: function (d) { S.page = Math.max(0, S.page + d); renderClean(); },
     addStep: addStep, saveCfg: function (t, m) { return saveCfg(t, m).catch(function () {}); }, test: test, health: health,
-    refresh: refresh, ctl: ctl, warm: warm, mbSave: mbSave, mbTest: mbTest, ptSave: ptSave, bulk: bulk, blockAdd: blockAdd,
+    refresh: refresh, ctl: ctl, warm: warm, net: net, mbSave: mbSave, mbTest: mbTest, ptSave: ptSave, bulk: bulk, blockAdd: blockAdd,
     ctPage: function (d) { var o = S.ct.offset + d * CT_PAGE; if (o < 0 || o >= S.ct.total) return; S.ct.offset = o; loadContacts(); },
     searchSoon: function () { clearTimeout(S.searchT); S.searchT = setTimeout(function () { S.ct.q = $('qSearch').value.trim(); S.ct.offset = 0; loadContacts(); }, 350); },
     _test: { parseCSV: parseCSV, toItems: toItems, clean: clean, items: function () { return S.items; } }

@@ -443,7 +443,10 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
           <div class="row" style="justify-content:space-between"><div><b>Warm-up</b> <span class="tag removed" id="warmTag">Off</span>
             <div id="warmInfo" style="color:var(--mut);font-size:13px;margin-top:6px">Your mailboxes send each other a few normal emails every day, during your schedule, so your campaign emails land in Inbox.</div></div>
           <div class="row"><button class="btn success" id="bWarmOn" onclick="CMP.warm(true)">Start warm-up</button><button class="btn del" id="bWarmOff" onclick="CMP.warm(false)" hidden>Stop warm-up</button></div></div>
-          <div class="msg" id="wMsg" role="status"></div>
+          <div class="row" style="justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><div><b>Dispatch Link warm-up network</b> <span class="tag removed" id="netTag">Off</span>
+            <div id="netInfo" style="color:var(--mut);font-size:13px;margin-top:6px">Also warm up with mailboxes of other companies that use Dispatch Link. Different companies and domains make the warm-up much stronger.</div></div>
+          <div class="row"><button class="btn success" id="bNetOn" onclick="CMP.net(true)">Join network</button><button class="btn del" id="bNetOff" onclick="CMP.net(false)" hidden>Leave network</button></div></div>
+          <div class="msg" id="nMsg" role="status"></div>
         </div>
         <div class="panel" id="healthBox" hidden>
           <div class="hb-top"><div class="hb-ring" id="hbRing"><b id="hbScore">-</b><small>/100</small></div>
@@ -476,7 +479,7 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
   </section>
 </div>
 <script src="auth.js"></script>
-<script src="mailer-files.js?v=12"></script>
-<script src="campaign.js?v=16"></script>
+<script src="mailer-files.js?v=13"></script>
+<script src="campaign.js?v=17"></script>
 </body>
 </html>
