@@ -156,6 +156,10 @@
     var l = D.census[n] || [];
     return l.length > 0 && !l.some(function (x) { return x.status_code === 'A'; });
   }
+  function oosStep(n) { // FMCSA MCSIP step in the census: 54-68 = out-of-service order, 99 = out of business ('' when clean)
+    var l = D.census[n] || [], c = l.filter(function (x) { return x.status_code === 'A'; })[0] || l[0], st = c ? parseInt(c.mcsipstep, 10) : NaN;
+    return (st >= 54 && st <= 68) || st === 99 ? st : '';
+  }
   function insLapsed(n) { // authority taken from the older file, but every BI&PD policy there was cancelled and no newer one is on file:
     // FMCSA revokes the authority about 30 days after the insurance ends, so SAFER shows NOT AUTHORIZED
     if ((D.mLic[n] || []).length || (D.mIns[n] || []).length) return false;
@@ -186,6 +190,7 @@
     var lic = (D.mLic[n] || [])[0] || (D.oLic[n] || [])[0] || null, auth = authState(n);
     if (!(c && c.dot_number) && !lic) return { status: 'not_found' };
     if (censusInactive(n)) return { status: 'filtered_out' }; // USDOT record inactive (SAFER: "Record Inactive")
+    if (oosStep(n)) return { status: 'filtered_out' }; // out-of-service order or out of business (census MCSIP step)
     if (c && c.dot_number && c.carship && !/C/.test(c.carship)) return { status: 'filtered_out' };
     if (auth !== 'yes') {
       // No MOTUS record and the older file (frozen in May 2026) says "no authority" or has nothing: the authority may have
@@ -226,8 +231,9 @@
   var BG = { q: [], seen: {}, tries: {}, oq: [], oseen: {}, drop: {}, running: false, sheet: null, followed: null,
     add: function (mc) { var k = String(mc); if (this.seen[k]) return; this.seen[k] = 1; this.q.push(mc); },
     addOos: function (rec) { // every lead in the list is checked once for an FMCSA out-of-service order (CarrierChk shows it)
-      var dot = String(rec && rec.usdot || '').replace(/\D/g, ''), k = String(rec && rec.mc);
-      if (!dot || this.oseen[k]) return; this.oseen[k] = 1; this.oq.push({ mc: k, dot: dot.replace(/^0+/, '') });
+      var dot = String(rec && rec.usdot || '').replace(/\D/g, ''), k = String(rec && rec.mc), n = parseInt(k, 10);
+      if (!dot || this.oseen[k]) return;
+      if (LOADED[n] && (D.census[n] || []).length) { this.oseen[k] = 1; return; } // the census already answered (MCSIP step): no CarrierChk visit needed this.oseen[k] = 1; this.oq.push({ mc: k, dot: dot.replace(/^0+/, '') });
     },
     reset: function () { this.q = []; this.seen = {}; this.tries = {}; this.oq = []; this.oseen = {}; this.drop = {}; } };
 
@@ -322,7 +328,7 @@
           await loadList(mcs);
           if (G('currentHistoryId') !== id || G('scraping')) return;
           var gone = 0;
-          sd.forEach(function (r) { var m = parseInt(r.mc, 10); if (m > 0 && (((D.mLic[m] || []).length && authState(m) === 'no') || insLapsed(m) || censusInactive(m))) { BG.drop[String(r.mc)] = 1; gone++; } });
+          sd.forEach(function (r) { var m = parseInt(r.mc, 10); if (m > 0 && (((D.mLic[m] || []).length && authState(m) === 'no') || insLapsed(m) || censusInactive(m) || oosStep(m))) { BG.drop[String(r.mc)] = 1; gone++; } });
           if (gone) dropRows();
         }
       } catch (e) {}
