@@ -1156,12 +1156,12 @@
     $('netTag').textContent = on ? 'Joined' : 'Off'; $('netTag').className = 'tag ' + (on ? 'queued' : 'removed');
     $('bNetOn').hidden = on; $('bNetOff').hidden = !on; $('bNetOn').disabled = !!st && !known;
     $('netInfo').textContent = !known ? (st ? 'Update the Mailer to join the network (1. Connect, step 1: download it again and unzip it into the same folder, then restart-mailer.bat).' : 'Also warm up with mailboxes of other companies that use Dispatch Link. Different companies and domains make the warm-up much stronger.')
-      : on ? 'Joined. ' + (n ? 'Warming up with ' + n + ' mailbox(es) of other companies too, during your schedule.' : 'No other company has joined yet; it starts by itself when they do.') + ' Only the address of this mailbox is shared, never its password.'
-      : 'Also warm up with mailboxes of other companies that use Dispatch Link' + (n ? ' (' + n + ' in the network now)' : '') + '. Only the address of this mailbox is shared, never its password.';
+      : on ? 'Joined. ' + (n ? 'Warming up with ' + n + ' mailbox(es) of other companies too, during your schedule.' : 'No other company has joined yet; it starts by itself when they do.') + ' Only addresses are shared (this mailbox and your Gmail / Outlook partners), never passwords.'
+      : 'Also warm up with mailboxes of other companies that use Dispatch Link' + (n ? ' (' + n + ' in the network now)' : '') + '. Only addresses are shared (this mailbox and your Gmail / Outlook partners), never passwords.';
   }
   function net(on) {
     if (!S.box) { setMsg('nMsg', NOMAILER); return; }
-    if (on && !confirm('Join the Dispatch Link warm-up network with ' + S.box + '?\n\nThe address of this mailbox (not the password) is shared with the other companies in the network, and warm-up emails are exchanged with their mailboxes during your schedule.')) return;
+    if (on && !confirm('Join the Dispatch Link warm-up network with ' + S.box + '?\n\nThe address of this mailbox and of your Gmail / Outlook warm-up partners (not the passwords) is shared with the other companies in the network, and warm-up emails are exchanged with their mailboxes during your schedule.')) return;
     var who = ''; try { var ss = (typeof DL !== 'undefined' && DL.session) ? DL.session() : null; who = ss && ss.company || ''; } catch (e) {}
     setMsg('nMsg', '...', true);
     return api(on ? 'net_on' : 'net_off', { company: who }).then(function (j) {
