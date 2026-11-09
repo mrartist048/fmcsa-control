@@ -152,6 +152,10 @@
     cur.sort(); all.sort();
     return cur[0] || all[all.length - 1] || '';
   }
+  function censusInactive(n) { // the census (updated every day) has this MC only with an INACTIVE USDOT number
+    var l = D.census[n] || [];
+    return l.length > 0 && !l.some(function (x) { return x.status_code === 'A'; });
+  }
   function insLapsed(n) { // authority taken from the older file, but every BI&PD policy there was cancelled and no newer one is on file:
     // FMCSA revokes the authority about 30 days after the insurance ends, so SAFER shows NOT AUTHORIZED
     if ((D.mLic[n] || []).length || (D.mIns[n] || []).length) return false;
@@ -181,6 +185,7 @@
     var list = D.census[n] || [], c = list.filter(function (x) { return x.status_code === 'A'; })[0] || list[0] || null;
     var lic = (D.mLic[n] || [])[0] || (D.oLic[n] || [])[0] || null, auth = authState(n);
     if (!(c && c.dot_number) && !lic) return { status: 'not_found' };
+    if (censusInactive(n)) return { status: 'filtered_out' }; // USDOT record inactive (SAFER: "Record Inactive")
     if (c && c.dot_number && c.carship && !/C/.test(c.carship)) return { status: 'filtered_out' };
     if (auth !== 'yes') {
       // No MOTUS record and the older file (frozen in May 2026) says "no authority" or has nothing: the authority may have
@@ -271,17 +276,20 @@
     var sd0 = G('scrapedData'); if (Array.isArray(sd0)) sd0.forEach(function (r) { BG.addOos(r); });
     if (!BG.q.length && !BG.oq.length) return;
     BG.running = true; BG.sheet = G('currentHistoryId');
+    // the sheet of a new scan gets its id after the first leads: that is not "another sheet"
+    var moved = function () { var c = G('currentHistoryId'); if (BG.sheet == null) { BG.sheet = c; return false; } return c != null && c !== BG.sheet; };
     try {
       if (!BG.followed) BG.followed = await new Promise(function (res) {
         var f = G('getAllAppDataFromIndexedDB');
         try { f('followups', function (l) { res(new Set((l || []).map(function (x) { return x.mc; }))); }); } catch (e) { res(new Set()); }
       });
       while (BG.q.length || BG.oq.length) {
-        if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; } // another sheet was opened or a new scan started
-        if (G('scraping')) { await wait(3000); continue; }
+        if (moved()) { BG.reset(); break; } // another sheet was opened or a new scan started
+        // during a Turbo Scan the leads already found are checked at once, in order; other tabs wait for the scan to end
+        if (G('scraping') && G('dataSource') !== SRC) { await wait(3000); continue; }
         if (BG.oq.length) {
           var it = BG.oq.shift(), o = await isOutOfService(it.dot);
-          if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; }
+          if (moved()) { BG.reset(); break; }
           if (o === true) { BG.drop[it.mc] = 1; dropRows(); }
           else if (o === null) { var tk = 'o' + it.mc, tt = BG.tries[tk] || 0; if (tt < 3) { BG.tries[tk] = tt + 1; BG.oq.push(it); await wait(15000); } }
           await wait(300);
@@ -289,7 +297,7 @@
         }
         var mc = BG.q.shift(), r = null;
         try { r = await origVia(mc, null); } catch (e) { r = null; }
-        if (G('currentHistoryId') !== BG.sheet) { BG.reset(); break; }
+        if (moved()) { BG.reset(); break; }
         if (r && r.status === 'success' && r.data) bgAddRow(r.data);
         else if (!r || r.status === 'error') { var t = BG.tries[mc] || 0; if (t < 3) { BG.tries[mc] = t + 1; BG.q.push(mc); await wait(15000); } }
         await wait(400);
@@ -314,7 +322,7 @@
           await loadList(mcs);
           if (G('currentHistoryId') !== id || G('scraping')) return;
           var gone = 0;
-          sd.forEach(function (r) { var m = parseInt(r.mc, 10); if (m > 0 && (((D.mLic[m] || []).length && authState(m) === 'no') || insLapsed(m))) { BG.drop[String(r.mc)] = 1; gone++; } });
+          sd.forEach(function (r) { var m = parseInt(r.mc, 10); if (m > 0 && (((D.mLic[m] || []).length && authState(m) === 'no') || insLapsed(m) || censusInactive(m))) { BG.drop[String(r.mc)] = 1; gone++; } });
           if (gone) dropRows();
         }
       } catch (e) {}
@@ -327,7 +335,11 @@
     if (G('dataSource') !== SRC) return origPS.apply(this, arguments);
     var gate = G('_licenseGateCached');
     if (typeof gate === 'function') { var g = await gate(el); if (g) return g; } // licence / tab limit check stays the same
-    return fastOne(mc, el);
+    var res = await fastOne(mc, el);
+    if (res && res.status === 'success' && res.data) { // check this lead in the background right away (in the order found)
+      var d0 = res.data; setTimeout(function () { BG.addOos(d0); bgRun(); }, 0);
+    }
+    return res;
   };
 
   /* ---------------- scan by date ---------------- */
