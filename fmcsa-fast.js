@@ -74,6 +74,44 @@
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .catch(function (e) { if (tries >= 2) throw e; return wait([3000, 8000][tries]).then(function () { return getJson(id, where, tries + 1); }); });
   }
+  /* the Dispatch Link data bridge (Cloudflare Worker): what one company loaded is kept and given to everyone,
+     and it waits for FMCSA when FMCSA says "too many requests". If the bridge itself is down, the page asks FMCSA directly. */
+  var BRIDGE = 'https://dl-data-bridge.noumannaseer048.workers.dev', BR_OFF = 0, BR_WAITS = [8, 15, 25, 30, 30, 30, 30, 30, 30, 30];
+  if (!/^https:\/\//.test(BRIDGE)) BRIDGE = '';
+  function waitNote(on) {
+    var n = $('turboWait');
+    if (!n && on) {
+      var st = $('status'); if (!st || !st.parentNode) return;
+      n = document.createElement('div'); n.id = 'turboWait';
+      n.style.cssText = 'margin:8px 0 0;padding:8px 12px;border-radius:10px;font-size:13px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#f59e0b';
+      n.textContent = 'FMCSA data is slow right now. The scan is waiting and will continue by itself.';
+      st.parentNode.insertBefore(n, st.nextSibling);
+    }
+    if (n) n.hidden = !on;
+  }
+  var WAITING = 0;
+  function viaBridge(path, direct) {
+    if (!BRIDGE || Date.now() < BR_OFF) return direct();
+    var tries = 0;
+    function go() {
+      return fetch(BRIDGE + path, { cache: 'no-store' }).then(function (r) {
+        if (r.ok) return r.json();
+        if (r.status === 503) throw { busy: true };
+        throw { down: true };
+      }, function () { throw { down: true }; })
+        .then(function (data) { if (tries) { WAITING--; if (!WAITING) waitNote(false); } return data; }, function (e) {
+          if (e && e.busy && tries < BR_WAITS.length) {
+            if (!tries) { WAITING++; } waitNote(true);
+            return wait(BR_WAITS[tries++] * 1000).then(go);
+          }
+          if (tries) { WAITING--; if (!WAITING) waitNote(false); }
+          if (e && e.down) { BR_OFF = Date.now() + 5 * 60000; return direct(); }
+          throw new Error('FMCSA data is busy');
+        });
+    }
+    return go();
+  }
+  function getQ(id, where) { return viaBridge('/q?id=' + id + '&where=' + encodeURIComponent(where), function () { return getJson(id, where); }); }
   function usDate(s) { var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || '')); return m ? m[3] + ('0' + m[1]).slice(-2) + ('0' + m[2]).slice(-2) : ''; } // -> YYYYMMDD
   function ymd(s) { var m = /^(\d{4})(\d{2})(\d{2})/.exec(String(s || '')); return m ? m[0] : ''; }
   function iso(d8) { return d8 ? d8.slice(0, 4) + '-' + d8.slice(4, 6) + '-' + d8.slice(6, 8) : ''; }
@@ -110,7 +148,7 @@
   function loadBlock(mc) { // 1,000 MC at a time (whole thousands never mix numbers of different length)
     var a = Math.floor(mc / 1000) * 1000, b = a + 999, key = String(a);
     if (BLOCKS[key]) return BLOCKS[key];
-    var p = fetchSets(function (f, kind) { return kind === 'num' ? f + " between '" + a + "' and '" + b + "'" : f + " between 'MC" + a + "' and 'MC" + b + "'"; })
+    var p = viaBridge('/block?a=' + a, function () { return fetchSets(function (f, kind) { return kind === 'num' ? f + " between '" + a + "' and '" + b + "'" : f + " between 'MC" + a + "' and 'MC" + b + "'"; }); })
       .then(function (sets) {
         fill(sets, function (m) { return m >= a && m <= b; });
         var all = []; for (var m = a; m <= b; m++) { LOADED[m] = 1; all.push(m); }
@@ -125,7 +163,7 @@
     function worker() {
       if (idx >= parts.length) return Promise.resolve();
       var part = parts[idx++], set = {}; part.forEach(function (m) { set[m] = 1; });
-      return fetchSets(function (f, kind) { return f + ' in(' + part.map(function (m) { return q(kind === 'num' ? String(m) : 'MC' + m); }).join(',') + ')'; })
+      return viaBridge('/list?mcs=' + part.join(','), function () { return fetchSets(function (f, kind) { return f + ' in(' + part.map(function (m) { return q(kind === 'num' ? String(m) : 'MC' + m); }).join(',') + ')'; }); })
         .then(function (sets) { fill(sets, function (m) { return !!set[m]; }); part.forEach(function (m) { LOADED[m] = 1; }); primeCensusCache(part); done++; if (onPart) onPart(done, parts.length); })
         .then(worker);
     }
@@ -367,14 +405,14 @@
     var addDock = function (rows) { rows.forEach(function (r) { var m = dockNo(r.docket_number); if (m) mcs[m] = 1; }); };
     var oldTo = d.to < MOTUS_SINCE ? d.to : MOTUS_SINCE, oldDays = d.from <= MOTUS_SINCE ? usDays(d.from, oldTo).map(q).join(',') : '';
     var between = function (f) { return f + " between '" + d.from + "' and '" + d.to + "'"; };
-    if (d.type === 'reg') jobs.push(getJson('az4n-8mr2', "docket1prefix='MC' AND " + between('add_date')).then(function (rows) { rows.forEach(function (c) { var m = parseInt(c.docket1, 10); if (m) mcs[m] = 1; }); }));
+    if (d.type === 'reg') jobs.push(getQ('az4n-8mr2', "docket1prefix='MC' AND " + between('add_date')).then(function (rows) { rows.forEach(function (c) { var m = parseInt(c.docket1, 10); if (m) mcs[m] = 1; }); }));
     if (d.type === 'auth') {
-      jobs.push(getJson('yu5v-wbh6', "docket_number like 'MC%' AND upper(reason) like '%GRANT%' AND " + between('status_change_date')).then(addDock));
-      if (oldDays) jobs.push(getJson('9mw4-x3tu', "docket_number like 'MC%' AND upper(original_action_desc) like '%GRANT%' AND orig_served_date in(" + oldDays + ')').then(addDock));
+      jobs.push(getQ('yu5v-wbh6', "docket_number like 'MC%' AND upper(reason) like '%GRANT%' AND " + between('status_change_date')).then(addDock));
+      if (oldDays) jobs.push(getQ('9mw4-x3tu', "docket_number like 'MC%' AND upper(original_action_desc) like '%GRANT%' AND orig_served_date in(" + oldDays + ')').then(addDock));
     }
     if (d.type === 'ins') {
-      jobs.push(getJson('x96h-evps', "docket_number like 'MC%' AND " + between('effective_date')).then(addDock));
-      if (oldDays) jobs.push(getJson('qh9u-swkp', "docket_number like 'MC%' AND effective_date in(" + oldDays + ')').then(addDock));
+      jobs.push(getQ('x96h-evps', "docket_number like 'MC%' AND " + between('effective_date')).then(addDock));
+      if (oldDays) jobs.push(getQ('qh9u-swkp', "docket_number like 'MC%' AND effective_date in(" + oldDays + ')').then(addDock));
     }
     return Promise.all(jobs).then(function () { return Object.keys(mcs).map(Number).filter(function (m) { return m > 0; }).sort(function (a, b) { return a - b; }); });
   }
