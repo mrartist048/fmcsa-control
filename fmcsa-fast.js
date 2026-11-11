@@ -167,7 +167,47 @@
       return sets;
     });
   }
-  function withCensus(sets, inRange) { return sets && sets[0] === null ? smsFill(sets, inRange) : sets; }
+  function withCensus(sets, inRange, path) {
+    if (!(sets && sets[0] === null)) return sets;
+    if (path && BRIDGE) LATER.push({ path: path, inRange: inRange, tries: 0 }), laterSoon();
+    return smsFill(sets, inRange);
+  }
+  /* the Census file was refused for some MC: it is asked again quietly every minute; when it comes, those leads get
+     the owner name, vehicles and categories, and the ones with an inactive USDOT / out-of-service order leave the list */
+  var LATER = [], laterT = null;
+  function laterSoon() { if (!laterT) laterT = setTimeout(laterRun, 60000); }
+  function laterRun() {
+    laterT = null; if (!LATER.length) return;
+    var job = LATER.shift();
+    fetch(BRIDGE + job.path, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }, function () { return null; }).then(function (sets) {
+      if (!sets || !Array.isArray(sets) || sets[0] === null || sets[1] === null) { if (++job.tries < 60) LATER.push(job); return; }
+      var cc = G('_censusMcCache'), mcs = {};
+      Object.keys(D.census).forEach(function (m) { if (job.inRange(+m)) { delete D.census[m]; if (cc) delete cc[m]; mcs[m] = 1; } });
+      sets[0].forEach(function (c) { var m = parseInt(c.docket1, 10); if (job.inRange(m)) { put(D.census, m, c); mcs[m] = 1; } });
+      sets[1].forEach(function (c) { var m = parseInt(c.docket2, 10); if (job.inRange(m)) { put(D.census, m, c); mcs[m] = 1; } });
+      primeCensusCache(Object.keys(mcs).map(Number));
+      upgradeRows(job.inRange);
+    }).then(function () { if (LATER.length) laterSoon(); });
+  }
+  function upgradeRows(inRange) {
+    var sd = G('scrapedData'), toRec = G('_censusToRec'); if (!Array.isArray(sd) || typeof toRec !== 'function') return;
+    var changed = false;
+    sd.forEach(function (row) {
+      var n = parseInt(row.mc, 10); if (!inRange(n)) return;
+      if (censusInactive(n) || oosStep(n)) { BG.drop[String(row.mc)] = 1; return; }
+      var list = D.census[n] || [], c = list.filter(function (x) { return x.status_code === 'A'; })[0] || list[0];
+      if (!c || c._sms || !c.dot_number) return;
+      var t = { owner: '', name: 'N/A', phone: 'N/A', address: 'N/A', email: 'N/A', powerUnits: 'N/A', vehicleType: 'N/A', carrierDetails: '', entityType: 'CARRIER', usdot: 'N/A' };
+      toRec(c, t);
+      ['owner', 'vehicleType', 'carrierDetails'].forEach(function (k) { if (t[k] && t[k] !== 'N/A' && row[k] !== t[k]) { row[k] = t[k]; changed = true; } });
+      ['email', 'phone', 'address', 'powerUnits', 'name'].forEach(function (k) { if ((!row[k] || row[k] === 'N/A') && t[k] && t[k] !== 'N/A') { row[k] = t[k]; changed = true; } });
+    });
+    if (Object.keys(BG.drop).length) { dropRows(); return; }
+    if (!changed) return;
+    var a = document.activeElement; if (a && a.closest && a.closest('#resultsTable')) { setTimeout(function () { upgradeRows(inRange); }, 3000); return; }
+    var paint = G('paintTable'); if (typeof paint === 'function') try { paint(); } catch (e) {}
+    var ss = G('_saveSoon'); if (typeof ss === 'function') try { ss(); } catch (e) {}
+  }
   function primeCensusCache(mcs) {
     var cache = G('_censusMcCache'); if (!cache || typeof cache !== 'object') return;
     mcs.forEach(function (m) { if (!(m in cache)) { var l = D.census[m] || []; cache[m] = l.filter(function (x) { return x.status_code === 'A'; })[0] || l[0] || {}; } });
@@ -177,7 +217,7 @@
     var a = Math.floor(mc / 1000) * 1000, b = a + 999, key = String(a);
     if (BLOCKS[key]) return BLOCKS[key];
     var p = viaBridge('/block?a=' + a, function () { return fetchSets(function (f, kind) { return kind === 'num' ? f + " between '" + a + "' and '" + b + "'" : f + " between 'MC" + a + "' and 'MC" + b + "'"; }); })
-      .then(function (sets) { return withCensus(sets, function (m) { return m >= a && m <= b; }); })
+      .then(function (sets) { return withCensus(sets, function (m) { return m >= a && m <= b; }, '/block?a=' + a); })
       .then(function (sets) {
         fill(sets, function (m) { return m >= a && m <= b; });
         var all = []; for (var m = a; m <= b; m++) { LOADED[m] = 1; all.push(m); }
@@ -193,7 +233,7 @@
       if (idx >= parts.length) return Promise.resolve();
       var part = parts[idx++], set = {}; part.forEach(function (m) { set[m] = 1; });
       return viaBridge('/list?mcs=' + part.join(','), function () { return fetchSets(function (f, kind) { return f + ' in(' + part.map(function (m) { return q(kind === 'num' ? String(m) : 'MC' + m); }).join(',') + ')'; }); })
-        .then(function (sets) { return withCensus(sets, function (m) { return !!set[m]; }); })
+        .then(function (sets) { return withCensus(sets, function (m) { return !!set[m]; }, '/list?mcs=' + part.join(',')); })
         .then(function (sets) { fill(sets, function (m) { return !!set[m]; }); part.forEach(function (m) { LOADED[m] = 1; }); primeCensusCache(part); done++; if (onPart) onPart(done, parts.length); })
         .then(worker);
     }
