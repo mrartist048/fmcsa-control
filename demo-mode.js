@@ -79,7 +79,17 @@
     if (!s || !s.company) return;
     var c = null; try { c = await DL.company(s.company); } catch (e) {}
     if (!c || !c.demo) return;
-    DEMO = { id: s.company, until: +c.demoUntil || 0 };
+    var until = +c.demoUntil || 0, mins = +c.demoMins || 0;
+    if (!until && mins) { // "the time starts when the client creates his password": this is his first sign-in, start it now
+      var lk = 'dl_demo_start_' + s.company, t0 = 0;
+      try { t0 = +localStorage.getItem(lk) || 0; } catch (e) {}
+      until = (t0 || Date.now()) + mins * 60000;
+      try { if (!t0) localStorage.setItem(lk, String(Date.now())); } catch (e) {}
+      try {
+        if (typeof DL.patchCompany === 'function') await DL.patchCompany(c, { demoUntil: until, expires: new Date(until).toISOString().slice(0, 10) });
+      } catch (e) {} // a sales agent may not save it: the admin's next sign-in will
+    }
+    DEMO = { id: s.company, until: until };
     css(); lockDownloads();
     if (DEMO.until && Date.now() >= DEMO.until) return ended();
     paintBar();
