@@ -130,16 +130,44 @@
   }
   function fetchSets(w) { // w(field, kind) -> where clause
     return Promise.all([
-      getJson('az4n-8mr2', "docket1prefix='MC' AND " + w('docket1', 'num')),
-      getJson('az4n-8mr2', "docket2prefix='MC' AND " + w('docket2', 'num')),
+      getJson('az4n-8mr2', "docket1prefix='MC' AND " + w('docket1', 'num')).catch(function () { return null; }),
+      getJson('az4n-8mr2', "docket2prefix='MC' AND " + w('docket2', 'num')).catch(function () { return null; }),
       getJson('inys-ebih', w('docket_number', 'mc')),
       getJson('6eyk-hxee', w('docket_number', 'mc')),
       getJson('x96h-evps', w('docket_number', 'mc')),
       getJson('qh9u-swkp', w('docket_number', 'mc')),
       getJson('yu5v-wbh6', w('docket_number', 'mc')),
       getJson('9mw4-x3tu', w('docket_number', 'mc'))
-    ]);
+    ]).then(function (s) { if (s[0] === null || s[1] === null) { s[0] = null; s[1] = null; } return s; });
   }
+  var MON = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06', JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
+  function smsDate(s) { var m = /^(\d{1,2})-([A-Z]{3})-(\d{2})$/i.exec(String(s || '').trim()); if (!m) return ''; var y = +m[3]; return (y > 50 ? 1900 + y : 2000 + y) + MON[m[2].toUpperCase()] + ('0' + m[1]).slice(-2); }
+  function smsFill(sets, inRange) { // sets[0]/[1] are null: build census-like rows from the licence files + SMS census
+    sets[0] = []; sets[1] = [];
+    var byDot = {};
+    [[2, 'usdot_number'], [3, 'dot_number']].forEach(function (k) {
+      (sets[k[0]] || []).forEach(function (r) { var m = dockNo(r.docket_number), d = parseInt(r[k[1]], 10); if (m && d && inRange(m)) (byDot[d] = byDot[d] || {})[m] = 1; });
+    });
+    var dots = Object.keys(byDot), parts = [];
+    for (var i = 0; i < dots.length; i += 250) parts.push(dots.slice(i, i + 250));
+    return Promise.all(parts.map(function (p) {
+      return getQ('kjg3-diqy', 'dot_number in(' + p.map(function (d) { return q(d); }).join(',') + ')').catch(function () { return []; });
+    })).then(function (lists) {
+      lists.forEach(function (rows) {
+        (rows || []).forEach(function (r) {
+          var d = parseInt(r.dot_number, 10); if (!byDot[d]) return;
+          var cls = [r.authorized_for_hire === 'true' ? 'AUTHORIZED FOR HIRE' : '', r.exempt_for_hire === 'true' ? 'EXEMPT FOR HIRE' : '', r.private_property === 'true' ? 'PRIVATE PROPERTY' : ''].filter(Boolean).join(';');
+          Object.keys(byDot[d]).forEach(function (m) {
+            sets[0].push({ _sms: 1, docket1: String(m), dot_number: String(d), legal_name: r.legal_name, phone: r.telephone, email_address: r.email_address,
+              phy_street: r.phy_street, phy_city: r.phy_city, phy_state: r.phy_state, phy_zip: r.phy_zip, power_units: r.nbr_power_unit,
+              classdef: cls, add_date: smsDate(r.add_date), mcs150_date: smsDate(r.mcs150_date) });
+          });
+        });
+      });
+      return sets;
+    });
+  }
+  function withCensus(sets, inRange) { return sets && sets[0] === null ? smsFill(sets, inRange) : sets; }
   function primeCensusCache(mcs) {
     var cache = G('_censusMcCache'); if (!cache || typeof cache !== 'object') return;
     mcs.forEach(function (m) { if (!(m in cache)) { var l = D.census[m] || []; cache[m] = l.filter(function (x) { return x.status_code === 'A'; })[0] || l[0] || {}; } });
@@ -149,6 +177,7 @@
     var a = Math.floor(mc / 1000) * 1000, b = a + 999, key = String(a);
     if (BLOCKS[key]) return BLOCKS[key];
     var p = viaBridge('/block?a=' + a, function () { return fetchSets(function (f, kind) { return kind === 'num' ? f + " between '" + a + "' and '" + b + "'" : f + " between 'MC" + a + "' and 'MC" + b + "'"; }); })
+      .then(function (sets) { return withCensus(sets, function (m) { return m >= a && m <= b; }); })
       .then(function (sets) {
         fill(sets, function (m) { return m >= a && m <= b; });
         var all = []; for (var m = a; m <= b; m++) { LOADED[m] = 1; all.push(m); }
@@ -164,6 +193,7 @@
       if (idx >= parts.length) return Promise.resolve();
       var part = parts[idx++], set = {}; part.forEach(function (m) { set[m] = 1; });
       return viaBridge('/list?mcs=' + part.join(','), function () { return fetchSets(function (f, kind) { return f + ' in(' + part.map(function (m) { return q(kind === 'num' ? String(m) : 'MC' + m); }).join(',') + ')'; }); })
+        .then(function (sets) { return withCensus(sets, function (m) { return !!set[m]; }); })
         .then(function (sets) { fill(sets, function (m) { return !!set[m]; }); part.forEach(function (m) { LOADED[m] = 1; }); primeCensusCache(part); done++; if (onPart) onPart(done, parts.length); })
         .then(worker);
     }
@@ -191,7 +221,7 @@
     return cur[0] || all[all.length - 1] || '';
   }
   function censusInactive(n) { // the census (updated every day) has this MC only with an INACTIVE USDOT number
-    var l = D.census[n] || [];
+    var l = (D.census[n] || []).filter(function (x) { return !x._sms; });
     return l.length > 0 && !l.some(function (x) { return x.status_code === 'A'; });
   }
   function oosStep(n) { // FMCSA MCSIP step in the census: 54-68 = out-of-service order, 99 = out of business ('' when clean)
@@ -271,7 +301,8 @@
     addOos: function (rec) { // every lead in the list is checked once for an FMCSA out-of-service order (CarrierChk shows it)
       var dot = String(rec && rec.usdot || '').replace(/\D/g, ''), k = String(rec && rec.mc), n = parseInt(k, 10);
       if (!dot || this.oseen[k]) return;
-      if (LOADED[n] && (D.census[n] || []).length) { this.oseen[k] = 1; return; } // the census already answered (MCSIP step): no CarrierChk visit needed this.oseen[k] = 1; this.oq.push({ mc: k, dot: dot.replace(/^0+/, '') });
+      if (LOADED[n] && (D.census[n] || []).some(function (x) { return !x._sms; })) { this.oseen[k] = 1; return; } // the census already answered (MCSIP step): no CarrierChk visit needed
+      this.oseen[k] = 1; this.oq.push({ mc: k, dot: dot.replace(/^0+/, '') });
     },
     reset: function () { this.q = []; this.seen = {}; this.tries = {}; this.oq = []; this.oseen = {}; this.drop = {}; } };
 
