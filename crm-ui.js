@@ -21,6 +21,10 @@
     '.input-field:has(> #startMc)::after,.input-field:has(> #endMc)::after{content:"MC";position:absolute;left:10px;bottom:11px;height:32px;min-width:42px;padding:0 8px;display:flex;align-items:center;justify-content:center;',
     'border-radius:9px;font:700 12px/1 var(--head,inherit);letter-spacing:.08em;color:var(--accent);background:var(--accent-soft);pointer-events:none}',
     '.input-field:has(> #startMc:focus)::after,.input-field:has(> #endMc:focus)::after{color:#fff;background:var(--grad,var(--accent))}',
+    /* History: "Select all", the count and the buttons wrap instead of running out of the drawer */
+    '#drawerHistoryList .hist-bulk{flex-wrap:wrap;row-gap:8px}#drawerHistoryList .hist-bulk #histDlSel,#drawerHistoryList .hist-bulk #histDelSel{flex:1 1 140px;justify-content:center;white-space:nowrap}',
+    /* phone: the account menu (Sign out) opens right under the name button, inside the screen */
+    '@media (max-width:900px){#dlAgentDropdownMenu.settings-menu{position:fixed!important;left:12px!important;right:12px!important;width:auto!important;top:var(--dl-menu-top,72px)!important;bottom:auto!important;max-height:calc(100vh - var(--dl-menu-top,72px) - 12px);overflow:auto;z-index:1000}}',
     '#startMc.dl-bad,#endMc.dl-bad{border-color:var(--c-red,#dc2626)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--c-red,#dc2626) 15%,transparent)!important}'
   ].join('');
   function toggle() {
@@ -52,6 +56,12 @@
       });
       el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { var btn = document.getElementById('startBtn') || document.querySelector('[onclick*="startScraping"]'); if (btn && !btn.disabled) btn.click(); } });
     });
+    /* phone: put the account menu right under the name button (the top bar is taller there) */
+    document.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('#dlMeBtn'); if (!btn) return;
+      var y = Math.round(btn.getBoundingClientRect().bottom + 8);
+      document.documentElement.style.setProperty('--dl-menu-top', Math.max(8, Math.min(y, window.innerHeight - 160)) + 'px');
+    }, true);
     if (place()) return;
     var mo = new MutationObserver(function () { if (place()) mo.disconnect(); });
     mo.observe(document.body, { childList: true, subtree: true });

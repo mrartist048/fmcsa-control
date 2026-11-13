@@ -503,3 +503,48 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
+
+/* History: select several saved sheets and delete them at once (next to "Download selected").
+   Follow-ups: typing in the search looks through all saved follow-ups, not only the ones due today. */
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var G = function (n) { try { return (0, eval)(n); } catch (e) { return undefined; } };
+  function picked() { return Array.prototype.map.call(document.querySelectorAll('#drawerHistoryList .hist-select:checked'), function (x) { return x.value; }); }
+  function paintDel() { var b = $('histDelSel'); if (b) { var n = picked().length; b.disabled = !n; b.textContent = n ? 'Delete selected (' + n + ')' : 'Delete selected'; } }
+  function delSelected() {
+    var ids = picked(); if (!ids.length || typeof window.deleteHistoryItem !== 'function') return;
+    if (!confirm('Delete ' + ids.length + ' saved sheet' + (ids.length === 1 ? '' : 's') + ' from History?\nThe leads in ' + (ids.length === 1 ? 'it' : 'them') + ' are removed too. This cannot be undone.')) return;
+    var cur = G('currentHistoryId'), oc = window.confirm;
+    window.confirm = function () { return true; }; // the one-by-one delete asks every time: already answered above
+    try { ids.forEach(function (id) { try { window.deleteHistoryItem(/^\d+$/.test(id) ? +id : id); } catch (e) {} }); }
+    finally { window.confirm = oc; }
+    if (cur != null && ids.some(function (id) { return String(id) === String(cur); })) { try { (0, eval)('currentHistoryId = null'); } catch (e) {} }
+    if (typeof window.showPremiumNotification === 'function') window.showPremiumNotification(ids.length + ' sheet' + (ids.length === 1 ? '' : 's') + ' deleted', 2600);
+  }
+  function addDelBtn() {
+    var bar = document.querySelector('#drawerHistoryList .hist-bulk'); if (!bar || $('histDelSel')) return;
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'histDelSel'; b.className = 'hc-btn'; b.disabled = true;
+    b.style.cssText = 'color:#ef4444;border-color:rgba(239,68,68,.45)'; b.textContent = 'Delete selected'; b.onclick = delSelected;
+    var dl = $('histDlSel'); bar.insertBefore(b, dl ? dl.nextSibling : null); paintDel();
+  }
+  function wire() {
+    var list = $('drawerHistoryList');
+    if (list && !list.__dlDel) {
+      list.__dlDel = true;
+      new MutationObserver(addDelBtn).observe(list, { childList: true });
+      list.addEventListener('change', function () { setTimeout(paintDel, 0); });
+      list.addEventListener('click', function (e) { if (e.target && e.target.id === 'histSelectAll') setTimeout(paintDel, 0); });
+      addDelBtn();
+    }
+    var s = $('followUpSearchInput');
+    if (s && !s.__dlAll) {
+      s.__dlAll = true;
+      s.addEventListener('input', function () {
+        if (s.value.trim() && G('currentFollowUpFilterMode') === 'today' && typeof window.filterFollowUpsByDate === 'function') window.filterFollowUpsByDate('all');
+      });
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+  setTimeout(wire, 1500);
+})();

@@ -81,3 +81,49 @@
     }
   });
 })();
+
+/* Admin page "Licence period" bar: shows how much of the CURRENT licence is left (it shrinks day by day),
+   measured from the day the licence was given or last renewed (licFrom, saved by the Dispatch Link admin panel).
+   Without that date: from the first activation when that is the same period, otherwise a 30-day month. */
+(function () {
+  var bar = document.getElementById("licBar"); if (!bar) return;
+  var DAY = 864e5, busy = false;
+  function ms(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || "")); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : 0; }
+  async function fix() {
+    if (busy) return; busy = true;
+    try {
+      var DL = (typeof window.DL !== "undefined" && window.DL) || (function () { try { return (0, eval)("DL"); } catch (e) { return null; } })(), s = DL && DL.session && DL.session(); if (!s || !s.company) return;
+      var c = await DL.company(s.company); if (!c || !c.expires) return;
+      var end = ms(c.expires), now = Date.now();
+      var start = ms(c.licFrom);
+      if (!start && c.activated && end - c.activated > 0 && end - c.activated <= 400 * DAY) start = +c.activated;
+      if (!start || start >= end) start = end - 30 * DAY;
+      var pct = Math.max(0, Math.min(100, (end - now) / (end - start) * 100)), days = Math.ceil((end - now) / DAY);
+      bar.style.width = pct.toFixed(1) + "%";
+      bar.style.background = days <= 3 ? "linear-gradient(90deg,#ef4444,#f97316)" : days <= 7 ? "linear-gradient(90deg,#f59e0b,#f97316)" : "";
+      bar.title = Math.max(0, days) + " of " + Math.round((end - start) / DAY) + " days left";
+    } catch (e) {} finally { setTimeout(function () { busy = false; }, 50); }
+  }
+  // the page sets its own width after loading / Refresh: put ours back each time
+  new MutationObserver(function () { if (!busy) fix(); }).observe(bar, { attributes: true, attributeFilter: ["style"] });
+  setTimeout(fix, 1500);
+})();
+
+/* Admin page: Refresh keeps the section you were on (Overview / Sales team / Configure Your GS) */
+(function () {
+  var btns = document.querySelectorAll('.nav-btn[data-v]'); if (!btns.length) return;
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('.nav-btn[data-v]'); if (!b) return;
+    var v = b.getAttribute('data-v');
+    try { history.replaceState(history.state, '', v === 'overview' ? location.pathname + location.search : '#' + v); } catch (x) {}
+  }, true);
+  function restore(tries) {
+    var v = (location.hash || '').replace(/^#/, ''); if (!v || v === 'overview') return;
+    var b = document.querySelector('.nav-btn[data-v="' + v.replace(/[^a-z0-9_-]/gi, '') + '"]'); if (!b) return;
+    var box = document.getElementById('v-' + v);
+    if (box && box.classList.contains('on')) return;
+    b.click();
+    if (tries > 0) setTimeout(function () { restore(tries - 1); }, 700); // the page may open Overview once more while it loads
+  }
+  setTimeout(function () { restore(4); }, 600);
+})();

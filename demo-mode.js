@@ -86,7 +86,7 @@
       until = (t0 || Date.now()) + mins * 60000;
       try { if (!t0) localStorage.setItem(lk, String(Date.now())); } catch (e) {}
       try {
-        if (typeof DL.patchCompany === 'function') await DL.patchCompany(c, { demoUntil: until, expires: new Date(until).toISOString().slice(0, 10) });
+        if (typeof DL.patchCompany === 'function') await DL.patchCompany(c, { demoUntil: until }); // the secure rules let the client save only this, once
       } catch (e) {} // a sales agent may not save it: the admin's next sign-in will
     }
     DEMO = { id: s.company, until: until };
