@@ -37,12 +37,24 @@
   }
   function set(a) { cur = a && typeof a === 'object' && a.text ? a : null; paint(); }
 
+  // the company name set later in the admin panel: the session keeps the name it had at sign-in, so bring it up to date
+  function syncName(s, c) {
+    var nm = c && typeof c.name === 'string' ? c.name.trim() : '';
+    if (!nm || s.name === nm) return;
+    var old = s.name || s.company;
+    ['localStorage', 'sessionStorage'].forEach(function (k) {
+      try { var st = window[k], v = JSON.parse(st.getItem('dl_session') || 'null'); if (v && v.company === s.company) { v.name = nm; st.setItem('dl_session', JSON.stringify(v)); } } catch (e) {}
+    });
+    var hi = document.getElementById('hi'); // the greeting on the hub
+    if (hi && old && hi.textContent.indexOf(old) >= 0) hi.textContent = hi.textContent.split(old).join(nm);
+  }
   async function start() {
     var DL = G('DL'); if (!DL || typeof DL.session !== 'function') return;
     var s = null; try { s = DL.session(); } catch (e) {}
     if (!s || !s.company) return;
     me = String(s.company).toLowerCase();
     var c = null; try { c = await DL.company(s.company); } catch (e) {}
+    syncName(s, c);
     var db = c && c.dbUrl; if (!db) return;
     db = db.replace(/\/?$/, '/');
     var url = db + 'announce.json';
