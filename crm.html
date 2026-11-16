@@ -128,7 +128,26 @@
       <button type="button" class="dd-btn" id="powerDropdownBtn" onclick="togglePowerDropdown(event)">Power units</button>
       <div class="dd-menu" id="powerUnitDropdownContent"><div id="powerCheckboxList"></div></div>
     </div>
-    <select id="ageFilterSelect" onchange="applyAdvancedFilters()" title="Filter by MC age (BI&amp;PD insurance date)">
+    <div class="dd" id="ageDropdown">
+      <button type="button" class="dd-btn" id="ageDropdownBtn">Age</button>
+      <div class="dd-menu age-menu">
+        <div class="age-grp"><div class="age-h">MC age (MCS-150 date)</div>
+          <label><input type="radio" name="agemc" value="" checked> Any</label>
+          <label><input type="radio" name="agemc" value="3"> 3 months or older</label>
+          <label><input type="radio" name="agemc" value="6"> 6 months or older</label>
+          <label><input type="radio" name="agemc" value="12"> 1 year or older</label>
+          <label><input type="radio" name="agemc" value="u3"> Under 3 months</label>
+        </div>
+        <div class="age-grp"><div class="age-h">Insurance age (BI&amp;PD)</div>
+          <label><input type="radio" name="ageins" value="" checked> Any</label>
+          <label><input type="radio" name="ageins" value="3"> 3 months or older</label>
+          <label><input type="radio" name="ageins" value="6"> 6 months or older</label>
+          <label><input type="radio" name="ageins" value="12"> 1 year or older</label>
+          <label><input type="radio" name="ageins" value="u3"> Under 3 months</label>
+        </div>
+      </div>
+    </div>
+    <select id="ageFilterSelect" onchange="applyAdvancedFilters()" hidden style="display:none">
       <option value="">Any MC age</option>
       <option value="3">MC 3 months or older</option>
       <option value="6">MC 6 months or older</option>
@@ -147,7 +166,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Carrier</th><th>Entity type</th><th>Operating status</th><th>MC age</th>
+          <th>Carrier</th><th>Entity type</th><th>Operating status</th><th>Age</th>
           <th>Owner name</th><th>Phone</th><th>Address</th><th>Email</th><th>Power units</th>
         </tr>
       </thead>
@@ -312,7 +331,7 @@
 <script src="crm-followups.js?v=10"></script>
 <script src="motus-register.js?v=5"></script>
 <script src="crm-lookup.js?v=8"></script>
-<script src="fmcsa-fast.js?v=13"></script>
+<script src="fmcsa-fast.js?v=19"></script>
 <script src="email-verify.js?v=2"></script>
 <script src="crm-ui.js?v=3"></script>
 <script src="demo-mode.js?v=3"></script>

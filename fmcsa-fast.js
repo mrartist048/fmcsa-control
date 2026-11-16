@@ -2,7 +2,8 @@
    Everything comes from FMCSA's own open data (data.transportation.gov), asked for many MC at a time:
      - Company Census (az4n-8mr2): USDOT, name, phone, email, address, owner, trucks, cargo, USDOT registration date
      - Authority:  Motus Carrier (inys-ebih, changes since the MOTUS switch in May 2026) over Carrier (6eyk-hxee, the older file)
-     - Insurance:  Motus Insur  (x96h-evps) over ActPendInsur (qh9u-swkp)          -> BI&PD effective date = MC age
+     - Insurance:  Motus Insur  (x96h-evps) over ActPendInsur (qh9u-swkp)          -> BI&PD effective date
+     - MC age shown in the list = the census MCS-150 date (insurance date only when that is missing)
      - Granted:    Motus AuthHist (yu5v-wbh6) over AuthHist (9mw4-x3tu)             -> date the authority was granted
    Two ways to scan (one or both):
      - MC range:  every MC between start and end (8 requests per 1,000 MC)
@@ -114,9 +115,13 @@
   function getQ(id, where) { return viaBridge('/q?id=' + id + '&where=' + encodeURIComponent(where), function () { return getJson(id, where); }); }
   function usDate(s) { var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || '')); return m ? m[3] + ('0' + m[1]).slice(-2) + ('0' + m[2]).slice(-2) : ''; } // -> YYYYMMDD
   function ymd(s) { var m = /^(\d{4})(\d{2})(\d{2})/.exec(String(s || '')); return m ? m[0] : ''; }
+  function anyDate(s) { // YYYYMMDD..., YYYY-MM-DD..., MM/DD/YYYY -> YYYYMMDD
+    s = String(s || '').trim(); var m = /^(\d{4})-?(\d{2})-?(\d{2})/.exec(s); if (m) return m[1] + m[2] + m[3]; return usDate(s);
+  }
   function iso(d8) { return d8 ? d8.slice(0, 4) + '-' + d8.slice(4, 6) + '-' + d8.slice(6, 8) : ''; }
   function dockNo(s) { var m = /^MC(\d+)$/i.exec(String(s || '').trim()); return m ? parseInt(m[1], 10) : 0; }
   function q(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
+  window._dlCensusQ = function (where) { return getQ('az4n-8mr2', where); }; // used below for the MC age of the other scan sources
 
   /* everything known about one MC, from both the MOTUS files and the older files */
   var D = { census: {}, mLic: {}, oLic: {}, mIns: {}, oIns: {}, mAuth: {}, oAuth: {} }, LOADED = {};
@@ -321,7 +326,8 @@
     }
     if (/BROKER/.test(rec.entityType) && !/CARRIER/.test(rec.entityType)) rec.entityType = 'CARRIER/BROKER';
     rec.status = 'AUTHORIZED';
-    rec.effDate = iso(insDate(n));
+    rec.effDate = iso(anyDate(c && c.mcs150_date) || insDate(n)); // MC age = MCS-150 date (the user's choice)
+    rec.insDate = iso(insDate(n)); // shown under it as the insurance age
     if (rec.effDate) { var ac = G('_mcAgeCache'); if (ac) ac[String(mc)] = rec.effDate; }
     rec.decidedBy = LABEL;
     if (LISTMODE) LISTMODE.found++;
@@ -564,3 +570,130 @@
     return ST.apply(window, args);
   };
 })();
+
+/* ---------------- Insurance age: shown under the MC age, and its own choice in the age filter ----------------
+   MC age = the MCS-150 date (Turbo Scan). Insurance age = the BI&PD insurance effective date (rec.insDate; for the
+   other scan sources the date they show is already the insurance date). */
+(function () {
+  'use strict';
+  var G = function (n) { try { return (0, eval)(n); } catch (e) { return undefined; } };
+  function insOf(r) { return (r && (r.insDate || (r.src !== 'fast' ? r.effDate : ''))) || ''; }
+  function us(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? m[2] + '/' + m[3] + '/' + m[1] : ''; }
+  var cell = G('mcAgeCell'), label = G('mcAgeLabel'), months = G('mcMonths');
+  function short(d) { // "10 months" -> "10 mo", "Under 1 month" -> "<1 mo", "1 yr 5 mo" stays
+    var t = String(label(d) || ''); if (!t) return '';
+    return t.replace(/^Under 1 months?$/i, '<1 mo').replace(/\bmonths?\b/g, 'mo').replace(/\byears?\b/g, 'yr');
+  }
+  function tone(d) { var m = months(d); return m === null ? '' : m < 3 ? 'new' : m < 6 ? 'mid' : 'old'; }
+  function line(k, d, tip) {
+    return '<div class="ag" title="' + tip + ' ' + us(d) + '"><span class="ag-k">' + k + '</span><span class="ag-v ' + tone(d) + '">' + esc(short(d)) + '</span><span class="ag-d">' + us(d) + '</span></div>';
+  }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  if (typeof cell === 'function' && typeof label === 'function' && typeof months === 'function') {
+    window.mcAgeCell = function (d, r) {
+      if (!(r && (r.src === 'fast' || r.dual === true)) || !d || months(d) === null) return cell.apply(this, arguments); // other sources / still loading: as before
+      return '<td class="age-cell age2">' + line('MC', d, 'MC age: MCS-150 date') + (r.insDate ? line('INS', r.insDate, 'Insurance (BI&amp;PD) effective') : '') + '</td>';
+    };
+  }
+  var st = document.createElement('style');
+  st.textContent =
+    '.age2 .ag{display:flex;align-items:baseline;gap:6px;line-height:1.3;white-space:nowrap}.age2 .ag-k{flex:0 0 26px}' +
+    '.age2 .ag+.ag{margin-top:6px;padding-top:6px;border-top:1px dashed rgba(148,163,184,.22);width:max-content}.age2 .ag:first-child{width:max-content}' +
+    '.age2 .ag-k{font-size:10px;font-weight:800;letter-spacing:.07em;opacity:.5}' +
+    '.age2 .ag-v{font-size:13px;font-weight:700}' +
+    '.age2 .ag-v.new{color:#f87171}.age2 .ag-v.mid{color:#fbbf24}.age2 .ag-v.old{color:#34d399}' +
+    '.age2 .ag-d{font-size:11px;opacity:.55;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}' +
+    'html:not([data-theme=dark]) .age2 .ag-v.new{color:#dc2626}html:not([data-theme=dark]) .age2 .ag-v.mid{color:#b45309}html:not([data-theme=dark]) .age2 .ag-v.old{color:#059669}';
+  document.head.appendChild(st);
+
+  st.textContent += '.age-menu{min-width:250px;max-height:none}.age-grp+.age-grp{margin-top:4px;padding-top:6px;border-top:1px solid var(--line)}' +
+    '.age-h{padding:6px 10px 4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.6}' +
+    '#ageDropdownBtn.on{border-color:var(--accent);color:var(--accent)}';
+
+  /* the Age filter: MC age (MCS-150) and insurance age, each on its own, both together if wanted */
+  function pick(name) { var x = document.querySelector('input[name="' + name + '"]:checked'); return x ? x.value : ''; }
+  var SHORT = { '3': '3m+', '6': '6m+', '12': '1y+', u3: '<3m' };
+  function paintBtn() {
+    var b = document.getElementById('ageDropdownBtn'); if (!b) return;
+    var mc = pick('agemc'), ins = pick('ageins'), t = [];
+    if (mc) t.push('MC ' + SHORT[mc]); if (ins) t.push('INS ' + SHORT[ins]);
+    b.textContent = t.length ? t.join(' · ') : 'Age'; b.classList.toggle('on', t.length > 0);
+  }
+  function wire() {
+    var dd = document.getElementById('ageDropdown'), btn = document.getElementById('ageDropdownBtn'), sel = document.getElementById('ageFilterSelect');
+    if (!dd || !btn || dd.__wired) return; dd.__wired = true;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      document.querySelectorAll('.dd.open,.dd.visible').forEach(function (x) { if (x !== dd) x.classList.remove('open', 'visible'); });
+      dd.classList.toggle('open');
+    });
+    dd.querySelector('.dd-menu').addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { dd.classList.remove('open'); });
+    dd.addEventListener('change', function (e) {
+      if (!e.target || e.target.type !== 'radio') return;
+      if (e.target.name === 'agemc' && sel) sel.value = e.target.value;
+      paintBtn(); window.applyAdvancedFilters();
+    });
+    paintBtn();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+
+  var orig = window.applyAdvancedFilters;
+  if (typeof orig !== 'function' || typeof months !== 'function') return;
+  window.applyAdvancedFilters = function () {
+    var res = orig.apply(this, arguments), want = pick('ageins');
+    if (!want) return res;
+    var data = G('scrapedData') || [], rows = document.querySelectorAll('#resultsTable tr');
+    data.forEach(function (r, k) {
+      var row = rows[k]; if (!row || row.style.display === 'none') return;
+      var m = months(insOf(r));
+      if (!(m !== null && (want === 'u3' ? m < 3 : m >= (+want || 0)))) row.style.display = 'none';
+    });
+    var up = G('updateVisibleRecordCount'); if (typeof up === 'function') try { up(); } catch (e) {}
+    return res;
+  };
+  /* the other scan sources only know the insurance date: get the MCS-150 date of their USDOT from the census
+     (100 at a time, through the data bridge), then show both lines like Turbo Scan */
+  var MCS = {}, ASKED = {}, busyQ = false;
+  function d8iso(s) { var m = /^(\d{4})-?(\d{2})-?(\d{2})/.exec(String(s || '')); return m ? m[1] + '-' + m[2] + '-' + m[3] : ''; }
+  function dotOf(r) { var d = parseInt(String(r && r.usdot || '').replace(/\D/g, ''), 10); return d > 0 ? d : 0; }
+  function settle() { // records whose insurance date and MCS-150 date are both known: show both
+    var data = G('scrapedData') || [], paint = G('_paintAge'), filt = false;
+    data.forEach(function (r) {
+      if (!r || r.src === 'fast' || r.dual || !r.effDate) return;
+      var d = dotOf(r); if (!d || !(d in MCS)) return;
+      if (!MCS[d]) { r.dual = 'none'; return; } // no MCS-150 date in the census: keep the single date
+      r.insDate = r.effDate; r.effDate = MCS[d]; r.dual = true; filt = true;
+      if (typeof paint === 'function') try { paint(r); } catch (e) {}
+    });
+    var sel = document.getElementById('ageFilterSelect');
+    if (filt && ((sel && sel.value) || pick('ageins'))) try { window.applyAdvancedFilters(); } catch (e) {}
+  }
+  async function fillMcs() {
+    if (busyQ || typeof window._dlCensusQ !== 'function') { settle(); return; }
+    var data = G('scrapedData') || [], need = [];
+    data.forEach(function (r) { if (r && r.src !== 'fast' && !r.dual) { var d = dotOf(r); if (d && !(d in MCS) && !ASKED[d] && need.indexOf(d) < 0) need.push(d); } });
+    settle();
+    if (!need.length) return;
+    busyQ = true;
+    try {
+      for (var i = 0; i < need.length; i += 100) {
+        var part = need.slice(i, i + 100); part.forEach(function (d) { ASKED[d] = 1; });
+        var rows = [];
+        try { rows = await window._dlCensusQ('dot_number in(' + part.map(function (d) { return "'" + d + "'"; }).join(',') + ')') || []; } catch (e) { part.forEach(function (d) { delete ASKED[d]; }); break; }
+        part.forEach(function (d) { MCS[d] = ''; });
+        rows.forEach(function (c) { var d = parseInt(c.dot_number, 10); if (d && c.mcs150_date) MCS[d] = d8iso(c.mcs150_date); });
+        settle();
+      }
+    } finally { busyQ = false; }
+  }
+  setInterval(function () { fillMcs().catch(function () {}); }, 4000);
+
+  var origReset = window.resetAdvancedFilters;
+  if (typeof origReset === 'function') window.resetAdvancedFilters = function () {
+    document.querySelectorAll('input[name="agemc"],input[name="ageins"]').forEach(function (x) { x.checked = x.value === ''; });
+    var sel = document.getElementById('ageFilterSelect'); if (sel) sel.value = '';
+    paintBtn(); return origReset.apply(this, arguments);
+  };
+})();
+
