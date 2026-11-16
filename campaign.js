@@ -225,7 +225,7 @@
   function findMailer(quiet) {
     if (!quiet) setMsg('cMsg', 'Looking for the Mailer on this computer...', true);
     return mailerStatus().then(function (j) {
-      S.online = true; S.mailerV = String(j.v || '');
+      S.online = true; S.mailerV = String(j.v || ''); try { paintFmt(); preview(); } catch (e) {}
       if (!(parseFloat(j.v) >= 4)) {
         BOXES = []; drawBoxes(); renderSender(); pill('Update the Mailer', 'gray');
         setMsg('cMsg', 'The Mailer on this computer is version ' + (j.v || '?') + '. Download the new Mailer (step 1 below), unzip it into the SAME folder (your mailboxes and passwords stay), close the old Mailer window and double-click install-autostart.bat.');
@@ -649,7 +649,12 @@
       return '<div class="step" data-i="' + i + '"><h3><span>' + (i === 0 ? 'First email' : 'Follow-up ' + i) + '</span>' + (i > 0 ? '<button class="btn sm del" data-del="' + i + '">Remove</button>' : '') + '</h3>' +
         (i > 0 ? '<label class="gl">Send it this many days after the previous email (if no reply)</label><input class="gi" type="number" min="1" data-k="waitDays" value="' + esc(st.waitDays || 3) + '" style="max-width:140px">' : '') +
         '<label class="gl">Subject</label><input class="gi" data-k="subject" value="' + esc(st.subject) + '">' +
-        '<label class="gl">Message</label><textarea class="ta" data-k="body">' + esc(st.body) + '</textarea>' +
+        '<label class="gl">Message</label>' +
+        '<div class="fmt-bar" data-fmt><button type="button" class="btn sm" data-f="b" title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="btn sm" data-f="i" title="Italic (Ctrl+I)"><i>I</i></button>' +
+        '<button type="button" class="btn sm" data-f="ul" title="Bullet list">&bull; List</button><button type="button" class="btn sm" data-f="ol" title="Numbered list">1. List</button>' +
+        '<span class="fmt-tip">Select text, then press a button. Text pasted from Word or ChatGPT keeps its bold and bullets.</span></div>' +
+        '<div class="wiz-note fmt-old" data-fmtold>Bold and bullet points need the Mailer 4.5 or newer on this computer. Update it once: <b>Download Mailer</b> (1. Connect), unzip it into the same folder, double-click <code>restart-mailer.bat</code>. After that it updates itself.</div>' +
+        '<textarea class="ta" data-k="body">' + esc(st.body) + '</textarea>' +
         '<div class="row"><button class="btn sm" data-ins="{firstname}">Insert {firstname}</button><button class="btn sm" data-ins="{name}">Insert {name}</button><button class="btn sm" data-ins="{company}">Insert {company}</button></div></div>';
     }).join('');
     $('stepList').querySelectorAll('.step').forEach(function (el) {
@@ -666,8 +671,96 @@
         };
       });
       var d = el.querySelector('[data-del]'); if (d) d.onclick = function () { S.cfg.steps.splice(i, 1); S.prevStep = 0; renderSteps(); preview(); };
+      var ta = el.querySelector('textarea');
+      function changed() { S.cfg.steps[i].body = ta.value; S.prevStep = i; preview(); }
+      el.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { fmtApply(ta, b.getAttribute('data-f')); changed(); }; });
+      ta.addEventListener('keydown', function (e) {
+        if (!fmtOk() || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+        var k = e.key.toLowerCase(); if (k !== 'b' && k !== 'i') return;
+        e.preventDefault(); fmtApply(ta, k); changed();
+      });
+      ta.addEventListener('paste', function (e) {
+        if (!fmtOk() || !e.clipboardData) return;
+        var h = e.clipboardData.getData('text/html'); if (!h) return;
+        var t = htmlToFmt(h); if (!t) return;
+        e.preventDefault(); fmtInsert(ta, t); changed();
+      });
     });
+    paintFmt();
     preview();
+  }
+  /* ---- formatting: **bold**, *italic*, bullet / numbered lines (the Mailer 4.5+ turns them into real bold and lists) ---- */
+  function verGE(a, b) { a = String(a || '0').split('.').map(Number); b = String(b).split('.').map(Number); for (var i = 0; i < Math.max(a.length, b.length); i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); } return true; }
+  function fmtOk() { return !!S.online && verGE(S.mailerV, '4.5'); }
+  function paintFmt() {
+    var ok = fmtOk();
+    document.querySelectorAll('[data-fmt]').forEach(function (x) { x.style.display = ok ? '' : 'none'; });
+    document.querySelectorAll('[data-fmtold]').forEach(function (x) { x.style.display = !ok && S.online ? '' : 'none'; });
+  }
+  function fmtInsert(ta, t) {
+    var s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+    ta.value = ta.value.slice(0, s) + t + ta.value.slice(e); ta.focus(); ta.selectionStart = ta.selectionEnd = s + t.length;
+  }
+  var LIST_RE = /^\s*(?:([\u2022\u00b7\u25aa\u25cf\u25e6\u2023\-*])|(\d{1,3})[.)])\s+(.*)$/;
+  function fmtApply(ta, f) {
+    var v = ta.value, s = ta.selectionStart || 0, e = ta.selectionEnd || 0;
+    if (f === 'b' || f === 'i') {
+      var m = f === 'b' ? '**' : '*', sel = v.slice(s, e);
+      var lead = sel.match(/^\s*/)[0], trail = sel.match(/\s*$/)[0], core = sel.trim();
+      if (!core) { ta.value = v.slice(0, s) + m + m + v.slice(e); ta.focus(); ta.selectionStart = ta.selectionEnd = s + m.length; return; }
+      var on = core.length > 2 * m.length && core.slice(0, m.length) === m && core.slice(-m.length) === m && (f === 'b' || core.slice(0, 2) !== '**');
+      var out = on ? core.slice(m.length, -m.length) : m + core + m;
+      ta.value = v.slice(0, s) + lead + out + trail + v.slice(e); ta.focus();
+      ta.selectionStart = s + lead.length; ta.selectionEnd = s + lead.length + out.length; return;
+    }
+    var a = v.lastIndexOf('\n', s - 1) + 1, z = v.indexOf('\n', e > s && v[e - 1] === '\n' ? e - 1 : e); if (z < 0) z = v.length;
+    var lines = v.slice(a, z).split('\n'), all = lines.every(function (l) { var x = LIST_RE.exec(l); return !l.trim() || (x && (f === 'ol' ? !!x[2] : !x[2])); });
+    var n = 0, res = lines.map(function (l) {
+      if (!l.trim()) return l;
+      var x = LIST_RE.exec(l), txt = x ? x[3] : l.trim();
+      if (all) return txt;
+      return f === 'ol' ? (++n) + '. ' + txt : '\u2022 ' + txt;
+    }).join('\n');
+    ta.value = v.slice(0, a) + res + v.slice(z); ta.focus(); ta.selectionStart = a; ta.selectionEnd = a + res.length;
+  }
+  function htmlToFmt(h) { // what Word, Google Docs, ChatGPT ... put on the clipboard -> our simple marks
+    var doc; try { doc = new DOMParser().parseFromString(h, 'text/html'); } catch (e) { return ''; }
+    var BLOCK = /^(P|DIV|H[1-6]|LI|UL|OL|TR|TABLE|BLOCKQUOTE|PRE|SECTION|ARTICLE)$/;
+    function walk(n, ctx) {
+      if (n.nodeType === 3) return n.nodeValue.replace(/[\s\u00a0]+/g, ' ');
+      if (n.nodeType !== 1 || /^(SCRIPT|STYLE|HEAD|META|TITLE)$/.test(n.tagName)) return '';
+      var t = n.tagName, st = (n.getAttribute('style') || '').toLowerCase();
+      if (t === 'BR') return '\n';
+      if (t === 'UL' || t === 'OL') {
+        var k = 0, items = [];
+        Array.prototype.forEach.call(n.children, function (li) { if (li.tagName !== 'LI') return; var x = walk(li, ctx).replace(/\n+/g, ' ').trim(); if (x) items.push(t === 'OL' ? (++k) + '. ' + x : '\u2022 ' + x); });
+        return '\n' + items.join('\n') + '\n';
+      }
+      var inner = ''; Array.prototype.forEach.call(n.childNodes, function (c) { inner += walk(c, ctx); });
+      var bold = t === 'B' || t === 'STRONG' || /^H[1-6]$/.test(t) || /font-weight:\s*(bold|[6-9]00)/.test(st);
+      var ital = t === 'I' || t === 'EM' || /font-style:\s*italic/.test(st);
+      if ((t === 'B' && /font-weight:\s*normal/.test(st))) bold = false; // Google Docs wraps everything in <b style="font-weight:normal">
+      if (bold || ital) { var core = inner.trim(); if (core && !/\n/.test(core)) { var lead = inner.match(/^\s*/)[0], trail = inner.match(/\s*$/)[0]; inner = lead + (bold ? '**' : '') + (ital ? '*' : '') + core + (ital ? '*' : '') + (bold ? '**' : '') + trail; } }
+      if (BLOCK.test(t)) return '\n' + inner.trim() + '\n';
+      return inner;
+    }
+    var out = walk(doc.body, {});
+    return out.replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n').replace(/\*\*\*\*/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function fmtInline(t) {
+    return esc(t).replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<b>$1</b>').replace(/(^|[^*\w])\*(?=[^\s*])([^*]*?[^\s*])\*(?![*\w])/g, '$1<i>$2</i>');
+  }
+  function fmtHtml(text) { // the same rules as the Mailer
+    var lines = String(text || '').replace(/\r\n?/g, '\n').split('\n'), out = [], prev = '';
+    for (var i = 0; i < lines.length; i++) {
+      var m = LIST_RE.exec(lines[i]);
+      if (m) {
+        var ol = !!m[2], items = [];
+        while (i < lines.length) { var x = LIST_RE.exec(lines[i]); if (!x || !!x[2] !== ol) break; items.push('<li style="margin:2px 0">' + fmtInline(x[3]) + '</li>'); i++; }
+        i--; out.push('<' + (ol ? 'ol' : 'ul') + ' style="margin:4px 0;padding-left:24px">' + items.join('') + '</' + (ol ? 'ol' : 'ul') + '>'); prev = 'list';
+      } else { out.push((prev === 'text' ? '<br>' : '') + fmtInline(lines[i])); prev = 'text'; }
+    }
+    return out.join('');
   }
   function sample(t) {
     return String(t || '').replace(/\{company\}/gi, 'Sample Logistics LLC').replace(/\{firstname\}/gi, 'John').replace(/\{name\}/gi, 'John Smith')
@@ -731,7 +824,7 @@
     $('prevTabs').innerHTML = steps.map(function (s, i) { return '<button class="chip' + (i === S.prevStep ? ' active' : '') + '" data-p="' + i + '">' + (i === 0 ? 'First email' : 'Follow-up ' + i) + '</button>'; }).join('');
     $('prevTabs').querySelectorAll('.chip').forEach(function (b) { b.onclick = function () { S.prevStep = +b.getAttribute('data-p'); preview(); }; });
     var st = steps[S.prevStep] || steps[0], addr = $('address').value.trim() || '(your business address)', un = $('unsubText').value.trim();
-    $('prev').innerHTML = '<div class="s">' + esc(sample(st.subject)) + '</div>' + esc(sample(st.body)) + sigHtml(sigRead()) + '<div class="f">--<br>' + esc(addr) + '<br>' + esc(/\bstop\b/i.test(un) ? un : STOP_TEXT) + '</div>';
+    $('prev').innerHTML = '<div class="s">' + esc(sample(st.subject)) + '</div>' + (fmtOk() ? '<div style="white-space:normal">' + fmtHtml(sample(st.body)) + '</div>' : esc(sample(st.body))) + sigHtml(sigRead()) + '<div class="f">--<br>' + esc(addr) + '<br>' + esc(/\bstop\b/i.test(un) ? un : STOP_TEXT) + '</div>';
   }
   function addStep() {
     if (S.cfg.steps.length >= 5) { toast('Up to 5 emails (1 first email + 4 follow-ups).'); return; }
