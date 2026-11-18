@@ -206,6 +206,7 @@
       toRec(c, t);
       ['owner', 'vehicleType', 'carrierDetails'].forEach(function (k) { if (t[k] && t[k] !== 'N/A' && row[k] !== t[k]) { row[k] = t[k]; changed = true; } });
       ['email', 'phone', 'address', 'powerUnits', 'name'].forEach(function (k) { if ((!row[k] || row[k] === 'N/A') && t[k] && t[k] !== 'N/A') { row[k] = t[k]; changed = true; } });
+      if (row.cdl === undefined || row.cdl === null || row.cdl === '') { row.cdl = +c.total_cdl || 0; row.truckUnits = +c.truck_units || 0; changed = true; } // cargo van guess
     });
     if (Object.keys(BG.drop).length) { dropRows(); return; }
     if (!changed) return;
@@ -328,6 +329,7 @@
     rec.status = 'AUTHORIZED';
     rec.effDate = iso(anyDate(c && c.mcs150_date) || insDate(n)); // MC age = MCS-150 date (the user's choice)
     rec.insDate = iso(insDate(n)); // shown under it as the insurance age
+    if (c && !c._sms) { rec.cdl = +c.total_cdl || 0; rec.truckUnits = +c.truck_units || 0; } // for the cargo van guess
     if (rec.effDate) { var ac = G('_mcAgeCache'); if (ac) ac[String(mc)] = rec.effDate; }
     rec.decidedBy = LABEL;
     if (LISTMODE) LISTMODE.found++;
@@ -645,7 +647,7 @@
     if (!want) return res;
     var data = G('scrapedData') || [], rows = document.querySelectorAll('#resultsTable tr');
     data.forEach(function (r, k) {
-      var row = rows[k]; if (!row || row.style.display === 'none') return;
+      var row = rows[k]; if (!row || row.style.display === 'none' || (r && r.__dlxOnline)) return; // carriers found by the search box always show
       var m = months(insOf(r));
       if (!(m !== null && (want === 'u3' ? m < 3 : m >= (+want || 0)))) row.style.display = 'none';
     });
@@ -654,11 +656,25 @@
   };
   /* the other scan sources only know the insurance date: get the MCS-150 date of their USDOT from the census
      (100 at a time, through the data bridge), then show both lines like Turbo Scan */
-  var MCS = {}, ASKED = {}, busyQ = false;
+  var MCS = {}, CEN = {}, ASKED = {}, busyQ = false;
+  function eqCol() { var i = -1; document.querySelectorAll('table.table thead th').forEach(function (th, k) { if (/^\s*(equipment|vehicles)\s*$/i.test(th.textContent)) i = k; }); return i; }
+  function paintEquip(r, k) {
+    var col = eqCol(), tr = document.querySelectorAll('#resultsTable tr')[k]; if (col < 0 || !tr || !tr.children[col]) return;
+    var rows = equipRows(r); if (!rows.length) return;
+    tr.children[col].innerHTML = rows.map(function (x) { var more = x[2] && x[2].length ? x[2] : null; return '<div class="eq-row"' + (more ? ' title="Also filed cargo for: ' + esc(more.join(', ')) + '"' : '') + '><span>' + esc(x[0]) + (more ? ' <i class="eq-i">+' + more.length + '</i>' : '') + '</span>' + (x[1] ? '<b>' + x[1] + '</b>' : '') + '</div>'; }).join('');
+    if (!tr.children[col].classList.contains('veh-cell')) tr.children[col].classList.add('veh-cell');
+  }
   function d8iso(s) { var m = /^(\d{4})-?(\d{2})-?(\d{2})/.exec(String(s || '')); return m ? m[1] + '-' + m[2] + '-' + m[3] : ''; }
   function dotOf(r) { var d = parseInt(String(r && r.usdot || '').replace(/\D/g, ''), 10); return d > 0 ? d : 0; }
   function settle() { // records whose insurance date and MCS-150 date are both known: show both
     var data = G('scrapedData') || [], paint = G('_paintAge'), filt = false;
+    data.forEach(function (r, k) { // CDL drivers / truck units for the equipment column
+      if (!r || r.src === 'fast' || (r.cdl !== undefined && r.cdl !== null && r.cdl !== '')) return;
+      var d = dotOf(r); if (!d || !CEN[d]) return;
+      r.cdl = CEN[d].cdl; r.truckUnits = CEN[d].tu; if (!(parseInt(r.powerUnits, 10) > 0) && CEN[d].pu) r.powerUnits = String(CEN[d].pu);
+      try { paintEquip(r, k); } catch (e) {}
+      if (eqWanted().length) filt = true;
+    });
     data.forEach(function (r) {
       if (!r || r.src === 'fast' || r.dual || !r.effDate) return;
       var d = dotOf(r); if (!d || !(d in MCS)) return;
@@ -667,7 +683,7 @@
       if (typeof paint === 'function') try { paint(r); } catch (e) {}
     });
     var sel = document.getElementById('ageFilterSelect');
-    if (filt && ((sel && sel.value) || pick('ageins'))) try { window.applyAdvancedFilters(); } catch (e) {}
+    if (filt && ((sel && sel.value) || pick('ageins') || eqWanted().length)) try { window.applyAdvancedFilters(); } catch (e) {}
   }
   async function fillMcs() {
     if (busyQ || typeof window._dlCensusQ !== 'function') { settle(); return; }
@@ -682,16 +698,137 @@
         var rows = [];
         try { rows = await window._dlCensusQ('dot_number in(' + part.map(function (d) { return "'" + d + "'"; }).join(',') + ')') || []; } catch (e) { part.forEach(function (d) { delete ASKED[d]; }); break; }
         part.forEach(function (d) { MCS[d] = ''; });
-        rows.forEach(function (c) { var d = parseInt(c.dot_number, 10); if (d && c.mcs150_date) MCS[d] = d8iso(c.mcs150_date); });
+        rows.forEach(function (c) { var d = parseInt(c.dot_number, 10); if (!d) return; if (c.mcs150_date) MCS[d] = d8iso(c.mcs150_date); CEN[d] = { cdl: +c.total_cdl || 0, tu: +c.truck_units || 0, pu: +c.power_units || 0 }; });
         settle();
       }
     } finally { busyQ = false; }
   }
   setInterval(function () { fillMcs().catch(function () {}); }, 4000);
 
+  /* ---------------- equipment: worked out from what FMCSA knows (cargo carried + straight trucks / tractors) ----------------
+     FMCSA has no "trailer type". Like other lead tools we read it from the cargo the carrier filed on its MCS-150. */
+  var EQ = ['Dry van', 'Reefer', 'Flatbed', 'Hotshot', 'Box truck', 'Cargo van', 'Power only', 'Tanker', 'Car hauler', 'Dry bulk', 'Livestock', 'Container'];
+  function equipOf(r) {
+    if (!r) return [];
+    var vt = String(r.vehicleType || ''), cd = String(r.carrierDetails || '').toLowerCase(), t = [];
+    var straight = /straight truck/i.test(vt), tract = /tractor/i.test(vt), trailer = /trailer/i.test(vt);
+    var power = tract && !trailer; // tractors but no trailer of its own: pulls other people's trailers
+    if (straight) t.push('Box truck');
+    if (power) t.push('Power only');
+    if (/refrigerated|\bmeat\b/.test(cd)) t.push('Reefer');
+    if (/building materials|machinery|large objects|logs|poles|beams|lumber|metal|construction|oilfield/.test(cd)) t.push('Flatbed');
+    if (/liquids|gases|fuel oil/.test(cd)) t.push('Tanker');
+    if (/motor vehicles/.test(cd)) t.push('Car hauler');
+    if (/dry bulk|grain|feed|hay/.test(cd)) t.push('Dry bulk');
+    if (/livestock/.test(cd)) t.push('Livestock');
+    if (/intermodal/.test(cd)) t.push('Container');
+    if ((!straight || tract) && !power) { if (/general freight|household goods|paper products|beverages|commodities/.test(cd) || (!t.length && (tract || cd))) t.unshift('Dry van'); }
+    return t;
+  }
+  window._dlEquipOf = equipOf;
+  st.textContent += '.eq-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;max-width:190px}.eq-tag{font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:2px 7px;border-radius:99px;' +
+    'background:rgba(99,102,241,.14);color:#a5b4fc;border:1px solid rgba(129,140,248,.28);white-space:nowrap}' +
+    'html:not([data-theme=dark]) .eq-tag{background:#eef2ff;color:#4338ca;border-color:#c7d2fe}' +
+    '.eq-menu{min-width:200px}';
+  function numOf(vt, re) { var m = re.exec(vt); return m ? +m[1] : 0; }
+  // One clear line per kind of vehicle the carrier really has (the numbers are FMCSA's truck counts):
+  //   straight trucks -> Box truck, tractors without trailers -> Power only, trailers -> ONE trailer type.
+  // The trailer type comes from the cargo; a carrier that ticked several special cargos shows the most common one + the count of the others.
+  var PRIO = ['Reefer', 'Flatbed', 'Tanker', 'Car hauler', 'Dry bulk', 'Livestock', 'Container']; // the most common first
+  function trailerType(hints) { // the most likely one, then the others it filed
+    var sp = PRIO.filter(function (x) { return hints.indexOf(x) >= 0; });
+    return sp.length ? sp[0] : 'Dry van';
+  }
+  function equipRows(r) { // [[name, count, also], ...]
+    if (!r) return [];
+    var hints = equipOf(r), vt = String(r.vehicleType || '');
+    var st = numOf(vt, /straight trucks?\D*(\d+)/i), tr = numOf(vt, /tractors?\D*(\d+)/i), tl = numOf(vt, /trailers?\D*(\d+)/i);
+    var sp = hints.filter(function (x) { return x !== 'Box truck' && x !== 'Power only' && x !== 'Dry van'; }), out = [];
+    var main = trailerType(hints), more = PRIO.filter(function (x) { return x !== main && sp.indexOf(x) >= 0; });
+    var known = r.cdl !== undefined && r.cdl !== null && r.cdl !== '', pu = parseInt(r.powerUnits, 10) || 0;
+    // 1-3 power units that are in none of the truck boxes (no straight truck, tractor or trailer, own or leased) and
+    // FMCSA counts 0 trucks: a cargo / Sprinter van. Checked on 5,000 carriers of 2026: ~3% match; bigger fleets with
+    // empty truck boxes are missing data, not vans, so they are left out.
+    if (known && !st && !tr && !tl && pu > 0 && pu <= 3 && !(+r.truckUnits > 0)) return [['Cargo van', pu]];
+    if (st && tl && !tr) { // a pickup / straight truck pulling its own trailer, no tractor: hotshot
+      out.push(['Hotshot', tl]);
+      if (st > tl) out.push(['Box truck', st - tl]);
+      return out;
+    }
+    // (no "no CDL = small van" rule: 64% of straight-truck carriers have no CDL driver, most of them 26 ft box trucks)
+    if (st) out.push([sp.length === 1 && sp[0] === 'Reefer' ? 'Reefer box truck' : 'Box truck', st]);
+    if (tr && !tl) out.push(['Power only', tr]);
+    if (tl) out.push([main, tl, more]);
+    if (!out.length && hints.length) out.push([main, 0, more]); // no truck numbers known
+    return out;
+  }
+  function rowKinds(r) { // what the Equipment filter matches
+    var k = [];
+    equipRows(r).forEach(function (x) { if (x[0] === 'Reefer box truck') k.push('Box truck', 'Reefer'); else if (x[0] === 'Hotshot') k.push('Hotshot', 'Flatbed'); else k.push(x[0]); if (x[2] && x[2].length) k.push.apply(k, x[2]); });
+    return k;
+  }
+  window._dlEquipRows = equipRows;
+  function headName() { // the column header: "Vehicles" -> "Equipment"
+    document.querySelectorAll('table.table thead th').forEach(function (th) { if (/^\s*vehicles\s*$/i.test(th.textContent)) th.textContent = 'Equipment'; });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', headName); else headName();
+  setTimeout(headName, 1500);
+  try { var th0 = document.querySelector('table.table thead'); if (th0) new MutationObserver(headName).observe(th0, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+  st.textContent += '.veh-cell .eq-row{display:flex;justify-content:space-between;align-items:center;gap:14px;white-space:nowrap;line-height:1.55;min-width:130px}.veh-cell .eq-row span{opacity:.9}' +
+    '.veh-cell .eq-row b{min-width:22px;text-align:right}.eq-i{display:inline-block;font-style:normal;font-size:10px;font-weight:800;padding:0 5px;height:15px;line-height:15px;border-radius:99px;background:rgba(148,163,184,.22);vertical-align:1px;cursor:help}';
+  var row = G('rowHTML');
+  if (typeof row === 'function') {
+    window.rowHTML = function (r) {
+      var html = String(row.apply(this, arguments)), rows = equipRows(r);
+      if (!rows.length) return html;
+      var inner = rows.map(function (x) {
+        var more = x[2] && x[2].length ? x[2] : null;
+        return '<div class="eq-row"' + (more ? ' title="Also filed cargo for: ' + esc(more.join(', ')) + '"' : '') + '><span>' + esc(x[0]) + (more ? ' <i class="eq-i">+' + more.length + '</i>' : '') + '</span>' + (x[1] ? '<b>' + x[1] + '</b>' : '') + '</div>';
+      }).join('');
+      // the Vehicles column shows the equipment with its numbers instead of "Tractor / Trailer / Straight"
+      return html.replace(/(<td class="veh-cell"[^>]*>)[\s\S]*?(<\/td>)/, '$1' + inner + '$2');
+    };
+  }
+  // the Equipment filter (next to Age): tick one or more, a carrier shows when it has any of them
+  function eqWanted() { return Array.prototype.map.call(document.querySelectorAll('input[name="eqf"]:checked'), function (x) { return x.value; }); }
+  function eqBtn() { var b = document.getElementById('eqDropdownBtn'); if (!b) return; var w = eqWanted(); b.textContent = w.length ? (w.length > 2 ? w.length + ' equipment' : w.join(', ')) : 'Equipment'; b.classList.toggle('on', w.length > 0); }
+  function eqWire() {
+    var age = document.getElementById('ageDropdown'); if (!age || document.getElementById('eqDropdown')) return;
+    var dd = document.createElement('div'); dd.className = 'dd'; dd.id = 'eqDropdown';
+    dd.innerHTML = '<button type="button" class="dd-btn" id="eqDropdownBtn">Equipment</button><div class="dd-menu eq-menu">' +
+      EQ.map(function (x) { return '<label><input type="checkbox" name="eqf" value="' + x + '"> ' + x + '</label>'; }).join('') + '</div>';
+    age.parentNode.insertBefore(dd, age);
+    var btn = dd.querySelector('button');
+    btn.addEventListener('click', function (e) { e.stopPropagation(); document.querySelectorAll('.dd.open,.dd.visible').forEach(function (x) { if (x !== dd) x.classList.remove('open', 'visible'); }); dd.classList.toggle('open'); });
+    dd.querySelector('.dd-menu').addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { dd.classList.remove('open'); });
+    dd.addEventListener('change', function () { eqBtn(); window.applyAdvancedFilters(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', eqWire); else eqWire();
+  st.textContent += '#eqDropdownBtn.on{border-color:var(--accent);color:var(--accent)}';
+  function fixEquipCells() { // rows the table drew without an equipment cell (no truck numbers): fill them
+    var col = eqCol(); if (col < 0) return;
+    var data = G('scrapedData') || [], rows = document.querySelectorAll('#resultsTable tr');
+    data.forEach(function (r, k) { var tr = rows[k], td = tr && tr.children[col]; if (td && !td.querySelector('.eq-row') && equipRows(r).length) paintEquip(r, k); });
+  }
+  var af = window.applyAdvancedFilters;
+  window.applyAdvancedFilters = function () {
+    var res = af.apply(this, arguments), w = eqWanted();
+    try { fixEquipCells(); } catch (e) {}
+    if (!w.length) return res;
+    var data = G('scrapedData') || [], rows = document.querySelectorAll('#resultsTable tr');
+    data.forEach(function (r, k) {
+      var tr = rows[k]; if (!tr || tr.style.display === 'none' || (r && r.__dlxOnline)) return; // carriers found by the search box always show
+      var t = rowKinds(r); if (!t.some(function (x) { return w.indexOf(x) >= 0; })) tr.style.display = 'none';
+    });
+    var up = G('updateVisibleRecordCount'); if (typeof up === 'function') try { up(); } catch (e) {}
+    return res;
+  };
+
   var origReset = window.resetAdvancedFilters;
   if (typeof origReset === 'function') window.resetAdvancedFilters = function () {
     document.querySelectorAll('input[name="agemc"],input[name="ageins"]').forEach(function (x) { x.checked = x.value === ''; });
+    document.querySelectorAll('input[name="eqf"]').forEach(function (x) { x.checked = false; }); eqBtn();
     var sel = document.getElementById('ageFilterSelect'); if (sel) sel.value = '';
     paintBtn(); return origReset.apply(this, arguments);
   };

@@ -7,7 +7,8 @@
   'use strict';
   var CONTACT = '923700684849', CONTACT_SHOW = '0370 0684849';
   var G = function (n) { try { return (0, eval)(n); } catch (e) { return undefined; } };
-  var DEMO = null, timer = null;
+  var DEMO = null, timer = null, OFF = 0; // OFF: the server clock minus this computer's clock
+  function now() { return Date.now() + OFF; }
 
   function css() {
     if (document.getElementById('dlDemoCss')) return;
@@ -37,7 +38,7 @@
       bar = document.createElement('div'); bar.id = 'dlDemoBar';
       document.body.insertBefore(bar, document.body.firstChild);
     }
-    bar.innerHTML = '<span><b>Demo account</b> &middot; ' + left(DEMO.until - Date.now()) + ' left &middot; Downloading leads is not available in the demo.</span>' +
+    bar.innerHTML = '<span><b>Demo account</b> &middot; ' + left(DEMO.until - now()) + ' left &middot; Downloading leads is not available in the demo.</span>' +
       '<a href="' + wa('Hello, I am using the Dispatch Link demo (' + DEMO.id + ') and I want to buy Dispatch Link.') + '" target="_blank" rel="noopener">Buy Dispatch Link</a>';
   }
   function popup(title, text, onClose) {
@@ -73,6 +74,15 @@
     popup('Your demo has ended', 'Thank you for trying Dispatch Link. To keep using it and download your leads, buy Dispatch Link.', false);
     setTimeout(function () { var DL = G('DL'); try { DL && DL.logout ? DL.logout() : location.replace('index.html'); } catch (e) { location.replace('index.html'); } }, 8000);
   }
+  async function serverNow(c, co) { // write the server's time in our own clock spot and read it back
+    try {
+      var db = String(c && c.dbUrl || '').replace(/\/?$/, '/'); if (!/^https:/.test(db)) return 0;
+      var r = await fetch(db + 'device_locks/' + encodeURIComponent(String(co).toLowerCase()) + '/_clock/demo.json?x-http-method-override=PUT',
+        { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ '.sv': 'timestamp' }) });
+      if (!r.ok) return 0;
+      var v = await r.json(); return typeof v === 'number' ? v : 0;
+    } catch (e) { return 0; }
+  }
   async function start() {
     var DL = G('DL'); if (!DL || typeof DL.session !== 'function') return;
     var s = null; try { s = DL.session(); } catch (e) {}
@@ -80,20 +90,20 @@
     var c = null; try { c = await DL.company(s.company); } catch (e) {}
     if (!c || !c.demo) return;
     var until = +c.demoUntil || 0, mins = +c.demoMins || 0;
+    // the time is counted on the database's clock: a computer whose clock is wrong (some are 45 minutes ahead)
+    // would otherwise be refused by the database and the demo would never start
+    var sn = await serverNow(c, s.company); if (sn) OFF = sn - Date.now();
     if (!until && mins) { // "the time starts when the client creates his password": this is his first sign-in, start it now
-      var lk = 'dl_demo_start_' + s.company, t0 = 0;
-      try { t0 = +localStorage.getItem(lk) || 0; } catch (e) {}
-      until = (t0 || Date.now()) + mins * 60000;
-      try { if (!t0) localStorage.setItem(lk, String(Date.now())); } catch (e) {}
+      until = now() + mins * 60000;
       try {
         if (typeof DL.patchCompany === 'function') await DL.patchCompany(c, { demoUntil: until }); // the secure rules let the client save only this, once
       } catch (e) {} // a sales agent may not save it: the admin's next sign-in will
     }
     DEMO = { id: s.company, until: until };
     css(); lockDownloads();
-    if (DEMO.until && Date.now() >= DEMO.until) return ended();
+    if (DEMO.until && now() >= DEMO.until) return ended();
     paintBar();
-    timer = setInterval(function () { if (DEMO.until && Date.now() >= DEMO.until) ended(); else paintBar(); }, 30000);
+    timer = setInterval(function () { if (DEMO.until && now() >= DEMO.until) ended(); else paintBar(); }, 30000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(start, 300); });
   else setTimeout(start, 300);

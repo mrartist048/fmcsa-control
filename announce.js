@@ -38,15 +38,29 @@
   function set(a) { cur = a && typeof a === 'object' && a.text ? a : null; paint(); }
 
   // the company name set later in the admin panel: the session keeps the name it had at sign-in, so bring it up to date
-  function syncName(s, c) {
-    var nm = c && typeof c.name === 'string' ? c.name.trim() : '';
+  // the session keeps the name it had at sign-in: bring it up to date.
+  // Company admin: the company name from the admin panel. Sales agent: his own name (sales_users), never the company's.
+  async function syncName(s, c) {
+    var nm = '';
+    if (s.role === 'sales') {
+      if (!s.username || !c || !c.dbUrl) return;
+      try {
+        var u = String(c.dbUrl).replace(/\/?$/, '/') + 'sales_users/' + encodeURIComponent(String(s.company).toLowerCase()) + '/' + encodeURIComponent(s.username) + '.json';
+        var rec = await fetch(u, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; });
+        nm = rec && typeof rec.name === 'string' ? rec.name.trim() : '';
+      } catch (e) { return; }
+    } else nm = c && typeof c.name === 'string' ? c.name.trim() : '';
     if (!nm || s.name === nm) return;
     var old = s.name || s.company;
     ['localStorage', 'sessionStorage'].forEach(function (k) {
-      try { var st = window[k], v = JSON.parse(st.getItem('dl_session') || 'null'); if (v && v.company === s.company) { v.name = nm; st.setItem('dl_session', JSON.stringify(v)); } } catch (e) {}
+      try { var st = window[k], v = JSON.parse(st.getItem('dl_session') || 'null'); if (v && v.company === s.company && (v.username || '') === (s.username || '')) { v.name = nm; st.setItem('dl_session', JSON.stringify(v)); } } catch (e) {}
     });
     var hi = document.getElementById('hi'); // the greeting on the hub
     if (hi && old && hi.textContent.indexOf(old) >= 0) hi.textContent = hi.textContent.split(old).join(nm);
+    // the name in the top menu of the page (shown as plain text)
+    if (old) document.querySelectorAll('header *, .app-header *, nav *').forEach(function (el) {
+      if (el.children.length === 0 && el.textContent.trim() === old) el.textContent = nm;
+    });
   }
   async function start() {
     var DL = G('DL'); if (!DL || typeof DL.session !== 'function') return;
@@ -54,7 +68,7 @@
     if (!s || !s.company) return;
     me = String(s.company).toLowerCase();
     var c = null; try { c = await DL.company(s.company); } catch (e) {}
-    syncName(s, c);
+    syncName(s, c).catch(function () {});
     var db = c && c.dbUrl; if (!db) return;
     db = db.replace(/\/?$/, '/');
     var url = db + 'announce.json';
