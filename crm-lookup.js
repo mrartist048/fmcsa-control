@@ -102,22 +102,39 @@
   }
 
 
-  function census(where, limit) {
+  // The search asks FMCSA itself (not through the scanner's shared queue): when a scan made FMCSA say "too many requests",
+  // the scanner pauses that site for a while, and the search used to fail until the page was refreshed.
+  // Now: FMCSA directly -> the Dispatch Link data bridge (waits out "too many requests") -> FMCSA again after a short wait.
+  function direct(qs) {
+    var ac = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ac) ac.abort(); }, 12000);
+    return fetch(CENSUS + '?' + qs, { cache: 'no-store', signal: ac ? ac.signal : undefined })
+      .then(function (r) { clearTimeout(t); if (r.status === 404) return []; if (!r.ok) throw new Error('busy'); return r.json(); },
+        function (e) { clearTimeout(t); throw e; })
+      .then(function (j) { return Array.isArray(j) ? j : []; });
+  }
+  function census(where, limit, exact) {
     var qs = '$where=' + encodeURIComponent(where) + '&$limit=' + (limit || 10) + '&$order=' + encodeURIComponent('status_code ASC');
-    var cq = G('_censusQuery');
-    if (typeof cq === 'function') return cq(qs).then(function (r) { if (r === null) throw new Error('busy'); return r; });
-    return fetch(CENSUS + '?' + qs).then(function (r) { if (r.status === 404) return []; if (!r.ok) throw new Error('busy'); return r.json(); });
+    var br = G('_dlCensusQ'), cq = G('_censusQuery');
+    return direct(qs).catch(function () {
+      if (exact && typeof br === 'function') return br(where).then(function (r) { if (!Array.isArray(r)) throw new Error('busy'); return r; });
+      throw new Error('busy');
+    }).catch(function () {
+      return new Promise(function (ok) { setTimeout(ok, 2500); }).then(function () { return direct(qs); });
+    }).catch(function () {
+      if (typeof cq !== 'function') throw new Error('busy');
+      return cq(qs).then(function (r) { if (r === null) throw new Error('busy'); return r; });
+    });
   }
   function sq(s) { return String(s).replace(/'/g, "''"); }
   function findRows(q) {
     var x = kind(q);
-    if (x.k === 'email') return census("upper(email_address)='" + sq(x.v.toUpperCase()) + "'");
-    if (x.k === 'mc') return census("(docket1prefix='MC' AND docket1='" + x.v + "') OR (docket2prefix='MC' AND docket2='" + x.v + "')");
-    if (x.k === 'dot') return census("dot_number='" + x.v + "'");
+    if (x.k === 'email') return census("upper(email_address)='" + sq(x.v.toUpperCase()) + "'", 10, true);
+    if (x.k === 'mc') return census("(docket1prefix='MC' AND docket1='" + x.v + "') OR (docket2prefix='MC' AND docket2='" + x.v + "')", 10, true);
+    if (x.k === 'dot') return census("dot_number='" + x.v + "'", 10, true);
     if (x.k === 'num') {
       var n = String(parseInt(x.v, 10)), w = ["dot_number='" + n + "'", "(docket1prefix='MC' AND docket1='" + n + "')", "(docket2prefix='MC' AND docket2='" + n + "')"];
       if (x.v.length === 10) w.push("phone='" + x.v + "'", "cell_phone='" + x.v + "'");
-      return census(w.join(' OR '));
+      return census(w.join(' OR '), 10, true);
     }
     var u = sq(x.v.toUpperCase());
     return census("upper(legal_name) like '%" + u + "%' OR upper(dba_name) like '%" + u + "%'", 8);
@@ -144,7 +161,7 @@
       addRows(rows, q, my);
     }, function () {
       if (my !== SEQ) return;
-      msg('Could not search online right now. Press Enter to try again.');
+      msg('FMCSA is not answering right now. Wait a few seconds and press Enter to search again.');
     });
   }
 

@@ -661,7 +661,7 @@
   function paintEquip(r, k) {
     var col = eqCol(), tr = document.querySelectorAll('#resultsTable tr')[k]; if (col < 0 || !tr || !tr.children[col]) return;
     var rows = equipRows(r); if (!rows.length) return;
-    tr.children[col].innerHTML = rows.map(function (x) { var more = x[2] && x[2].length ? x[2] : null; return '<div class="eq-row"' + (more ? ' title="Also filed cargo for: ' + esc(more.join(', ')) + '"' : '') + '><span>' + esc(x[0]) + (more ? ' <i class="eq-i">+' + more.length + '</i>' : '') + '</span>' + (x[1] ? '<b>' + x[1] + '</b>' : '') + '</div>'; }).join('');
+    tr.children[col].innerHTML = rows.map(function (x) { var more = x[2] && x[2].length ? x[2] : null; return '<div class="eq-row"' + (more ? ' title="Also filed cargo for: ' + esc(more.join(', ')) + '"' : '') + '><span>' + esc(x[0]) + (more ? ' <i class="eq-i">+' + more.length + '</i>' : '') + '</span></div>'; }).join('');
     if (!tr.children[col].classList.contains('veh-cell')) tr.children[col].classList.add('veh-cell');
   }
   function d8iso(s) { var m = /^(\d{4})-?(\d{2})-?(\d{2})/.exec(String(s || '')); return m ? m[1] + '-' + m[2] + '-' + m[3] : ''; }
@@ -774,7 +774,7 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', headName); else headName();
   setTimeout(headName, 1500);
   try { var th0 = document.querySelector('table.table thead'); if (th0) new MutationObserver(headName).observe(th0, { childList: true, subtree: true, characterData: true }); } catch (e) {}
-  st.textContent += '.veh-cell .eq-row{display:flex;justify-content:space-between;align-items:center;gap:14px;white-space:nowrap;line-height:1.55;min-width:130px}.veh-cell .eq-row span{opacity:.9}' +
+  st.textContent += '.veh-cell .eq-row{display:flex;align-items:center;gap:14px;white-space:nowrap;line-height:1.55;min-width:110px}.veh-cell .eq-row span{opacity:.9}' +
     '.veh-cell .eq-row b{min-width:22px;text-align:right}.eq-i{display:inline-block;font-style:normal;font-size:10px;font-weight:800;padding:0 5px;height:15px;line-height:15px;border-radius:99px;background:rgba(148,163,184,.22);vertical-align:1px;cursor:help}';
   var row = G('rowHTML');
   if (typeof row === 'function') {
@@ -783,7 +783,7 @@
       if (!rows.length) return html;
       var inner = rows.map(function (x) {
         var more = x[2] && x[2].length ? x[2] : null;
-        return '<div class="eq-row"' + (more ? ' title="Also filed cargo for: ' + esc(more.join(', ')) + '"' : '') + '><span>' + esc(x[0]) + (more ? ' <i class="eq-i">+' + more.length + '</i>' : '') + '</span>' + (x[1] ? '<b>' + x[1] + '</b>' : '') + '</div>';
+        return '<div class="eq-row"' + (more ? ' title="Also filed cargo for: ' + esc(more.join(', ')) + '"' : '') + '><span>' + esc(x[0]) + (more ? ' <i class="eq-i">+' + more.length + '</i>' : '') + '</span></div>';
       }).join('');
       // the Vehicles column shows the equipment with its numbers instead of "Tractor / Trailer / Straight"
       return html.replace(/(<td class="veh-cell"[^>]*>)[\s\S]*?(<\/td>)/, '$1' + inner + '$2');
