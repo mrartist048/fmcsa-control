@@ -120,7 +120,7 @@
       <button type="button" class="dd-btn anchor" onclick="toggleCategoryDropdown(event)">Categories</button>
       <ul class="dd-menu" id="checkboxListContainer"></ul>
     </div>
-    <div class="dd" id="vehicleDropdown">
+    <div class="dd" id="vehicleDropdown" style="display:none"><!-- hidden: the Equipment filter does this job -->
       <button type="button" class="dd-btn" id="vehicleDropdownBtn" onclick="toggleVehicleDropdown(event)">Vehicle types</button>
       <div class="dd-menu" id="vehicleTypeDropdownContent"><div id="vehicleCheckboxList"></div></div>
     </div>
@@ -332,6 +332,9 @@
 <script src="motus-register.js?v=5"></script>
 <script src="crm-lookup.js?v=9"></script>
 <script src="fmcsa-fast.js?v=31"></script>
+<script>/* Vehicle types filter is hidden (Equipment replaces it): make sure no old tick keeps filtering */
+(function(){function clr(){var n=0;document.querySelectorAll('#vehicleCheckboxList input:checked').forEach(function(x){x.checked=false;n++;});if(n&&typeof window.applyAdvancedFilters==='function')try{window.applyAdvancedFilters();}catch(e){}}
+clr();setTimeout(clr,1500);setTimeout(clr,5000);})();</script>
 <script src="email-verify.js?v=2"></script>
 <script src="crm-ui.js?v=3"></script>
 <script src="demo-mode.js?v=4"></script>
