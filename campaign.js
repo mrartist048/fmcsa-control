@@ -404,7 +404,8 @@
       if (s.error) return '<tr><td><b>' + esc(s.label || s.box || 'Campaign') + '</b></td><td colspan="8" style="color:var(--bad)">' + esc(s.error) + '</td><td class="r"><button class="btn sm" data-open="' + esc(s.id || '') + '">Open</button></td></tr>';
       var run = s.run || {}, c = s.counts || {}, w = s.worker, now = s.now || Date.now(), online = !!(w && now - w.seen < 6 * 60000), smtp = s.cfg && s.cfg.sender === 'smtp';
       var on = run.running && !run.paused;
-      t.sent += run.sentToday || 0; t.lim += on ? (s.effLimit || 0) : (run.sentToday || 0); // stopped / paused mailboxes send no more today: only what they already sent counts t.wait += c.queued || 0; t.rep += c.replied || 0; t.bnc += c.bounced || 0; if (on) t.run++; if (smtp && online) t.on++;
+      t.sent += run.sentToday || 0; t.lim += on ? (s.effLimit || 0) : (run.sentToday || 0); // stopped / paused mailboxes send no more today: only what they already sent counts
+      t.wait += c.queued || 0; t.rep += c.replied || 0; t.bnc += Math.max(run.bouncedTotal || 0, c.bounced || 0); if (on) t.run++; if (smtp && online) t.on++;
       var tag = run.running ? (run.paused ? '<span class="tag paused">Paused</span>' : '<span class="tag queued">Running</span>') : run.ended ? '<span class="tag removed">7 days over</span>' : '<span class="tag removed">Stopped</span>';
       if (run.running && run.endAt) tag += '<br><small style="color:var(--mut)">until ' + esc(fmtTz(run.endAt, (s.cfg && s.cfg.tz) || 'America/New_York').replace(/,\s*\d+:\d+\s*[AP]M$/i, '')) + '</small>';
       var nxt = '-';
