@@ -164,6 +164,35 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 .sch-dates>div>label.gl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fmt-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}.fmt-bar .btn{min-width:38px}.fmt-tip{font-size:12px;color:var(--mut);margin-left:4px}.fmt-old{margin:0 0 8px}
 </style>
+<style>/* stats cards: soft depth, tinted icon, calm numbers */
+#allKpis,#runKpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:22px;background:none;border:0;overflow:visible}
+#allKpis .kpi,#runKpis .kpi{position:relative;display:flex;flex-direction:column;gap:12px;padding:16px 18px 18px;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(180deg,var(--surface) 0%,var(--surface2) 100%);box-shadow:0 1px 2px rgba(0,0,0,.06),0 6px 18px rgba(15,26,51,.06);transition:transform .15s,box-shadow .15s,border-color .15s;overflow:hidden}
+[data-theme=dark] #allKpis .kpi,[data-theme=dark] #runKpis .kpi{background:linear-gradient(180deg,rgba(255,255,255,.035) 0%,rgba(255,255,255,.01) 100%),var(--surface);box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 8px 24px rgba(0,0,0,.25)}
+#allKpis .kpi:hover,#runKpis .kpi:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--kc,var(--accent)) 45%,var(--line))}
+#allKpis .kpi::after,#runKpis .kpi::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:var(--kc,var(--accent));opacity:.07;pointer-events:none}
+#allKpis .kpi small,#runKpis .kpi small{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;line-height:1.25;color:var(--mut);white-space:normal;min-width:0}
+#allKpis .ki,#runKpis .ki{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;flex:none;color:var(--kc,var(--accent));background:color-mix(in srgb,var(--kc,var(--accent)) 14%,transparent)}
+#allKpis .ki svg,#runKpis .ki svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#allKpis .kpi b,#runKpis .kpi b{font-family:var(--font);font-size:26px;font-weight:650;line-height:1.1;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+#allKpis .kpi b.alert,#runKpis .kpi b.alert{color:var(--bad)}
+#allKpis .kpi b .of,#runKpis .kpi b .of{margin-left:5px;font-size:15px;font-weight:500;color:var(--mut)}
+#allKpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:1250px){#allKpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){#allKpis,#runKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#allKpis .kpi,#runKpis .kpi{min-width:0}
+html:not([data-theme=dark]) #allKpis .kpi,html:not([data-theme=dark]) #runKpis .kpi{background:#fff;border-color:#E3E8F1;box-shadow:0 1px 2px rgba(15,26,51,.05),0 4px 14px rgba(15,26,51,.05)}
+/* corner decoration: soft glow + two thin rings in the card's colour (both themes) */
+#allKpis .kpi::after,#runKpis .kpi::after{right:-60px;top:-60px;width:150px;height:150px;opacity:1;background:radial-gradient(circle closest-side,
+  color-mix(in srgb,var(--kc,var(--accent)) 20%,transparent) 0%,color-mix(in srgb,var(--kc,var(--accent)) 7%,transparent) 55%,transparent 72%,
+  color-mix(in srgb,var(--kc,var(--accent)) 16%,transparent) 73%,color-mix(in srgb,var(--kc,var(--accent)) 16%,transparent) 74%,transparent 75%,
+  transparent 97%,color-mix(in srgb,var(--kc,var(--accent)) 11%,transparent) 98%,transparent 99.5%)}
+#allKpis .kpi::before,#runKpis .kpi::before{display:none}
+#allKpis .kpi>*,#runKpis .kpi>*{position:relative;z-index:1}
+#allKpis .kpi:hover::after,#runKpis .kpi:hover::after{filter:saturate(1.6) brightness(1.05)}
+html:not([data-theme=dark]) #allKpis .kpi:hover,html:not([data-theme=dark]) #runKpis .kpi:hover{box-shadow:0 2px 4px rgba(15,26,51,.06),0 10px 24px rgba(15,26,51,.08)}
+html:not([data-theme=dark]) #allKpis .ki,html:not([data-theme=dark]) #runKpis .ki{background:color-mix(in srgb,var(--kc,var(--accent)) 10%,#fff)}
+</style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -481,8 +510,9 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 </div>
 <script src="db-shim.js?v=1"></script><script src="auth.js"></script>
 <script src="mailer-files.js?v=17"></script>
-<script src="campaign.js?v=21"></script>
+<script src="campaign.js?v=25"></script>
 <script src="announce.js?v=3"></script>
 <script src="agent-mail.js?v=4"></script>
+<script src="nav.js?v=5"></script>
 </body>
 </html>

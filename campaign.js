@@ -398,6 +398,24 @@
       toast('Could not ' + act + ' ' + name + ': ' + e.message);
     });
   }
+  var KICON = { // small line icons for the stats cards
+    play: '<path d="M7 5l12 7-12 7z"/>', send: '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    reply: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 5 5v6"/>', alert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/>',
+    pc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>', check: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',
+    out: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 9l4 4M21 9l-4 4"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'
+  };
+  function kicon(l) {
+    var x = String(l).toLowerCase();
+    var k = /running/.test(x) ? 'play' : /sent today/.test(x) ? 'send' : /waiting/.test(x) ? 'clock' : /repl/.test(x) ? 'reply' : /bounc/.test(x) ? 'alert' :
+      /online|mailer/.test(x) ? 'pc' : /finish/.test(x) ? 'check' : /unsub/.test(x) ? 'out' : /held|risky/.test(x) ? 'shield' : 'mail';
+    return '<i class="ki"><svg viewBox="0 0 24 24">' + KICON[k] + '</svg></i>';
+  }
+  function kpiCell(l, v, cls) { // one stats card: icon + label, then the number ("12 / 60" shows the limit smaller)
+    var m = /^(.*?)\s*\/\s*(.*)$/.exec(String(v)), num = m ? m[1] : String(v), of = m ? '<span class="of">/ ' + m[2] + '</span>' : '';
+    var alert = cls === 'bad' && parseFloat(num) > 0;
+    return '<div class="kpi"' + (cls ? ' style="--kc:var(--' + cls + ')"' : '') + '><small>' + kicon(l) + l + '</small><b' + (alert ? ' class="alert"' : '') + '>' + num + of + '</b></div>';
+  }
   function drawOverview(rows, stale) {
     var t = { sent: 0, lim: 0, wait: 0, rep: 0, bnc: 0, run: 0, on: 0 }, id = S.box;
     var html = rows.map(function (s) {
@@ -425,7 +443,7 @@
       return '<tr><td><b>' + esc(s.label) + '</b>' + (s.id === id ? ' <small style="color:var(--accent)">(open)</small>' : '') + '</td><td>' + (smtp ? 'Mailer' + (online ? ' <span style="color:var(--ok)">●</span>' : ' <span style="color:var(--bad)">●</span>') : 'Gmail') + '</td><td>' + tag + '</td><td>' + (run.sentToday || 0) + ' / ' + (s.effLimit || 0) + '</td><td>' + (c.queued || 0) + '</td><td>' + (c.replied || 0) + '</td><td>' + br + '%</td><td data-h="' + esc(s.id || '') + '" data-d="' + esc(dom) + '">' + hBadge(hl) + '</td><td>' + nxt + '</td><td class="r"><span class="rowbtns">' + ctlBtns(s) + '<button class="btn sm" data-open="' + esc(s.id || '') + '">Open</button></span></td></tr>';
     }).join('');
     $('allTbl').innerHTML = html || '<tr><td colspan="10" style="color:var(--mut)">No campaigns yet.</td></tr>';
-    var k = function (l, v, cls) { return '<div class="kpi"><small>' + l + '</small><b' + (cls ? ' style="color:var(--' + cls + ')"' : '') + '>' + v + '</b></div>'; };
+    var k = kpiCell;
     $('allKpis').innerHTML = k('Campaigns running', t.run + ' / ' + rows.length) + k('Sent today', t.sent + ' / ' + t.lim) + k('Waiting to send', t.wait) + k('Replies', t.rep, 'accent') + k('Bounced', t.bnc, 'bad') + k('Mailers online', t.on, t.on ? 'ok' : '');
     paintLive('all');
     $('allTbl').querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () { rowCtl(b, rows); }; });
@@ -1086,7 +1104,7 @@
     $('bStart').hidden = on; $('bPause').hidden = !on || paused; $('bResume').hidden = !paused; $('bStop').hidden = !on;
     var sent = run.sentToday || 0, lim = st ? st.effLimit : 0;
     $('todayBar').style.width = lim ? Math.min(100, Math.round(sent * 100 / lim)) + '%' : '0';
-    var k = function (l, v, cls) { return '<div class="kpi"><small>' + l + '</small><b' + (cls ? ' style="color:var(--' + cls + ')"' : '') + '>' + v + '</b></div>'; };
+    var k = kpiCell;
     $('runKpis').innerHTML = st ? k('Sent today', sent + ' / ' + lim) + k('Waiting to send', c.queued || 0) + k('Finished', c.done || 0, 'ok') + k('Replied', c.replied || 0, 'accent') + k('Bounced', c.bounced || 0, 'bad') + k('Unsubscribed', c.unsub || 0) + k('Held (risky)', c.risky || 0) + k('Sent in total', run.sentTotal || 0) + (S.cfg.sender === 'smtp' ? k('Mailer', mailerOnline() ? 'Online' : 'Offline', mailerOnline() ? 'ok' : 'bad') : k('Gmail quota left', st.quota == null ? '-' : st.quota)) : '';
     $('runSub').textContent = st ? 'Today (' + st.today + ') the limit is ' + st.effLimit + ' emails' + (S.cfg.ramp && st.effLimit < S.cfg.limit ? ' because of the slow warm-up (your full limit is ' + S.cfg.limit + ')' : '') + '. Schedule: ' + schedText(S.cfg) + ' (' + S.cfg.tz + ')' + (S.cfg.startAt && S.cfg.startAt > Date.now() ? ', first email ' + fmtTz(S.cfg.startAt, S.cfg.tz) : '') + '.' : 'Start the campaign and it sends by itself within your limits.';
     if (st && S.cfg.sender === 'smtp' && on && !paused && !mailerOnline()) $('runReason').textContent = ((run.reason || '') + ' The Mailer program is not running, so nothing is being sent. Start it (step 1).').trim();
