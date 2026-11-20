@@ -182,14 +182,12 @@ th:first-child{border-radius:10px 0 0 10px}th:last-child{border-radius:0 10px 10
 @media(max-width:620px){#allKpis,#runKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 #allKpis .kpi,#runKpis .kpi{min-width:0}
 html:not([data-theme=dark]) #allKpis .kpi,html:not([data-theme=dark]) #runKpis .kpi{background:#fff;border-color:#E3E8F1;box-shadow:0 1px 2px rgba(15,26,51,.05),0 4px 14px rgba(15,26,51,.05)}
-/* corner decoration: soft glow + two thin rings in the card's colour (both themes) */
-#allKpis .kpi::after,#runKpis .kpi::after{right:-60px;top:-60px;width:150px;height:150px;opacity:1;background:radial-gradient(circle closest-side,
-  color-mix(in srgb,var(--kc,var(--accent)) 20%,transparent) 0%,color-mix(in srgb,var(--kc,var(--accent)) 7%,transparent) 55%,transparent 72%,
-  color-mix(in srgb,var(--kc,var(--accent)) 16%,transparent) 73%,color-mix(in srgb,var(--kc,var(--accent)) 16%,transparent) 74%,transparent 75%,
-  transparent 97%,color-mix(in srgb,var(--kc,var(--accent)) 11%,transparent) 98%,transparent 99.5%)}
+/* corner decoration: one soft circle in the card's colour (both themes) */
+#allKpis .kpi::after,#runKpis .kpi::after{right:-34px;top:-34px;width:104px;height:104px;opacity:1;
+  background:linear-gradient(225deg,color-mix(in srgb,var(--kc,var(--accent)) 18%,transparent) 0%,color-mix(in srgb,var(--kc,var(--accent)) 5%,transparent) 100%)}
 #allKpis .kpi::before,#runKpis .kpi::before{display:none}
 #allKpis .kpi>*,#runKpis .kpi>*{position:relative;z-index:1}
-#allKpis .kpi:hover::after,#runKpis .kpi:hover::after{filter:saturate(1.6) brightness(1.05)}
+#allKpis .kpi:hover::after,#runKpis .kpi:hover::after{filter:saturate(1.5)}
 html:not([data-theme=dark]) #allKpis .kpi:hover,html:not([data-theme=dark]) #runKpis .kpi:hover{box-shadow:0 2px 4px rgba(15,26,51,.06),0 10px 24px rgba(15,26,51,.08)}
 html:not([data-theme=dark]) #allKpis .ki,html:not([data-theme=dark]) #runKpis .ki{background:color-mix(in srgb,var(--kc,var(--accent)) 10%,#fff)}
 </style>
